@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+<head>
+    <title>CRM</title>
+    {% include "../add/head.html" %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/main.css' %}">
+</head>
+<body>
+
+{% include "../add/menu.html" %}
+
+<div class="container mt-4" style="min-height: 700px;">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="row">
+                <div class="col-lg-12 mt-4">
+                    <h4>Статистика примерная</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if user.login == "superadmin" %}
+    <div class="row justify-content-center mt-4">
+        <div class="col-md-10">
+            <hr>
+            <div class="row">
+                <div class="col-md-12 mt-2">
+                    {% include '../add/oblast_change.html' %}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <h3>Привет Супер админ</h3>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-3">
+                                <input type="date" name="from_date" class="form-control" value="{{ show_datefrom }}">
+                            </div>
+                            <div class="col-3">
+                                <input type="date" name="to_date" class="form-control" value="{{ show_dateto }}">
+                            </div>
+                            <div class="col-3">
+                                <input type="submit" name="repiod" class="btn btn-success" value="За период">
+                                <input type="submit" name="repiodreset" class="btn btn-warning" value="Сбросить">
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="col-12">
+                        {{ "Выводим данные с " }}{{ datefrom }}{{ " до " }}{{ dateto }}{{ " " }}{{ oblast_show }}
+                    </div>
+                </div>
+
+                <div class="col-12 mt-4">
+                    <table class="table table-bordered">
+                        <tr style="background: #eee;">
+                            <th>Статистика услуг</th>
+                            <th>кол-во</th>
+                            <th>аренда помещения</th>
+                            <th>аппаратура</th>
+                            <th>палочки</th>
+                        </tr>
+
+                        {% for service in services %}
+                        <tr>
+                            <td>{{ service.name }}</td>
+                            <td>{{ service.count }}</td>
+                            <td>{{ service.rent }}</td>
+                            <td>{{ service.equipment }}</td>
+                            <td>{{ service.sticks }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    <hr>
+                    <div class="col-12">
+                        {{ "Выводим данные ТОЛЬКО " }}{{ oblast_show }}
+                    </div>
+                    <br>
+
+                    <table class="table table-bordered">
+                        <tr style="background: #eee;">
+                            <th>Помещение</th>
+                            <th>кол-во броней</th>
+                            <th>сумма за аренду</th>
+                            <th>выручка</th>
+                            <th>Продано а/с
+                                <img src="{% static 'image/donebron.png' %}" height="20" data-bs-toggle2="tooltip"
+                                     title=""
+                                     data-bs-original-title="Абонементы и сертификаты получаются все за период, не зависимо от указания области">
+                            </th>
+                            <th> AVG%</th>
+                        </tr>
+
+                        {% for room in rooms %}
+                        <tr>
+                            <td>{{ room.name }}</td>
+                            <td>{{ room.count_bron }}</td>
+                            <td>{{ room.rent }}</td>
+                            <td>{{ room.revenue }}</td>
+                            <td>{{ room.sold_as }}</td>
+                            <td>{{ room.avg_percent }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+</body>
+</html>

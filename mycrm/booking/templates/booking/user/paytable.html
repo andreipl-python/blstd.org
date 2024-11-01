@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM</title>
+    {% include "booking/add/head.html" %}
+    {% include 'css/main.css' %}
+</head>
+<body>
+
+    {% include "booking/add/menu.html" %}
+
+    <div class="container">
+
+        <div class="row">
+            <div class="col-md-12 mt-4">
+                {% include '../add/oblast_change.html' %}
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mt-4">
+                <h2>Таблица оплат</h2>
+                <form method="post" action="{% url 'your_url_name' %}">
+                    <input type="date" name="datefrom" value="{{ datefrom }}">
+                    <input type="date" name="dateto" value="{{ dateto }}">
+                    <input type="submit" name="send" value="Назначить">
+                    <input type="submit" name="sendreset" value="Сбросить">
+                </form>
+            </div>
+            <div class="col-md-6 mt-4">
+
+                <h2>Фильтр</h2>
+                <form method="post" action="{% url 'your_url_name' %}">
+                    <select name="skidka_filtr">
+                        <option value="0">Все оплаты</option>
+                        <option value="1" {% if request.COOKIES.skidka_filtr == '1' %}selected{% endif %}>Только со скидкой</option>
+                        <option value="2" {% if request.COOKIES.skidka_filtr == '2' %}selected{% endif %}>Только без скидки</option>
+                    </select>
+
+                    <select name="idprepod">
+                        <option selected value="0">Все услуги</option>
+                        {{ uslugi_show|safe }}
+                        <option disabled value="0">- Сотрудники -</option>
+                        {% for prepod in prepods %}
+                            <option value="{{ prepod.id }}" {% if request.COOKIES.idprepod_filtr == prepod.id %}selected{% endif %}>{{ prepod.email }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <select name="idroom">
+                        <option selected value="0">Все комнаты</option>
+                        {% for room in rooms %}
+                            <option value="{{ room.id }}" {% if request.COOKIES.idroom_filtr == room.id %}selected{% endif %}>{{ room.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <br>
+
+                    <input type="submit" name="send_filtr" value="Назначить">
+                    <input type="submit" name="sendreset_filtr" value="Сбросить">
+                </form>
+
+                {% for payment in all_payment %}
+                    <div>{{ payment.id }} {{ payment.idbron }} {{ payment.date }}</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 mt-4">
+                <div>
+                    <div>
+                        {% if request.COOKIES.datefrompaytable and request.COOKIES.datetopaytable %}
+                            {% with where_time_from=request.COOKIES.datefrompaytable|date:"Y-m-d" %}
+                            {% with where_time_to=request.COOKIES.datetopaytable|date:"Y-m-d" %}
+                                {% for day in day_range %}
+                                    <div>{{ day }}</div>
+                                {% endfor %}
+                            {% endwith %}
+                            {% endwith %}
+                        {% else %}
+                            {% for day in month_days %}
+                                <div>{{ day }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

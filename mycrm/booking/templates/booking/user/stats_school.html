@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CRM</title>
+    {% include '../add/head.html' %}
+    {% include '../css/main.html' %}
+</head>
+<body>
+
+    {% include '../add/menu.html' %}
+
+<div class="container mt-4" style="min-height: 700px;">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="row"> 
+                <div class="col-lg-12 mt-4">
+                    <h4>Статистика школы</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if user.login == "superadmin" %} 
+        {% with countBron=0 %}
+            {% with salary_per_hour=0 %}
+                {% if id_client != 0 %}
+                    {% with count_salary_row=getObjCount('salary', id_client, "iduser") %}
+                        {% if count_salary_row == 1 %}
+                            {% with salary_query=conDB.execute("SELECT * FROM `salary` WHERE `iduser`='{}'".format(id_client)) %}
+                                {% with salary_data=salary_query.fetchone() %}
+                                    {% if salary_data %}
+                                        {% with salary_per_hour=salary_data['salary'] %}
+                                            {% comment "Зарплата в час" %}
+                                        {% endwith %}
+                                    {% endif %}
+                                {% endwith %}
+                            {% endwith %}
+                        {% endif %}
+                    {% endwith %}
+                {% endif %}
+                {% if id_client != 0 %}
+                    {% with getCountBron=conDB.execute("SELECT * FROM `bron` WHERE `idprepod`='{}' AND `hide`=0 {}".format(id_client, where_all_show)) %}
+                        {% with countBron=getCountBron.rowcount %}
+                            {% comment "Количество занятий с этим преподом" %}
+                        {% endwith %}
+                    {% endwith %}
+                {% endif %}
+                {% with uslugi_list=getObjListGlobal("SELECT * FROM uslugi WHERE idgruppa = 3 OR idgruppa = 8 ORDER BY id DESC") %}
+                    {% with uslugi_list_show="" %}
+                        {% for value in uslugi_list %}
+                            {% with uslugi_list_obj=getObjGlobal("SELECT * FROM uslugi WHERE id = {}".format(value)) %}
+                                <option value="{{ uslugi_list_obj.id }}">{{ uslugi_list_obj.name }}</option>
+                            {% endwith %}
+                        {% endfor %}
+                    {% endwith %}
+                {% endwith %}
+                
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-10">
+                        <hr>
+                        <div class="row">
+                            <div class="col-12">
+                                <h3>Привет Супер админ</h3>
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <div class="row">
+                                        <div class="col-3">
+                                            <input type="date" name="from_date" class="form-control" value="{{ show_datefrom }}">
+                                        </div>
+                                        <div class="col-3">
+                                            <input type="date" name="to_date" class="form-control" value="{{ show_dateto }}">
+                                        </div>
+                                        <div class="col-3">
+                                            <select name="idusluga" class="form-select">
+                                                <option value="0">Укажите услугу</option>
+                                                {{ uslugi_list_show|safe }}
+                                            </select>
+                                        </div>
+                                        <div class="col-3">
+                                            <input type="submit" name="repiod" class="btn btn-success" value="За период">
+                                            <input type="submit" name="repiodreset" class="btn btn-warning" value="Сбросить">
+                                        </div>
+                                    </div>
+                                </form>
+
+                                <div class="col-12">
+                                    <p>Выводим данные <b>{{ name_usluga }}</b> с {{ m_from }} месяца {{ year_from }} года до {{ m_to }} месяца {{ year_to }} года</p>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <hr>
+                                <table class="table table-bordered">
+                                    <tr style="background: #c6ffc6;">
+                                        <th rowspan="2">Месяц/год</th>
+                                        <th colspan="4"><center>Новые клиенты</center></th>
+                                        <th rowspan="2">Конверсия (запись-абонемент)</th>
+                                        <th rowspan="2">Конверсия (пробное-абонемент)</th>
+                                        <th rowspan="2">Общее число | Активные клиенты</th>
+                                        <th rowspan="2">Удержание <img src="/image/info.png" data-bs-toggle2="tooltip" title="" data-bs-original-title="Общее число клиентов = число уникальных клиентов, которые записывались на пробное занятие + и которые покупали абонементы. Т.е. если клиент просто записался на пробное, но абонемент не купил, то он в это число попадает."></th>
+                                        <th rowspan="2">Серая/цветная <br> Зарплата </th>
+                                    </tr>
+                                    <tr style="background: #c6ffc6;">
+                                        <th>Всего броней</th>
+                                        <th>Записались пробное</th>
+                                        <th>Пришли пробное</th>
+                                        <th>Купили абонементы</th>
+                                    </tr>
+
+                                    {% with year_show=year_from %}
+                                    {% with m_show=m_from %}
+                                    {% with active_klietns_all=0 %}
+                                    {% with all_clients=0 %}
+                                    {% while year_show <= year_to %}
+                                        {% for i in range(1, 14) %}
+                                            {% if m_show == i %}
+                                                {% if m_show >= 13 %}
+                                                    {% with m_show=1 %}
+                                                    {% endwith %}
+                                                {% endif %}
+                                                
+                                                {% if year_show < year_to or (year_show == year_to and m_show <= m_to) %}
+                                                    {% with probnoe_zapis=0 %}
+                                                    {% with probnoe_prishli=0 %}
+                                                    {% with kupili_abon=0 %}
+                                                    {% with all_clients_count=0 %}
+                                                    {% with nov_klienti_ves_period=0 %}
+                                                    {% with all_bron_count=0 %}
+                                                    {% with count_gray_bron=0 %}
+                                                    {% with salary_prepod=0 %}
+                                                    {% with salary_prepod_not_pay=0 %}
+                                                    
+                                                    {% comment "Логика расчетов" %}
+                                                    
+                                                    {% if id_client_connect != 0 %}
+                                                        {% with where_time_from_gray=mktime(0,0,m_show,1,year_show) %}
+                                                        {% with where_time_to_gray=mktime(23,59,59,m_show,31,year_show) %}
+                                                        {% with where_show_gray_bron="AND `timestart` BETWEEN '{}' AND '{}'".format(where_time_from_gray, where_time_to_gray) %}
+                                                        {% with all_bron_prepod_connect=getObjListGlobal("SELECT * FROM bron WHERE iduser='{}' AND status != 0 {}".format(id_client_connect, where_show_gray_bron)) %}
+                                                            {% with count_gray_bron=all_bron_prepod_connect|length %}
+                                                            {% endwith %}
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                    {% endif %}
+                                                    {% for value in all_bron %}
+                                                        {% with idbron=value.id %}
+                                                        {% with day=value.day %}
+                                                        {% with mon=value.mon %}
+                                                        {% with year=value.year %}
+                                                        {% with timestart=value.timestart %}
+                                                        {% with idprepod=value.idprepod %}
+                                                        {% with iduser=value.iduser %}
+                                                        {% with idroom=value.idroom %}
+                                                        {% with period=value.period %}
+                                                        {% with status=value.status %}
+                                                        {% with numbron=value.numbron %}
+                                                        {% with hide=value.hide %}
+                                                        
+                                                        {% if year_show == year and m_show == mon %}
+                                                            {% with add_counter=False %}
+                                                            {% with all_bron_count=all_bron_count + 1 %}
+                                                            {% with hours_zanjatie=ceil(period/3) %}
+                                                            {% if status != 0 %}
+                                                                {% with salary_prepod=salary_prepod + (hours_zanjatie * salary_per_hour) %}
+                                                                {% endwith %}
+                                                            {% endif %}
+                                                            {% with salary_prepod_not_pay=salary_prepod_not_pay + (hours_zanjatie * salary_per_hour) %}
+                                                            {% endwith %}
+                                                            
+                                                            {% with uslugibron_obj=getObjGlobal("SELECT * FROM uslugibron WHERE idbron='{}' AND idusluga=13".format(idbron)) %}
+                                                            {% if uslugibron_obj %}
+                                                                {% with probnoe_zapis=probnoe_zapis + 1 %}
+                                                                {% with add_counter=True %}
+                                                                {% if hide == 0 and status != 0 %}
+                                                                    {% with probnoe_prishli=probnoe_prishli + 1 %}
+                                                                    {% endwith %}
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                    {% endfor %}
+                                                    {% endwith %}
+                                                {% endfor %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endwhile %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                    
+                                    <tr>
+                                        <td><b>{{ m_show }}/{{ year_show }}</b></td>
+                                        <td><b>{{ all_bron_count }}</b></td>
+                                        <td><b>{{ probnoe_zapis }}</b></td>
+                                        <td><b>{{ probnoe_prishli }}</b></td>
+                                        <td><b>{{ kupili_abon }}</b></td>
+                                        <td><b>{{ get_conversion(probnoe_prishli, kupili_abon) }}</b></td>
+                                        <td><b>{{ get_conversion(probnoe_zapis, kupili_abon) }}</b></td>
+                                        <td><b>{{ all_clients_count }}</b></td>
+                                        <td><b>{{ count_gray_bron }}</b></td>
+                                        <td><b>{{ salary_prepod }} / {{ salary_prepod_not_pay }}</b></td>
+                                    </tr>
+                                    {% if m_show == 12 %}
+                                        {% with year_show=year_show + 1 %}
+                                        {% with m_show=1 %}
+                                    {% else %}
+                                        {% with m_show=m_show + 1 %}
+                                    {% endif %}
+                                    {% endfor %}
+                                {% endwhile %}
+                            {% endwith %}
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+</div>
+
+{% include '../add/footer.html' %}
+</body>
+</html>

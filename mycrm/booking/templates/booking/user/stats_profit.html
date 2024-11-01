@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+<head>
+    <title>CRM</title>
+    {% include "../add/head.html" %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+</head>
+<body>
+
+{% include "../add/menu.html" %}
+
+<link type="text/css" rel="stylesheet" href="https://bootstraptema.ru/plugins/2016/shieldui/style.css"/>
+<script type="text/javascript" src="{% static 'js/jquery-3.6.0.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/bootstrap.js' %}"></script>
+<script src="https://bootstraptema.ru/plugins/2016/shieldui/script.js"></script>
+<br><br><br>
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+
+            <form method="post">
+                {% csrf_token %}
+                <select name="y_now">
+                    <option value="2023">2023</option>
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                    <option value="2028">2028</option>
+                    <option value="2029">2029</option>
+                </select>
+                <input type="submit" name="setyear" value="Указать год" class="btn btn-success">
+                {{ y_now }}
+            </form>
+
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col-md-12 col-md-offset-2">
+
+            <!-- График -->
+            <div id="chart"></div>
+
+            <script>
+                $(function () {
+                $("#chart").shieldChart({
+                theme: "light",
+                exportOptions: {
+                image: false,
+                print: false
+                },
+                axisX: {
+                categoricalValues: ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь']
+                },
+                axisY: {
+                    axisTickText: {
+                    },
+                    min: 0,
+                    title: {
+                    text: "Рубли"
+                    }
+                },
+                tooltipSettings: {
+                chartBound: true
+                },
+                seriesSettings: {
+                line: {
+                enablePointSelection: true,
+                pointMark: {
+                activeSettings: {
+                pointSelectedState: {
+                drawWidth: 4,
+                drawRadius: 4
+                }
+                }
+                }
+                }
+                },
+                primaryHeader: {
+                text: "Выручка"
+                },
+                dataSeries: [
+                    {
+                        seriesType: 'line',
+                        collectionAlias: 'Вся выручка',
+                        data: [{{ all_money|join:', ' }}]
+                    },
+                    {
+                        seriesType: 'line',
+                        collectionAlias: 'Школа',
+                        data: [{{ all_money_school|join:', ' }}]
+                    },
+                    {
+                        seriesType: 'line',
+                        collectionAlias: 'Студия',
+                        data: [{{ all_money_studia|join:', ' }}]
+                    }
+                ]
+                });
+                });
+            </script><!-- /.График -->
+
+        </div><!-- /.col-md-8 col-md-offset-2 -->
+    </div><!-- /.row -->
+
+    <hr>
+
+    <div class="row mt-2">
+
+        <div class="col-12">
+
+            <table class="table table-bordered">
+                <tr>
+                    <th>Месяц</th>
+                    <th>Январь</th>
+                    <th>Февраль</th>
+                    <th>Март</th>
+                    <th>Апрель</th>
+                    <th>Май</th>
+                    <th>Июнь</th>
+                    <th>Июль</th>
+                    <th>Август</th>
+                    <th>Сентябрь</th>
+                    <th>Октябрь</th>
+                    <th>Ноябрь</th>
+                    <th>Декабрь</th>
+                </tr>
+
+                <tr>
+                    <td>Общая выручка</td>
+                    {% for value in all_money %}
+                    <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+
+                <tr>
+                    <td>Студия</td>
+                    {% for value in all_money_studia %}
+                    <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+
+                <tr>
+                    <td>Школа</td>
+                    {% for value in all_money_school %}
+                    <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div><!-- /.container -->
+
+<br><br><br><br><br><br>
+
+<script type="text/javascript" src="{% static 'js/popper.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/chosen.jquery.js' %}"></script>
+
+{% include "../js/js.html" %}
+
+</body>
+</html>
