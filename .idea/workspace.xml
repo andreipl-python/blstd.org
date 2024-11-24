@@ -4,115 +4,94 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9e1c6f41-7a20-462d-a34f-dc63ee92fdba" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/blstd.org.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/pythonProject.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/admin.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/apps.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0001_initial.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0002_activeclient.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0003_authtable.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0004_bron.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0005_coloredblock_connectuser.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0006_gruslugi.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0007_log.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0008_managersmena.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0009_oblast.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0010_payment.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0011_paymentdetail.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0012_paymenttype.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0013_room.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0014_salary.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0015_smena.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0016_tarif.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0017_tarifsavebron.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0018_tarifsetting.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0019_trytable.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0020_userimage.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0021_user.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0022_uslugi.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0023_uslugibron.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/models.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/css/bootstrap-grid.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/css/bootstrap-reboot.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/css/bootstrap-utilities.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/css/bootstrap.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/css/chosen-sprite.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/css/chosen.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/css/main.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/css/uikit.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/000.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/addfoto.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/base.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/cab.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/closeusl.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/cloud.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/cross.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/del_b.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/donebron.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/edit_b.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/exit.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/ic-time.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/icon-right.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/info.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/newbron.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/note.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/smena.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/stat.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/time.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/up.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/user.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/image/userico.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/js/bootstrap.bundle.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/js/bootstrap.esm.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/js/bootstrap.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/js/chosen.jquery.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/js/jquery-3.6.0.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/js/popper.minjs.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/js/uikit-icons.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/js/uikit.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/static/js/uikit.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/add/head.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/add/menu.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/add/menu_cabinet.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/admin/admin_menu.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/admin/index.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/index.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/js.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/auth.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/index.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/payment.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/paytable.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/smena.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/smena_new.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/stats_all.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/stats_average.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/stats_profit.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/stats_school.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/user.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/users_list.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templatetags/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/templatetags/custom_filters.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/tests.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/urls.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/views/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/booking/views/views.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/db.sqlite3" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/manage.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/mycrm/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/mycrm/asgi.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/mycrm/settings.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/mycrm/urls.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mycrm/mycrm/wsgi.py" afterDir="false" />
+    <list default="true" id="9e1c6f41-7a20-462d-a34f-dc63ee92fdba" name="Changes" comment="Start_commit">
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/management/commands/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/management/commands/add_reservation_types_to_room.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/management/commands/add_service_groups.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/management/commands/clean_contenttypes.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/management/commands/create_specialist.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/management/commands/generate_model_graph.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/management/commands/link_services_to_groups.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/management/commands/migrate_legacy_services.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/management/commands/randomize_service_types.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0025_migrate_dates.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0038_delete_authtable.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0039_delete_activeclient.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0040_reservationtype.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0041_alter_reservation_reservation_type_id.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0042_rename_reservation_type_id_reservation_reservation_type.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0043_specialist_service_specialistserviceprice_and_more.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0044_rename_user_client_alter_client_table.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0045_specialist_client.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0046_alter_client_options_remove_client_color_and_more.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0047_clientgroup_client_group.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0048_rename_email_client_name.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0049_alter_client_comment_alter_client_name_and_more.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0050_alter_reservation_client_group_id.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0051_rename_client_group_id_reservation_client_group.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0052_alter_reservation_specialist_id.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0053_rename_specialist_id_reservation_specialist.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0054_alter_reservation_client_id.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0055_rename_client_id_reservation_client.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0056_alter_room_options_alter_room_table.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0057_alter_room_options.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0058_remove_room_idoblast_remove_room_period_and_more.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0059_alter_room_hourend_alter_room_hourstart_and_more.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0060_room_reservation_type.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0061_alter_reservation_room_id_and_more.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0062_rename_room_id_reservation_room.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0063_specialist_reservation_type.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0064_delete_coloredblock.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0065_delete_connectuser.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0066_delete_gruslugi.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0067_delete_log.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0068_remove_specialist_services.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0069_specialist_services.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0070_remove_specialist_services.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0071_tariffunit.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0072_delete_specialistserviceprice.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0073_room_service.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0074_alter_tariffunit_options_alter_tariffunit_table.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0075_delete_managersmena.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0076_delete_oblast.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0077_servicegroup_subscription_delete_abon_service_group.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/migrations/0078_remove_service_reservation_type_and_more.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/services.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/add/menu2.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/add/oblast_change.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/add/scripts.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/modal_create_booking.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/modal_edit_booking.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/user_index.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/views/create_booking.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/views/menu2.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking/views/user_index.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/booking_graph.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/db1411.sqlite3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mycrm/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/mycrm/booking/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/static/css/bootstrap-grid.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/static/css/bootstrap-reboot.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/static/css/bootstrap-utilities.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/static/css/bootstrap.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/static/css/chosen.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/static/css/main.css" beforeDir="false" afterPath="$PROJECT_DIR$/mycrm/booking/static/css/main.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/static/js/bootstrap.bundle.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/static/js/bootstrap.esm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/static/js/bootstrap.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/static/js/chosen.jquery.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/static/js/jquery-3.6.0.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/templates/booking/add/head.html" beforeDir="false" afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/add/head.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/templates/booking/add/menu.html" beforeDir="false" afterPath="$PROJECT_DIR$/mycrm/booking/templates/booking/add/menu.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/templates/booking/user/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/templatetags/custom_filters.py" beforeDir="false" afterPath="$PROJECT_DIR$/mycrm/booking/templatetags/custom_filters.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/mycrm/booking/tests.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/mycrm/booking/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/views/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/mycrm/booking/views/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/booking/views/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/mycrm/booking/views_all.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/mycrm/db.sqlite3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mycrm/mycrm/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/mycrm/mycrm/settings.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -134,22 +113,30 @@
   &quot;associatedIndex&quot;: 0
 }</component>
   <component name="ProjectId" id="2nTsWiMHttDnpogD5PItYtSbySY" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/Andrei/PycharmProjects/blstd.org/mycrm/booking/static/css&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_ADD_EXTERNAL_FILES": "true",
+    "DefaultHtmlFileTemplate": "HTML File",
+    "Python.tests.executor": "Run",
+    "Python.tweaks.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "C:/Users/Andrei/PycharmProjects/blstd.org/mycrm/booking/management/commands",
+    "settings.editor.selected.configurable": "reference.settingsdialog.IDE.editor.colors.Markdown"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\Andrei\PycharmProjects\blstd.org\mycrm\booking\management\commands" />
+      <recent name="C:\Users\Andrei\PycharmProjects\blstd.org\mycrm" />
       <recent name="C:\Users\Andrei\PycharmProjects\blstd.org\mycrm\booking\static\css" />
       <recent name="C:\Users\Andrei\PycharmProjects\blstd.org\mycrm\booking\static\js" />
     </key>
@@ -157,6 +144,58 @@
       <recent name="C:\Users\Andrei\PycharmProjects\blstd.org\mycrm\booking\views" />
       <recent name="C:\Users\Andrei\PycharmProjects\blstd.org\mycrm\booking" />
     </key>
+  </component>
+  <component name="RunManager" selected="Python.tests">
+    <configuration name="tests" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="pythonProject" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/mycrm/booking" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/mycrm/booking/tests.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="tweaks" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="pythonProject" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/mycrm/booking" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/mycrm/booking/tweaks.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.tests" />
+        <item itemvalue="Python.tweaks" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -174,6 +213,20 @@
       <option name="presentableId" value="Default" />
       <updated>1729008433503</updated>
     </task>
+    <task id="LOCAL-00001" summary="Start_commit">
+      <option name="closed" value="true" />
+      <created>1730460937037</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1730460937037</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
+    <MESSAGE value="Start_commit" />
+    <option name="LAST_COMMIT_MESSAGE" value="Start_commit" />
   </component>
 </project>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+{% load static %}
+{% load custom_filters %}
+<html lang="ru">
+<head>
+    <title>CRM</title>
+    {% include 'booking/add/head.html' %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.js"></script>
+
+
+    <style>
+        .highlight-cell.available{
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            border: 1px dashed #ccccc;
+            width: 50px;
+            height: 40px;
+            background-color: transparent;
+            border: 1px dashed #cccccc;
+            }
+
+         .highlight-cell.booked{
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            border: 1px dashed #ccccc;
+            width: 50px;
+            height: 40px;
+            background-color: #FFD700;
+            border: 1px dashed #cccccc;
+            }
+
+        .highlight-cell:hover {
+            cursor: pointer;
+            background-color: #e0e0e0 !important; /* насыщенный серый фон */
+            border: 1px solid #666 !important; /* четкие границы со всех сторон */
+        }
+        .highlight-cell.border-right {
+            border-right: 1px solid #666;
+        }
+        .highlight-cell.selected {
+            background-color: #b3d9ff; /* Синий фон для выделенных ячеек */
+            border: 1px solid #3399ff; /* Яркая граница */
+        }
+    </style>
+
+</head>
+<body>
+
+{% include 'booking/add/menu.html' %}
+{% include 'booking/add/menu2.html' %}
+
+<!--<div class="container">-->
+<!--    <div class="row">-->
+<!--        <div class="col-md-12 mt-4">-->
+<!--            {% include 'booking/add/oblast_change.html' %}-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+
+
+<p id="bookings_in_range" style="display: none;">{{ bookings_in_range }}</p>
+
+
+<div class="container-fluid" style="padding-bottom: 20px;">
+    <div class="row mt-4" style="padding: 0; margin: 0;">
+        <div class="col-md-12">
+            <div style="width: 100%; margin: 0 auto;">
+                {% for day in days_of_month %}
+                <div>
+                    <br>
+                    <hr style="width: 100%; background: none; padding-top: 50px;">
+                    <a name="date={{ day.date }}"></a>
+                    <div class="container_block">
+                        <div class="row">
+                            <div class="col-12">
+                                <div>
+                                    <h5 class="p0" style="white-space: nowrap; margin-bottom: 5px;">
+                                        {{ day.date|date:"d E" }}
+                                    </h5>
+                                    <span class="text_day_button" data-bs-toggle="modal" data-bs-target="#exampleModal3"
+                                          todaysec="{{ day.timestamp }}">
+                                            {{ day.date|date:"l" }}
+                                    </span>
+
+                                    <div class="table-responsive mt-3">
+                                        <table id="table-{{ forloop.counter }}"
+                                               class="table table-bordered text-center"
+                                               style="width: 100%; border-collapse: collapse;">
+                                            <thead>
+                                            <tr>
+                                                <th style="border: none;"></th>
+                                                {% for block in time_blocks %}
+                                                <th colspan="4"
+                                                    style="text-align: left; padding-left: 10px; border: none;">
+                                                    {{ block.time }}
+                                                </th>
+                                                {% endfor %}
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for room in rooms %}
+                                            <tr id="row-{{ forloop.counter }}">
+                                                <td style="border-right: 2px solid #666; border-left: none;
+                                                white-space: nowrap; overflow: hidden; max-width: 150px;
+                                                text-overflow: ellipsis;"
+                                                    title="{{ room.name }}">
+                                                    {{ room.name }}
+                                                </td>
+
+                                                {% for block in time_blocks %}
+                                                {% for i in "1234" %}
+                                                {% with block_time=block.time|time_add:forloop.counter0|str_to_time %}
+                                                {% with full_datetime=day.date|combine_date_time:block_time %}
+
+                                                <td class="highlight-cell available {% if forloop.counter0|add:1 == 4 %}border-right{% endif %}"
+                                                    full_datetime="{{ full_datetime|date:'Y-m-d H:i:s' }}"
+                                                    room_name="{{ room.name }}"
+                                                    room_id="{{ room.id }}"
+                                                    title="{{ block.time|time_add:forloop.counter0 }}"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#createBookingModal"
+                                                    onclick="openModal(
+                                                    `{{ day.date|date:'d E Y' }}`,
+                                                    `{{ block.time|time_add:forloop.counter0 }}`,
+                                                    `{{ room.name }}`,
+                                                    `{{ time_blocks_json|escapejs }}`, `{{ rooms_json|escapejs }}`,
+                                                    `{{ reservation_types_json|escapejs }}`,
+                                                    `{{ specialists_json|escapejs }}`,
+                                                     this
+                                                    )">
+                                                </td>
+                                                {% endwith %}
+                                                {% endwith %}
+                                                {% endfor %}
+                                                {% endfor %}
+                                            </tr>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "booking/user/modal_create_booking.html" %}
+{% include "booking/user/modal_edit_booking.html" %}
+
+{% include 'booking/add/scripts.html' %}
+
+<script>
+    $(document).ready(function() {
+        // Обработка формы создания брони
+        $('#bookingForm').on('submit', function (e) {
+            e.preventDefault();
+            const formData = $(this).serialize();
+            
+            $.ajax({
+                type: 'POST',
+                url: '{% url "create_booking" %}',
+                data: formData,
+                success: function (response) {
+                    if (response.success) {
+                        $('#createBookingModal').modal('hide');
+                        Swal.fire({
+                            title: 'Успех!',
+                            text: 'Бронь успешно создана!',
+                            icon: 'success',
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                        
+                        location.reload();
+                    } else {
+                        Swal.fire({
+                            title: 'Ошибка!',
+                            text: "Ошибка при создании брони: " + response.error,
+                            icon: 'error',
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.log("Ошибка при отправке запроса:", error);
+                    Swal.fire({
+                        title: 'Ошибка!',
+                        text: 'Не удалось создать бронь. Пожалуйста, попробуйте еще раз.',
+                        icon: 'error',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                }
+            });
+        });
+
+        // Обновление забронированных ячеек
+        var bookingsInRange = JSON.parse(document.getElementById('bookings_in_range').textContent);
+
+        function updateBookedCells() {
+            var cells = document.querySelectorAll('td[room_name]');
+            cells.forEach(function(cell) {
+                var roomName = cell.getAttribute('room_name');
+                var cellDatetime = cell.getAttribute('full_datetime');
+
+                bookingsInRange.forEach(function(booking) {
+                    if (booking.room_name === roomName && booking.blocks_datetime_range.includes(cellDatetime)) {
+                        cell.classList.add('highlight-cell', 'booked');
+                        cell.setAttribute('data-bs-target', '#editBookingModal');
+                        cell.setAttribute('booking-id', booking.id);
+                        cell.setAttribute('onclick', 'openEditModal(this)');
+                    }
+                });
+            });
+        }
+
+        updateBookedCells();
+
+        // Назначение атрибутов parent_table_id и parent_row_id
+        function assignParentAttributes() {
+            var tables = document.querySelectorAll('table');
+            tables.forEach(function(table) {
+                var tableId = table.id;
+                var rows = table.querySelectorAll('tr');
+                rows.forEach(function(row) {
+                    row.setAttribute('parent_table_id', tableId);
+                    var cells = row.querySelectorAll('td');
+                    cells.forEach(function(cell) {
+                        cell.setAttribute('parent_table_id', tableId);
+                        cell.setAttribute('parent_row_id', row.id);
+                        var tableRowSelectors = `#${tableId} #${row.id} td`;
+                        cell.setAttribute('table_row_selectors', tableRowSelectors);
+                    });
+                });
+            });
+        }
+
+        assignParentAttributes();
+    });
+</script>
+
+</body>
+</html>

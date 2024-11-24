@@ -1,0 +1,170 @@
+{% load custom_filters %}
+<!-- Модальное окно редактирования брони -->
+<div class="modal fade" id="editBookingModal" tabindex="-1" aria-labelledby="editBookingModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog"
+         style="top: 0; left: 0; position: absolute; margin: 0; min-width: 800px; max-width: 800px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editBookingLabel"
+                    style="display: inline-block; white-space: nowrap; overflow: hidden;
+                    text-overflow: ellipsis; max-width: 100%;">
+                    Редактировать бронь
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bookingForm">
+                    <!-- ID брони -->
+                    <div class="mb-3">
+                        <label class="form-label" id="BookingIdLabel">Редактируем бронь с ID</label>
+                    </div>
+
+                    <!-- Поля "Клиент" и "Статус клиента" -->
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label for="bookingClientName">Клиент</label>
+                            <select id="bookingClientName" class="form-control" disabled></select>
+                        </div>
+
+                        <div class="col">
+                            <label for="bookingClientStatus">Статус клиента</label>
+                            <select id="bookingClientStatus" class="form-control" disabled>
+                                <option selected>Действующий клиент</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col">
+                            <span id="clientAbons">Абонементы и сертификаты + новый <br>7 из 10 ч, 298 руб Ш 6дн</span>
+                        </div>
+
+                        <div class="col">
+                            <span id="clientInfo">Информация о клиенте:</span>
+                        </div>
+                    </div>
+
+                    <!-- Выпадающий список "Тип брони" -->
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label for="bookingType" class="form-label">Тип брони</label>
+                            <select class="form-select" id="bookingType" name="bookingType">
+                                <option selected value="0">Сделайте выбор</option>
+                                <option disabled value="0">- Услуги школы -</option>
+                                {% for user in users %}
+                                {% if user.role == 'usluga_school' %}
+                                <option value="{{ user.id }}">{{ user.email }}</option>
+                                {% endif %}
+                                {% endfor %}
+                                <option disabled value="0">- Услуги студии -</option>
+                                {% for user in users %}
+                                {% if user.role == 'usluga_studia' %}
+                                <option value="{{ user.id }}">{{ user.email }}</option>
+                                {% endif %}
+                                {% endfor %}
+                                <option disabled value="0">- Сотрудники -</option>
+                                {% for user in users %}
+                                {% if user.role == 'prepod' %}
+                                <option value="{{ user.id }}">{{ user.email }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Выпадающие списки "Зал", "Дата" и "Длительность" -->
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label for="bookingRoom" class="form-label" style="white-space: nowrap; overflow: hidden;">
+                                Зал
+                            </label>
+                            <select class="form-select" id="bookingRoom" name="bookingRoom">
+                                {% for room in rooms %}
+                                <option value="{{ room.id }}">{{ room.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col">
+                            <label for="bookingDate" class="form-label" style="white-space: nowrap; overflow: hidden;">
+                                Дата
+                            </label>
+                            <input type="date" class="form-control" id="bookingDate" name="bookingDate">
+                        </div>
+
+                        <div class="col">
+                            <label for="bookingDuration" class="form-label"
+                                   style="white-space: nowrap; overflow: hidden;">
+                                Длительность
+                            </label>
+                            <select class="form-select" id="bookingDuration" name="bookingDuration">
+                                {% for duration in booking_durations %}
+                                <option value="{{ duration }}">{{ duration }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label for="comment" class="form-label"></label>
+                            <textarea class="form-control" id="comment" name="comment"
+                                      placeholder="Комментарий"></textarea>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="dateField" name="date" value="">
+                    <input type="hidden" id="timeField" name="time" value="">
+                    <input type="hidden" id="roomNameField" name="room_name" value="">
+
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary" form="bookingForm" id="deleteBookingButton">
+                    Удалить бронь
+                </button>
+                <button type="submit" class="btn btn-primary" form="bookingForm" id="escapeBookingButton">
+                    Отмена брони
+                </button>
+                <button type="submit" class="btn btn-primary" form="bookingForm" id="editBookingButton">
+                    Редактировать
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Функция для открытия модального окна в заполненной ячейке (редактирование бронирования)
+    function openEditModal(element) {
+        var bookingsInRange = JSON.parse(document.getElementById('bookings_in_range').textContent);
+
+        const bookingId = element.getAttribute('booking-id');
+        const BookingIdLabel = document.getElementById('BookingIdLabel');
+        BookingIdLabel.textContent = `Редактируем бронь с ID ${bookingId}`;
+
+        bookingsInRange.forEach(function(booking) {
+
+                        if (booking.id === parseInt(bookingId, 10)) {
+                        const bookingClientName = booking.client_name;
+                        const bookingClientInfo = booking.client_comment;
+
+                        const bookingClientNameSelect = document.getElementById('bookingClientName');
+                        const newOption = document.createElement('option');
+                        newOption.textContent = bookingClientName;
+                        newOption.selected = true;
+                        bookingClientNameSelect.appendChild(newOption);
+
+                        const bookingClientInfoSpan = document.getElementById('clientInfo');
+                        bookingClientInfoSpan.textContent = `Информация о клиенте: ${bookingClientInfo}`;
+
+                        const bookingRoomSelect = document.getElementById('bookingRoom');
+                        bookingRoomSelect.value = booking.idroom;
+                        console.log('booking.idroom', booking.idroom)
+
+                        }
+            });
+        }
+</script>
