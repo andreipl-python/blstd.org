@@ -273,13 +273,21 @@
             cells.forEach(function(cell) {
                 var roomName = cell.getAttribute('room_name');
                 var cellDatetime = cell.getAttribute('full_datetime');
+                var cellTime = new Date(cellDatetime);
 
                 bookingsInRange.forEach(function(booking) {
-                    if (booking.room_name === roomName && booking.blocks_datetime_range.includes(cellDatetime)) {
-                        cell.classList.add('highlight-cell', 'booked');
-                        cell.setAttribute('data-bs-target', '#editBookingModal');
-                        cell.setAttribute('booking-id', booking.id);
-                        cell.setAttribute('onclick', 'openEditModal(this)');
+                    if (booking.room_name === roomName) {
+                        // Получаем начальное и конечное время бронирования
+                        var startTime = new Date(booking.blocks_datetime_range[0]);
+                        var endTime = new Date(booking.blocks_datetime_range[booking.blocks_datetime_range.length - 1]);
+                        
+                        // Проверяем, что время ячейки >= начала и < конца
+                        if (cellTime >= startTime && cellTime < endTime) {
+                            cell.classList.add('highlight-cell', 'booked');
+                            cell.setAttribute('data-bs-target', '#editBookingModal');
+                            cell.setAttribute('booking-id', booking.id);
+                            cell.setAttribute('onclick', 'openEditModal(this)');
+                        }
                     }
                 });
             });
