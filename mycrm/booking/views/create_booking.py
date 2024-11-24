@@ -3,29 +3,58 @@ import dateparser
 
 from datetime import datetime, timedelta
 from typing import Tuple
-
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q
 
-from booking.models import Reservation, Room
+from booking.models import Reservation, Room, Service, Specialist
 
 
-def parse_data_and_calculate_end_time(date: str, time: str, booking_duration: str) -> tuple[str, str, str, int, int]:
-    """Функция для парсинга даты, перевода стартового времени брони и вычисления конечного"""
+def parse_datetime(date: str, time: str) -> datetime:
+    """Функция для парсинга даты и времени в объект datetime"""
     date_obj = dateparser.parse(date, languages=['ru'])
-    day, mon, year = str(date_obj.day), str(date_obj.month), str(date_obj.year)
-
     time_obj = datetime.strptime(time, '%H:%M')
-    combined_datetime = datetime.combine(date_obj.date(), time_obj.time())
-    timestart = int(combined_datetime.timestamp())
+    return datetime.combine(date_obj.date(), time_obj.time())
 
-    duration_hours, duration_minutes = map(int, booking_duration.split(':'))
-    duration = timedelta(hours=duration_hours, minutes=duration_minutes)
 
-    end_datetime = combined_datetime + duration
-    timeend = int(end_datetime.timestamp())
+def check_room_availability(room: Room, start_datetime: datetime, end_datetime: datetime) -> bool:
+    """Проверка доступности помещения"""
+    # Проверяем рабочее время
+    start_time = start_datetime.time()
+    end_time = end_datetime.time()
+    
+    # Преобразуем строки времени в объекты time
+    room_start = datetime.strptime(str(room.hourstart), '%H:%M:%S').time()
+    room_end = datetime.strptime(str(room.hourend), '%H:%M:%S').time()
+    
+    if start_time < room_start or end_time > room_end:
+        raise ValidationError("Время бронирования выходит за рамки рабочего времени помещения")
 
-    return day, mon, year, timestart, timeend
+    # Проверяем пересечение с другими бронями
+    overlapping_bookings = Reservation.objects.filter(
+        room=room,
+        datetimestart__lt=end_datetime,
+        datetimeend__gt=start_datetime
+    )
+    if overlapping_bookings.exists():
+        raise ValidationError("На это время уже есть бронирование")
+
+    return True
+
+
+def check_specialist_availability(specialist: Specialist, start_datetime: datetime, end_datetime: datetime) -> bool:
+    """Проверка доступности специалиста"""
+    overlapping_bookings = Reservation.objects.filter(
+        specialist=specialist,
+        datetimestart__lt=end_datetime,
+        datetimeend__gt=start_datetime
+    )
+    if overlapping_bookings.exists():
+        raise ValidationError("Специалист уже занят в это время")
+
+    return True
 
 
 @csrf_exempt
@@ -33,68 +62,78 @@ def create_booking_view(request):
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Неверный метод запроса"})
 
-    # print(f'Тело запроса: {request.body}')
-    service_types = request.POST.getlist('serviceType')
-    if service_types:
-        service_types = [int(service_type) for service_type in service_types]
-
-    booking_type = int(request.POST.get('bookingType'))
-    specialist = int(request.POST.get('specialist'))
-    client = int(request.POST.get('client'))
-    booking_count = int(request.POST.get('bookingCount'))
-    booking_duration = request.POST.get('bookingDuration')
-    comment = request.POST.get('comment')
-    date = request.POST.get('date')
-    time = request.POST.get('time')
-    room_name = request.POST.get('room_name')
-    status = 0  # По умолчанию статус новой брони
-    hide = 0  # Пример, если нет других условий для этого поля
-    pay = ""  # Если нет данных для оплаты на момент создания
-
-    required_fields = {
-        'booking_type': "Не указан тип брони",
-        'specialist': "Не указан специалист",
-        'client': "Не выбран клиент"
-    }
-
-    # print(f'Локальные переменные: {locals()}')
-    for field, error_message in required_fields.items():
-        value = locals().get(field)
-        if not value:
-            return JsonResponse({"success": False, "error": error_message})
-
     try:
-        room = Room.objects.get(name=room_name)
-        room_id = room.id
-        period = room.period
-    except Room.DoesNotExist:
-        return JsonResponse({"success": False, "error": "Комната с указанным именем не найдена"})
+        print("Request POST data:", request.POST)
+        # Получаем и валидируем данные
+        service_types = request.POST.getlist('serviceType')
+        booking_type = int(request.POST.get('bookingType'))
+        specialist_id = request.POST.get('specialist')
+        specialist_id = int(specialist_id) if specialist_id else None
+        client_id = int(request.POST.get('client'))
+        booking_duration = request.POST.get('bookingDuration')
+        comment = request.POST.get('comment', '')
+        room_id = int(request.POST.get('room_id'))
+        full_datetime = request.POST.get('full_datetime')
+        
+        print("Received full_datetime:", full_datetime)
 
-    day, mon, year, timestart, timeend = parse_data_and_calculate_end_time(date, time, booking_duration)
-    hash_value = hashlib.md5(f"{date}-{time}-{specialist}-{client}".encode()).hexdigest()
+        if not full_datetime:
+            return JsonResponse({"success": False, "error": "Не указано время начала брони"})
 
-    print(request.body)
+        # Проверяем обязательные поля
+        if not all([booking_type, client_id, booking_duration, room_id]):
+            return JsonResponse({"success": False, "error": "Не все обязательные поля заполнены"})
 
-    bron_record = Reservation.objects.create(
-        hash=hash_value,
-        day=day,
-        mon=mon,
-        year=year,
-        timestart=timestart,
-        timeend=timeend,
-        idprepod=specialist,
-        iduser=client,
-        idroom=room_id,
-        period=period,
-        hide=hide,
-        status=status,
-        pay=pay,
-        numbron=int(booking_count),
-        comment=comment
-    )
+        # Получаем объекты из базы
+        try:
+            room = Room.objects.get(id=room_id)
+            specialist = None
+            if specialist_id:
+                specialist = Specialist.objects.get(id=specialist_id)
+        except Room.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Комната не найдена"})
+        except Specialist.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Специалист не найден"})
 
-    print(f"ID созданной брони: {bron_record.id}")
+        # Вычисляем время начала и конца брони
+        start_datetime = datetime.strptime(full_datetime, '%Y-%m-%d %H:%M:%S')
+        duration_hours, duration_minutes = map(int, booking_duration.split(':'))
+        end_datetime = start_datetime + timedelta(hours=duration_hours, minutes=duration_minutes)
 
-    return JsonResponse({"success": True})
+        # Проверяем доступность
+        try:
+            check_room_availability(room, start_datetime, end_datetime)
+            if specialist:
+                check_specialist_availability(specialist, start_datetime, end_datetime)
+        except ValidationError as e:
+            return JsonResponse({"success": False, "error": str(e)})
 
+        # Создаем бронь в транзакции
+        with transaction.atomic():
+            # Создаем запись о брони
+            reservation = Reservation.objects.create(
+                datetimestart=start_datetime,
+                datetimeend=end_datetime,
+                specialist=specialist,
+                client_id=client_id,
+                room=room,
+                reservation_type_id=booking_type,
+                status=0,  # PENDING
+                comment=comment
+            )
 
+            # Добавляем услуги
+            if service_types:
+                services = Service.objects.filter(id__in=service_types)
+                reservation.services.add(*services)
+
+        return JsonResponse({
+            "success": True,
+            "reservation_id": reservation.id
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": f"Произошла ошибка при создании брони: {str(e)}"
+        })

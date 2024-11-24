@@ -16,7 +16,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
             </div>
             <div class="modal-body">
-                <form id="bookingForm">
+                <form id="bookingForm" action="javascript:void(0);" method="POST">
+                    {% csrf_token %}
                     <!-- Время начала брони -->
                     <div class="mb-3">
                         <label class="form-label" id="fromtimeBookingLabel">Бронь с</label>
@@ -24,6 +25,8 @@
                         <input type="hidden" id="timeField" name="time">
                         <input type="hidden" id="roomNameField" name="room_name">
                         <input type="hidden" id="maxEndTime" name="maxEndTime">
+                        <input type="hidden" id="fullDatetimeField" name="full_datetime">
+                        <input type="hidden" id="roomIdField" name="room_id">
                     </div>
 
                     <!-- Выпадающий список "Тип брони" -->
@@ -164,6 +167,8 @@
         document.getElementById('dateField').value = date;
         document.getElementById('timeField').value = time;
         document.getElementById('roomNameField').value = room_name;
+        document.getElementById('fullDatetimeField').value = cell.getAttribute('full_datetime');
+        document.getElementById('roomIdField').value = cell.getAttribute('room_id');
 
         // Сброс и скрытие комментария клиента при открытии модального окна
         $('#clientComment').hide();
@@ -544,8 +549,8 @@
         fromtimeBookingLabel.textContent = `Бронь с ${startTime} до ${endTime}`;
     }
 
-    // Используем делегирование событий через родительский элемент формы
-    $('#bookingForm').on('change', '#bookingDuration', function() {
+    // Обработчик изменения длительности бронирования
+    $('#bookingDuration').on('change', function() {
         const startTime = document.getElementById('timeField').value;
         console.log('Duration changed:', $(this).val());
         updateBookingLabel(startTime);

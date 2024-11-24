@@ -157,47 +157,112 @@
 <script>
     $(document).ready(function() {
         // Обработка формы создания брони
-        $('#bookingForm').on('submit', function (e) {
+        $('#bookingForm').on('submit', function(e) {
             e.preventDefault();
-            const formData = $(this).serialize();
             
+            const bookingType = $('#bookingType').val();
+            const client = $('#client').val();
+            const specialist = $('#specialist').val();
+            const duration = $('#bookingDuration').val();
+
+            // Проверяем обязательные поля
+            if (!bookingType || !client || !duration) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Ошибка',
+                    text: 'Заполните все обязательные поля'
+                });
+                return false;
+            }
+
+            // Получаем full_datetime
+            const fullDatetime = $('#fullDatetimeField').val();
+            if (!fullDatetime) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Ошибка',
+                    text: 'Не указано время начала брони'
+                });
+                return false;
+            }
+
+            // Показываем индикатор загрузки
+            Swal.fire({
+                title: 'Создание брони...',
+                text: 'Пожалуйста, подождите',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Собираем данные формы
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+            formData.append('bookingType', bookingType);
+            formData.append('client', client);
+            if (specialist) {
+                formData.append('specialist', specialist);
+            }
+            formData.append('bookingDuration', duration);
+            formData.append('full_datetime', fullDatetime);
+            formData.append('room_id', $('#roomIdField').val());
+            formData.append('comment', $('#comment').val());
+
+            // Добавляем выбранные услуги
+            const selectedServices = $('#serviceType').val();
+            if (selectedServices && selectedServices.length > 0) {
+                selectedServices.forEach(service => {
+                    formData.append('serviceType', service);
+                });
+            }
+
+            // Отправляем запрос
             $.ajax({
-                type: 'POST',
                 url: '{% url "create_booking" %}',
+                type: 'POST',
                 data: formData,
-                success: function (response) {
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
                     if (response.success) {
+                        // Закрываем модальное окно
                         $('#createBookingModal').modal('hide');
+                        
+                        // Показываем сообщение об успехе
                         Swal.fire({
-                            title: 'Успех!',
-                            text: 'Бронь успешно создана!',
                             icon: 'success',
+                            title: 'Бронь создана успешно!',
                             showConfirmButton: false,
                             timer: 1500
+                        }).then(() => {
+                            // Обновляем страницу для отображения новой брони
+                            location.reload();
                         });
-                        
-                        location.reload();
                     } else {
                         Swal.fire({
-                            title: 'Ошибка!',
-                            text: "Ошибка при создании брони: " + response.error,
                             icon: 'error',
-                            showConfirmButton: false,
-                            timer: 2000
+                            title: 'Ошибка',
+                            text: response.error || 'Произошла ошибка при создании брони'
                         });
                     }
                 },
-                error: function (xhr, status, error) {
-                    console.log("Ошибка при отправке запроса:", error);
+                error: function(xhr, status, error) {
                     Swal.fire({
-                        title: 'Ошибка!',
-                        text: 'Не удалось создать бронь. Пожалуйста, попробуйте еще раз.',
                         icon: 'error',
-                        showConfirmButton: false,
-                        timer: 2000
+                        title: 'Ошибка',
+                        text: 'Произошла ошибка при отправке запроса'
                     });
+                    console.error('Error:', error);
                 }
             });
+
+            return false;
         });
 
         // Обновление забронированных ячеек

@@ -96,6 +96,9 @@ class Reservation(models.Model):
                                  choices=ReservationStatus.choices(), default=ReservationStatus.PENDING.value,
                                  verbose_name="Статус брони", null=False, blank=False)
     comment = models.TextField(help_text='Комментарий к брони', verbose_name='Комментарий', null=True)
+    services = models.ManyToManyField('Service', related_name='reservations',
+                                    help_text='Услуги, включенные в бронь',
+                                    verbose_name='Услуги', blank=True)
 
     class Meta:
         db_table = 'reservations'
