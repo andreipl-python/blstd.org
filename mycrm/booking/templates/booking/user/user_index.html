@@ -11,35 +11,67 @@
 
 
     <style>
-        .highlight-cell.available{
-            transition: background-color 0.2s ease, border-color 0.2s ease;
-            border: 1px dashed #ccccc;
+        .highlight-cell.available {
+            transition: all 0.3s ease;
             width: 50px;
             height: 40px;
             background-color: transparent;
             border: 1px dashed #cccccc;
-            }
+            position: relative;
+        }
 
-         .highlight-cell.booked{
-            transition: background-color 0.2s ease, border-color 0.2s ease;
-            border: 1px dashed #ccccc;
-            width: 50px;
-            height: 40px;
-            background-color: #FFD700;
-            border: 1px dashed #cccccc;
-            }
+        .highlight-cell.booked {
+            position: relative;
+            padding: 0;
+            margin: 0;
+            border: none !important;
+            overflow: visible;
+        }
+
+        .booking-block {
+            position: absolute;
+            top: 5px;
+            height: 30px;
+            background: linear-gradient(135deg, 
+                #a960ee 0%, 
+                #90a0f7 100%
+            );
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 9px;
+            transition: all 0.2s ease;
+            z-index: 4;
+            cursor: pointer;
+            box-shadow: 
+                inset 0 1px 2px rgba(255, 255, 255, 0.8),
+                0 0 10px rgba(169, 96, 238, 0.5);
+        }
+
+        .booking-block:hover {
+            background: linear-gradient(135deg, 
+                #b76aff 0%, 
+                #a960ee 50%,
+                #90a0f7 100%
+            );
+            box-shadow: 
+                inset 0 1px 3px rgba(255, 255, 255, 0.9),
+                0 0 20px rgba(169, 96, 238, 0.8),
+                0 0 30px rgba(183, 106, 255, 0.4);
+            transform: translateY(-1px);
+        }
 
         .highlight-cell:hover {
             cursor: pointer;
-            background-color: #e0e0e0 !important; /* насыщенный серый фон */
-            border: 1px solid #666 !important; /* четкие границы со всех сторон */
+            background-color: #f5f5f5;
+            border: 1px solid #666;
         }
+
         .highlight-cell.border-right {
             border-right: 1px solid #666;
         }
+
         .highlight-cell.selected {
-            background-color: #b3d9ff; /* Синий фон для выделенных ячеек */
-            border: 1px solid #3399ff; /* Яркая граница */
+            background-color: #b3d9ff;
+            border: 1px solid #3399ff;
         }
     </style>
 
@@ -57,9 +89,7 @@
 <!--    </div>-->
 <!--</div>-->
 
-
 <p id="bookings_in_range" style="display: none;">{{ bookings_in_range }}</p>
-
 
 <div class="container-fluid" style="padding-bottom: 20px;">
     <div class="row mt-4" style="padding: 0; margin: 0;">
@@ -270,26 +300,75 @@
 
         function updateBookedCells() {
             var cells = document.querySelectorAll('td[room_name]');
+            
+            // Сначала очищаем все ячейки
             cells.forEach(function(cell) {
-                var roomName = cell.getAttribute('room_name');
-                var cellDatetime = cell.getAttribute('full_datetime');
-                var cellTime = new Date(cellDatetime);
+                cell.classList.remove('highlight-cell', 'booked');
+                cell.classList.add('highlight-cell', 'available');
+                // Удаляем старый booking-block если есть
+                const oldBlock = cell.querySelector('.booking-block');
+                if (oldBlock) {
+                    oldBlock.remove();
+                }
+            });
 
-                bookingsInRange.forEach(function(booking) {
-                    if (booking.room_name === roomName) {
-                        // Получаем начальное и конечное время бронирования
-                        var startTime = new Date(booking.blocks_datetime_range[0]);
-                        var endTime = new Date(booking.blocks_datetime_range[booking.blocks_datetime_range.length - 1]);
+            // Обрабатываем бронирования
+            bookingsInRange.forEach(function(booking) {
+                var startTime = new Date(booking.blocks_datetime_range[0]);
+                var endTime = new Date(booking.blocks_datetime_range[booking.blocks_datetime_range.length - 1]);
+                
+                // Находим все ячейки для текущего бронирования
+                var bookingCells = [];
+                var firstCell = null;
+                var width = 0;
+                
+                cells.forEach(function(cell) {
+                    if (cell.getAttribute('room_name') === booking.room_name) {
+                        var cellTime = new Date(cell.getAttribute('full_datetime'));
                         
-                        // Проверяем, что время ячейки >= начала и < конца
                         if (cellTime >= startTime && cellTime < endTime) {
-                            cell.classList.add('highlight-cell', 'booked');
+                            cell.classList.remove('available');
+                            cell.classList.add('booked');
+                            
+                            // Добавляем атрибуты для модального окна
                             cell.setAttribute('data-bs-target', '#editBookingModal');
                             cell.setAttribute('booking-id', booking.id);
                             cell.setAttribute('onclick', 'openEditModal(this)');
+                            
+                            if (!firstCell) {
+                                firstCell = cell;
+                            }
+                            width += cell.offsetWidth;
+                            bookingCells.push(cell);
                         }
                     }
                 });
+                
+                // Если нашли ячейки для бронирования
+                if (firstCell && bookingCells.length > 0) {
+                    // Создаем один общий блок бронирования
+                    const bookingBlock = document.createElement('div');
+                    bookingBlock.className = 'booking-block';
+                    bookingBlock.style.width = (width - 2) + 'px'; // -2px для небольшого отступа
+                    
+                    // Добавляем блок в первую ячейку
+                    firstCell.appendChild(bookingBlock);
+                    
+                    // Добавляем обработчик события для всех ячеек
+                    bookingCells.forEach(function(cell) {
+                        cell.addEventListener('mouseover', function() {
+                            bookingBlock.style.transform = 'translateY(-1px)';
+                            bookingBlock.style.boxShadow = 'inset 0 1px 3px rgba(255, 255, 255, 0.9), 0 0 20px rgba(169, 96, 238, 0.8), 0 0 30px rgba(183, 106, 255, 0.4)';
+                            bookingBlock.style.background = 'linear-gradient(135deg, #b76aff 0%, #a960ee 50%, #90a0f7 100%)';
+                        });
+                        
+                        cell.addEventListener('mouseout', function() {
+                            bookingBlock.style.transform = '';
+                            bookingBlock.style.boxShadow = 'inset 0 1px 2px rgba(255, 255, 255, 0.8), 0 0 10px rgba(169, 96, 238, 0.5)';
+                            bookingBlock.style.background = 'linear-gradient(135deg, #a960ee 0%, #90a0f7 100%)';
+                        });
+                    });
+                }
             });
         }
 
