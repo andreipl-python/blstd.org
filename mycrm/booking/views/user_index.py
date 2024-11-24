@@ -105,10 +105,6 @@ def user_index_view(request):
         )
     ).order_by('group_order', 'group__name', 'name')
 
-    # Получаем все группы
-    groups = ServiceGroup.objects.all().order_by('name')
-    groups_json = serialize('json', groups)
-
     # Сериализуем услуги вместе с их типами бронирования и группами
     services_json = serialize('json', services, use_natural_foreign_keys=True, use_natural_primary_keys=True)
 
@@ -135,8 +131,6 @@ def user_index_view(request):
         'show_dateto': days_of_month[-1]['date'].date().isoformat(),
         'services': services,
         'services_json': services_json,
-        'groups': groups,
-        'groups_json': groups_json,
         'specialists_json': specialists_json,
         'bookings_in_range': bookings_in_range_json,
         'reservation_types_json': reservation_types_json,

@@ -153,6 +153,9 @@ class ServiceGroup(models.Model):
     def __str__(self):
         return self.name
 
+    def natural_key(self):
+        return (self.name,)
+
 
 class Service(models.Model):
     """Модель для хранения информации об услугах"""

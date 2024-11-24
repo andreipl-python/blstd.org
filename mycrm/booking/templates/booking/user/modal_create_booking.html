@@ -150,10 +150,18 @@
             cachedData.rooms = JSON.parse(rooms_json_str);
             cachedData.specialists = JSON.parse(specialists_json_str);
             cachedData.reservationTypes = JSON.parse(reservation_types_json_str);
+            cachedData.services = JSON.parse(document.getElementById('services_json').textContent);
         } catch (error) {
             console.error('Ошибка при парсинге JSON данных в openModal:', error);
             return;
         }
+
+        // Сброс всех полей формы
+        $('#client').val('').trigger('chosen:updated');
+        $('#specialist').val('').trigger('chosen:updated');
+        $('#serviceType').val('').trigger('chosen:updated');
+        $('#bookingType').val('');
+        $('#comment').val('');
 
         const createBookingLabel = document.getElementById('createBookingLabel');
         createBookingLabel.textContent = `Бронирование ${date} | ${room_name}`;
@@ -305,6 +313,7 @@
 
         bookingTypeSelect.addEventListener('change', function () {
             updateSpecialistList(bookingTypeSelect.value);
+            updateServicesList(bookingTypeSelect.value);
             updateBookingDurationOptions(document.getElementById('timeField').value, maxEndTime, bookingTypeSelect.value);
         });
 
@@ -316,16 +325,25 @@
     }
 
     function updateServicesList(selectedTypeId) {
-        if (!selectedTypeId || !cachedData.services) return;
+        console.log('updateServicesList called with selectedTypeId:', selectedTypeId);
+        console.log('cachedData.services:', cachedData.services);
+        
+        if (!selectedTypeId || !cachedData.services) {
+            console.log('Early return: missing selectedTypeId or cachedData.services');
+            return;
+        }
 
         const serviceSelect = $('#serviceType');
-        const filteredServices = cachedData.services.filter(service => 
-            service.fields.reservation_type.includes(parseInt(selectedTypeId))
-        );
+        const filteredServices = cachedData.services.filter(service => {
+            console.log('Checking service:', service);
+            return service.fields.reservation_type.includes(parseInt(selectedTypeId));
+        });
+        
+        console.log('Filtered services:', filteredServices);
 
         // Группировка услуг
         const servicesByGroup = filteredServices.reduce((groups, service) => {
-            const groupName = service.fields.group ? service.fields.group[0] : 'Без группы';
+            const groupName = service.fields.group ? service.fields.group : 'Без группы';
             if (!groups[groupName]) {
                 groups[groupName] = [];
             }
@@ -333,20 +351,29 @@
             return groups;
         }, {});
 
+        console.log('Services by group:', servicesByGroup);
+
         // Формирование HTML опций
         const optionsHtml = ['<option value="" disabled selected>Укажите услугу</option>'];
-        ['Аренда оборудования', 'Прочее'].forEach(groupName => {
-            if (servicesByGroup[groupName]?.length) {
-                optionsHtml.push(`<optgroup label="${groupName}">`);
-                servicesByGroup[groupName].forEach(service => {
-                    optionsHtml.push(
-                        `<option value="${service.pk}">${service.fields.name}</option>`
-                    );
-                });
-                optionsHtml.push('</optgroup>');
-            }
+        
+        // Сначала добавим группу "Аренда оборудования", затем остальные
+        const sortedGroups = Object.keys(servicesByGroup).sort((a, b) => {
+            if (a === 'Аренда оборудования') return -1;
+            if (b === 'Аренда оборудования') return 1;
+            return a.localeCompare(b);
         });
 
+        sortedGroups.forEach(groupName => {
+            optionsHtml.push(`<optgroup label="${groupName}">`);
+            servicesByGroup[groupName].forEach(service => {
+                optionsHtml.push(
+                    `<option value="${service.pk}">${service.fields.name}</option>`
+                );
+            });
+            optionsHtml.push('</optgroup>');
+        });
+
+        console.log('Generated HTML:', optionsHtml.join('\n'));
         serviceSelect.html(optionsHtml.join('')).trigger('chosen:updated');
     }
 
