@@ -64,20 +64,12 @@
                     </div>
 
                     <!-- Выпадающий список "Укажите услугу" -->
-                    <div class="row mb-3">
+                    <div class="row mb-3" id="serviceTypeContainer">
                         <div class="col">
                             <label for="serviceType" class="form-label"></label>
                             <select class="form-select js-chosen" id="serviceType" name="serviceType"
                                     data-placeholder="Укажите услуги" multiple>
                                 <option value="" disabled selected>Укажите услугу</option>
-                                {% regroup services by group as service_groups %}
-                                {% for group in service_groups %}
-                                    <optgroup label="{{ group.grouper.name|default:'Без группы' }}">
-                                        {% for service in group.list %}
-                                            <option value="{{ service.id }}">{{ service.name }}</option>
-                                        {% endfor %}
-                                    </optgroup>
-                                {% endfor %}
                             </select>
                         </div>
                     </div>
@@ -150,7 +142,7 @@
             cachedData.rooms = JSON.parse(rooms_json_str);
             cachedData.specialists = JSON.parse(specialists_json_str);
             cachedData.reservationTypes = JSON.parse(reservation_types_json_str);
-            cachedData.services = JSON.parse(document.getElementById('services_json').textContent);
+            // Не парсим services сразу, сделаем это при необходимости
         } catch (error) {
             console.error('Ошибка при парсинге JSON данных в openModal:', error);
             return;
@@ -162,6 +154,9 @@
         $('#serviceType').val('').trigger('chosen:updated');
         $('#bookingType').val('');
         $('#comment').val('');
+        
+        // Скрываем контейнер услуг при открытии
+        $('#serviceTypeContainer').hide();
 
         const createBookingLabel = document.getElementById('createBookingLabel');
         createBookingLabel.textContent = `Бронирование ${date} | ${room_name}`;
@@ -214,7 +209,6 @@
         const maxEndTime = getMaxEndTime(timeblocksjson, rowSelector, currentCellIndex);
 
         updateBookingDurationOptions(time, maxEndTime, bookingTypeSelect.value);
-        updateBookingLabel(time);
         initializeModal(specialists_json_str, availableTypes, maxEndTime);
     }
 
@@ -324,12 +318,30 @@
         }
     }
 
+    function initializeServicesList() {
+        if (!cachedData.services) {
+            try {
+                cachedData.services = JSON.parse(document.getElementById('services_json').textContent);
+                console.log('Services initialized:', cachedData.services);
+            } catch (error) {
+                console.error('Ошибка при инициализации списка услуг:', error);
+                return false;
+            }
+        }
+        return true;
+    }
+
     function updateServicesList(selectedTypeId) {
         console.log('updateServicesList called with selectedTypeId:', selectedTypeId);
-        console.log('cachedData.services:', cachedData.services);
         
-        if (!selectedTypeId || !cachedData.services) {
-            console.log('Early return: missing selectedTypeId or cachedData.services');
+        if (!selectedTypeId) {
+            console.log('Early return: missing selectedTypeId');
+            $('#serviceTypeContainer').hide();
+            return;
+        }
+
+        // Инициализируем services только когда они нужны
+        if (!initializeServicesList()) {
             return;
         }
 
@@ -340,6 +352,12 @@
         });
         
         console.log('Filtered services:', filteredServices);
+
+        // Если услуг нет, скрываем контейнер
+        if (filteredServices.length === 0) {
+            $('#serviceTypeContainer').hide();
+            return;
+        }
 
         // Группировка услуг
         const servicesByGroup = filteredServices.reduce((groups, service) => {
@@ -375,7 +393,47 @@
 
         console.log('Generated HTML:', optionsHtml.join('\n'));
         serviceSelect.html(optionsHtml.join('')).trigger('chosen:updated');
+        
+        // Показываем контейнер услуг
+        $('#serviceTypeContainer').show();
     }
+
+    // Обработчик изменения типа бронирования
+    $('#bookingType').on('change', function() {
+        const selectedTypeId = $(this).val();
+        console.log('Booking type changed:', selectedTypeId);
+        
+        if (!selectedTypeId) {
+            // Если тип брони не выбран, скрываем список услуг
+            $('#serviceTypeContainer').hide();
+            return;
+        }
+        
+        updateServicesList(selectedTypeId);
+    });
+
+    function updateBookingLabel(startTime) {
+        const duration = document.getElementById('bookingDuration').value;
+        const fromtimeBookingLabel = document.getElementById('fromtimeBookingLabel');
+        
+        console.log('updateBookingLabel called with:', { startTime, duration });
+        
+        if (!duration || duration === '') {
+            fromtimeBookingLabel.textContent = `Бронь с ${startTime}`;
+            return;
+        }
+
+        const endTime = calculateEndTime(startTime, duration);
+        console.log('Calculated end time:', endTime);
+        fromtimeBookingLabel.textContent = `Бронь с ${startTime} до ${endTime}`;
+    }
+
+    // Используем делегирование событий через родительский элемент формы
+    $('#bookingForm').on('change', '#bookingDuration', function() {
+        const startTime = document.getElementById('timeField').value;
+        console.log('Duration changed:', $(this).val());
+        updateBookingLabel(startTime);
+    });
 
     function getMaxEndTime(timeblocks, rowSelector, currentCellIndex) {
         // Парсим JSON строку в массив
@@ -410,6 +468,21 @@
             return endOfDay;
         }
         return lastAvailableTime;
+    }
+
+    function calculateEndTime(startTime, duration) {
+        let [startHours, startMinutes] = startTime.split(':').map(Number);
+        let [durationHours, durationMinutes] = duration.split(':').map(Number);
+
+        let endHours = startHours + durationHours;
+        let endMinutes = startMinutes + durationMinutes;
+
+        if (endMinutes >= 60) {
+            endHours += Math.floor(endMinutes / 60);
+            endMinutes %= 60;
+        }
+
+        return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
     }
 
     function updateBookingDurationOptions(selectedTime, maxEndTime, selectedTypeId) {
@@ -457,45 +530,26 @@
             options.push(`<option value="${text}">${text}</option>`);
         }
 
+        // Удаляем старый обработчик события, если он был
+        $(durationSelect).off('change');
+
         durationSelect.disabled = false;
         durationSelect.innerHTML = options.join('');
+        
         if (options.length > 0) {
             durationSelect.value = durationSelect.options[0].value;
-            updateBookingLabel(selectedTime);
-        }
-    }
-
-    function calculateEndTime(startTime, duration) {
-        let [startHours, startMinutes] = startTime.split(':').map(Number);
-        let [durationHours, durationMinutes] = duration.split(' ').reduce((acc, part) => {
-            if (part.includes('ч')) acc[0] += parseInt(part, 10);
-            if (part.includes('мин')) acc[1] += parseInt(part, 10);
-            return acc;
-        }, [0, 0]);
-
-        let endHours = startHours + durationHours;
-        let endMinutes = startMinutes + durationMinutes;
-
-        if (endMinutes >= 60) {
-            endHours += Math.floor(endMinutes / 60);
-            endMinutes %= 60;
         }
 
-        return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+        // Добавляем новый обработчик события
+        $(durationSelect).on('change', function() {
+            console.log('Duration changed (from updateBookingDurationOptions):', $(this).val());
+            const startTime = document.getElementById('timeField').value;
+            updateBookingLabel(startTime);
+        });
+
+        // Вызываем обработчик сразу после установки начального значения
+        if (options.length > 0) {
+            $(durationSelect).trigger('change');
+        }
     }
-
-    function updateBookingLabel(startTime) {
-        const bookingDurationSelect = document.getElementById('bookingDuration');
-        const fromtimeBookingLabel = document.getElementById('fromtimeBookingLabel');
-
-        const selectedDuration = bookingDurationSelect.value;
-        const endTime = calculateEndTime(startTime, selectedDuration);
-
-        fromtimeBookingLabel.textContent = `Бронь с ${startTime} до ${endTime}`;
-    }
-
-    document.getElementById('bookingDuration').addEventListener('change', function () {
-        const startTime = document.getElementById('timeField').value;
-        updateBookingLabel(startTime);
-    });
 </script>
