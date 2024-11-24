@@ -137,6 +137,14 @@
 
     function openModal(date, time, room_name, timeblocksjson, rooms_json_str, reservation_types_json_str,
                       specialists_json_str, cell) {
+        console.log('Opening modal with cell:', {
+            rowSelector: cell.getAttribute('table_row_selectors'),
+            cellIndex: Array.from(cell.parentElement.children).indexOf(cell),
+            parentChildrenCount: cell.parentElement.children.length,
+            cellTime: cell.getAttribute('data-time'),
+            cellIsBooked: cell.classList.contains('booked')
+        });
+
         // Кэшируем JSON данные при открытии модального окна
         try {
             cachedData.rooms = JSON.parse(rooms_json_str);
@@ -208,7 +216,13 @@
 
         const rowSelector = cell.getAttribute('table_row_selectors');
         const currentCellIndex = Array.from(cell.parentElement.children).indexOf(cell);
+        console.log('Getting max end time with:', {
+            rowSelector,
+            currentCellIndex,
+            timeblocksjson: timeblocksjson
+        });
         const maxEndTime = getMaxEndTime(timeblocksjson, rowSelector, currentCellIndex);
+        console.log('Got max end time:', maxEndTime);
 
         document.getElementById('maxEndTime').value = maxEndTime;
 
@@ -445,7 +459,11 @@
     });
 
     function updateBookingDurationOptions(selectedTime, maxEndTime, selectedTypeId) {
-        console.log('updateBookingDurationOptions called with:', { selectedTime, maxEndTime, selectedTypeId });
+        console.log('updateBookingDurationOptions called with:', { 
+            selectedTime, 
+            maxEndTime, 
+            selectedTypeId 
+        });
         
         const durationSelect = document.getElementById('bookingDuration');
         const durationContainer = document.getElementById('durationContainer');
@@ -479,25 +497,55 @@
         const [maxHours, maxMinutes] = maxEndTime.split(':').map(Number);
         const startMinutesTotal = startHours * 60 + startMinutes;
         const maxMinutesTotal = maxHours * 60 + maxMinutes;
-        const availableMinutes = maxMinutesTotal - startMinutesTotal;
-
-        console.log('Time calculations:', { 
+        
+        console.log('Time calculations (before processing):', { 
+            startHours,
+            startMinutes,
+            maxHours,
+            maxMinutes,
             startMinutesTotal, 
-            maxMinutesTotal, 
-            availableMinutes, 
-            unitDuration 
+            maxMinutesTotal
         });
+
+        // Если время окончания меньше времени начала
+        if (maxMinutesTotal <= startMinutesTotal) {
+            console.log('Invalid time range detected');
+            durationSelect.innerHTML = '<option value="">Нет доступного времени</option>';
+            durationSelect.disabled = true;
+            // Принудительно показываем контейнер
+            durationContainer.style.cssText = "display: block !important";
+            return;
+        }
+
+        let availableMinutes = maxMinutesTotal - startMinutesTotal;
+        console.log('Available minutes:', availableMinutes);
 
         // Проверяем, достаточно ли времени для минимального бронирования
         if (availableMinutes < unitDuration) {
             console.log('Not enough time available');
             durationSelect.innerHTML = '<option value="">Нет доступного времени</option>';
             durationSelect.disabled = true;
+            // Принудительно показываем контейнер
+            durationContainer.style.cssText = "display: block !important";
             return;
         }
 
         const options = [];
         for (let minutes = unitDuration; minutes <= availableMinutes; minutes += unitDuration) {
+            // Проверяем, не выходит ли время окончания за пределы maxEndTime
+            const endTimeMinutes = startMinutesTotal + minutes;
+            console.log('Checking duration option:', {
+                minutes,
+                endTimeMinutes,
+                maxMinutesTotal,
+                wouldExceed: endTimeMinutes > maxMinutesTotal
+            });
+            
+            if (endTimeMinutes > maxMinutesTotal) {
+                console.log('Breaking loop - would exceed max time');
+                break;
+            }
+            
             const hours = Math.floor(minutes / 60);
             const mins = minutes % 60;
             const text = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
@@ -509,28 +557,32 @@
         // Удаляем старый обработчик события, если он был
         $(durationSelect).off('change');
 
-        durationSelect.disabled = false;
-        durationSelect.innerHTML = options.join('');
-        
-        if (options.length > 0) {
+        if (options.length === 0) {
+            durationSelect.innerHTML = '<option value="">Нет доступного времени</option>';
+            durationSelect.disabled = true;
+        } else {
+            durationSelect.disabled = false;
+            durationSelect.innerHTML = options.join('');
             durationSelect.value = durationSelect.options[0].value;
-        }
+            
+            // Добавляем новый обработчик события
+            $(durationSelect).on('change', function() {
+                console.log('Duration changed (from updateBookingDurationOptions):', $(this).val());
+                const startTime = document.getElementById('timeField').value;
+                updateBookingLabel(startTime);
+            });
 
-        // Добавляем новый обработчик события
-        $(durationSelect).on('change', function() {
-            console.log('Duration changed (from updateBookingDurationOptions):', $(this).val());
-            const startTime = document.getElementById('timeField').value;
-            updateBookingLabel(startTime);
-        });
-
-        // Вызываем обработчик сразу после установки начального значения
-        if (options.length > 0) {
+            // Вызываем обработчик сразу после установки начального значения
             $(durationSelect).trigger('change');
         }
         
-        // Принудительно показываем контейнер
+        // Принудительно показываем контейнер в любом случае
         durationContainer.style.cssText = "display: block !important";
-        console.log('Duration container display style:', durationContainer.style.display);
+        console.log('Duration container final state:', {
+            options: options.length,
+            containerDisplay: durationContainer.style.display,
+            selectDisabled: durationSelect.disabled
+        });
     }
 
     function updateBookingLabel(startTime) {
@@ -557,38 +609,67 @@
     });
 
     function getMaxEndTime(timeblocks, rowSelector, currentCellIndex) {
+        console.log('getMaxEndTime called with:', {
+            timeblocks,
+            rowSelector,
+            currentCellIndex
+        });
+
         // Парсим JSON строку в массив
         const timeBlocksArray = JSON.parse(timeblocks);
         const timeArray = timeBlocksArray.map(block => block.time);
-        let maxIndex = timeArray.length - 1;
+        console.log('Parsed timeArray:', timeArray);
 
-        // Проверка следующих ячеек на занятость
-        const row = document.querySelector(rowSelector);
-        if (row) {
-            const cells = Array.from(row.children);
-            for (let i = currentCellIndex + 1; i < cells.length; i++) {
-                if (cells[i].classList.contains('booked')) {
-                    maxIndex = i - 1;
-                    break;
+        // Получаем родительскую строку текущей ячейки
+        const currentCell = document.querySelector(`${rowSelector}:nth-child(${currentCellIndex + 1})`);
+        if (!currentCell || !currentCell.parentElement) {
+            console.error('Current cell or its parent not found');
+            return addHourToTime(timeArray[timeArray.length - 1]);
+        }
+
+        const row = currentCell.parentElement;
+        const cells = Array.from(row.children);
+        console.log('Found cells:', {
+            total: cells.length,
+            currentIndex: currentCellIndex,
+            cellsStatus: cells.map(cell => ({
+                time: cell.getAttribute('title'),
+                isBooked: cell.classList.contains('booked')
+            }))
+        });
+
+        // Ищем следующую занятую ячейку справа от текущей
+        for (let i = currentCellIndex + 1; i < cells.length; i++) {
+            const cell = cells[i];
+            console.log('Checking cell:', {
+                index: i,
+                isBooked: cell.classList.contains('booked'),
+                time: cell.getAttribute('title')
+            });
+
+            if (cell.classList.contains('booked')) {
+                const nextBookingTime = cell.getAttribute('title');
+                console.log('Found next booking at:', nextBookingTime);
+                if (nextBookingTime) {
+                    return nextBookingTime;
                 }
+                break;
             }
         }
 
-        // Используем последний доступный слот или конец рабочего дня
-        const endOfDay = "23:00";
-        const lastAvailableTime = timeArray[maxIndex] || timeArray[timeArray.length - 1];
-        
-        // Возвращаем более позднее время
-        const [lastHours, lastMinutes] = lastAvailableTime.split(':').map(Number);
-        const [endHours, endMinutes] = endOfDay.split(':').map(Number);
-        
-        const lastTotalMinutes = lastHours * 60 + lastMinutes;
-        const endTotalMinutes = endHours * 60 + endMinutes;
-        
-        if (endTotalMinutes > lastTotalMinutes) {
-            return endOfDay;
-        }
-        return lastAvailableTime;
+        // Если нет броней справа, используем последний доступный слот + 1 час
+        const lastTime = timeArray[timeArray.length - 1];
+        const result = addHourToTime(lastTime);
+        console.log('No bookings found, using last available slot + 1 hour:', result);
+        return result;
+    }
+
+    function addHourToTime(time) {
+        const [hours, minutes] = time.split(':').map(Number);
+        const totalMinutes = hours * 60 + minutes + 60; // добавляем 60 минут
+        const newHours = Math.floor(totalMinutes / 60);
+        const newMinutes = totalMinutes % 60;
+        return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
     }
 
     function calculateEndTime(startTime, duration) {
