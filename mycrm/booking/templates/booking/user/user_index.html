@@ -6,74 +6,9 @@
     <title>CRM</title>
     {% include 'booking/add/head.html' %}
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <link rel="stylesheet" href="{% static 'css/neon-dark-theme.css' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.js"></script>
-
-
-    <style>
-        .highlight-cell.available {
-            transition: all 0.3s ease;
-            width: 50px;
-            height: 40px;
-            background-color: transparent;
-            border: 1px dashed #cccccc;
-            position: relative;
-        }
-
-        .highlight-cell.booked {
-            position: relative;
-            padding: 0;
-            margin: 0;
-            border: none !important;
-            overflow: visible;
-        }
-
-        .booking-block {
-            position: absolute;
-            top: 5px;
-            height: 30px;
-            background: linear-gradient(135deg, 
-                #a960ee 0%, 
-                #90a0f7 100%
-            );
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 9px;
-            transition: all 0.2s ease;
-            z-index: 4;
-            cursor: pointer;
-            box-shadow: 
-                inset 0 1px 2px rgba(255, 255, 255, 0.8),
-                0 0 10px rgba(169, 96, 238, 0.5);
-        }
-
-        .booking-block:hover {
-            background: linear-gradient(135deg, 
-                #b76aff 0%, 
-                #a960ee 50%,
-                #90a0f7 100%
-            );
-            box-shadow: 
-                inset 0 1px 3px rgba(255, 255, 255, 0.9),
-                0 0 20px rgba(169, 96, 238, 0.8),
-                0 0 30px rgba(183, 106, 255, 0.4);
-            transform: translateY(-1px);
-        }
-
-        .highlight-cell:hover {
-            cursor: pointer;
-            background-color: #f5f5f5;
-            border: 1px solid #666;
-        }
-
-        .highlight-cell.border-right {
-            border-right: 1px solid #666;
-        }
-
-        .highlight-cell.selected {
-            background-color: #b3d9ff;
-            border: 1px solid #3399ff;
-        }
-    </style>
 
 </head>
 <body>
@@ -104,7 +39,7 @@
                         <div class="row">
                             <div class="col-12">
                                 <div>
-                                    <h5 class="p0" style="white-space: nowrap; margin-bottom: 5px;">
+                                    <h5 class="p0 date-header" style="white-space: nowrap; margin-bottom: 5px;">
                                         {{ day.date|date:"d E" }}
                                     </h5>
                                     <span class="text_day_button" data-bs-toggle="modal" data-bs-target="#exampleModal3"

@@ -1,16 +1,23 @@
 {% load static %}
-<div class="menu2 sticky-top" style="top: 60px;">
-    <nav class="navbar navbar-expand-lg navbar-light">
+<head>
+    <link rel="stylesheet" href="{% static 'css/neon-dark-theme.css' %}">
+</head>
+<div class="menu2 sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <form method="post">
                     {% csrf_token %}
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0" style="margin-bottom: -6px !important;">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <input type="submit" name="day7" class="nav_btn" value="Сегодня">
+                            <button type="submit" name="day7" class="nav_btn_flat" value="Сегодня">
+                                <i class="fas fa-calendar-day"></i> Сегодня
+                            </button>
                         </li>
                         <li class="nav-item">
-                            <input type="submit" name="allday" class="nav_btn" value="Месяц">
+                            <button type="submit" name="allday" class="nav_btn_flat" value="Месяц">
+                                <i class="fas fa-calendar-alt"></i> Месяц
+                            </button>
                         </li>
                         <li class="nav-item">
                             &nbsp;&nbsp;&nbsp;
@@ -22,156 +29,94 @@
                             <input type="date" name="to_date" class="form-control" value="{{ show_dateto }}">
                         </li>
                         <li class="nav-item">
-                            <input type="submit" name="repiod" class="nav_btn" value="За период">
-                        </li>
-                        <li class="nav-item">
-                            <input type="submit" name="repiodreset" class="nav_btn" value="Сбросить">
-                        </li>
-
-                        <li class="nav-item dropdown" style="line-height: 26px;">
-                            <a class="nav-link dropdown-toggle my_a" href="#" id="navbarDropdown" role="button"
-                               data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
-                                Календарь
-                            </a>
-                            <ul class="dropdown-menu" aria-labelledby="navbarDropdown"
-                                style="width: 325px; padding: 15px; margin-left: -150px;">
-                                <table style="width: 100%;" cellspacing=0 cellpadding=2>
-                                    <tr>
-                                        <td colspan=7>
-                                            <table width="100%" border=0 cellspacing=0 cellpadding=0>
-                                                <tr>
-                                                    <td align="left"></td>
-                                                    <td align="center">
-                                                        <a class="arrow" href="{{ prev }}">&lt;</a>
-                                                        {{ month_names|slice:m|first }} {{ y }}
-                                                        <a class="arrow" href="{{ next }}">&gt;</a>
-                                                    </td>
-                                                    <td align="right"></td>
-                                                </tr>
-                                            </table>
-                                            <br>
-                                        </td>
-                                    </tr>
-                                    <tr style="text-align: center;">
-                                        <td>Пн</td>
-                                        <td>Вт</td>
-                                        <td>Ср</td>
-                                        <td>Чт</td>
-                                        <td>Пт</td>
-                                        <td>Сб</td>
-                                        <td>Вс</td>
-                                    </tr>
-                                    {% for d in date_range %}
-                                    {% if forloop.counter0|divisibleby:7 %}
-                                    <tr>
-                                        {% endif %}
-                                        <td align="center" style="text-align: center;">
-                                            {% if d < 1 or d > day_count %}
-                                            &nbsp;
-                                            {% else %}
-                                            {% with now=y|add:"-"|add:m|add:"-"|add:d|stringformat:"02" %}
-                                            {% if d == day_now and m_now == m and y_now == y %}
-                                            <b><a class="tdn today_color" href="#date={{ now }}" class="now">{{ d }}</a></b>
-                                            {% else %}
-                                            <b><a class="tdn black_color" href="#date={{ now }}">{{ d }}</a></b>
-                                            {% endif %}
-                                            {% endwith %}
-                                            {% endif %}
-                                        </td>
-                                        {% if forloop.counter|divisibleby:7 %}
-                                    </tr>
-                                    {% endif %}
-                                    {% endfor %}
-                                </table>
-                            </ul>
+                            <button type="submit" name="repiod" class="nav_btn_flat" value="За период">
+                                <i class="fas fa-calendar-week"></i> За период
+                            </button>
                         </li>
                     </ul>
                 </form>
 
-                <ul class="navbar-nav ms-auto mb-2 mb-lg-0" style="margin-bottom: -6px !important;">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    {% if request.user.is_staff %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle my_a" href="#" id="navbarDropdown" role="button"
-                           data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
-                            <img src="{% static 'image/userico.png' %}"> Добавить клиента
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown"
-                            style="width: 325px; padding: 15px; margin-left: -150px;">
-                            <form method="post">
+                        <button type="button" class="nav_btn_flat" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                            <i class="fas fa-tools"></i> Меню для админа
+                        </button>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item" href="{% url 'admin_index' %}">Супер админка</a>
+                            <a class="dropdown-item" href="{% url 'payment' %}">Таблица платежей</a>
+                            <a class="dropdown-item" href="{% url 'paytable' %}">Сводная таблица</a>
+                            <a class="dropdown-item" href="{% url 'stats_school' %}">Статистика школы</a>
+                            <a class="dropdown-item" href="{% url 'stats_average' %}">Статистика примерная</a>
+                            <a class="dropdown-item" href="{% url 'stats_profit' %}">Статистика графики</a>
+                            <a class="dropdown-item" href="{% url 'stats_all' %}">Статистика за год</a>
+                        </div>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item dropdown">
+                        <button type="button" class="nav_btn_flat" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                            <i class="fas fa-user-plus"></i> Добавить клиента
+                        </button>
+                        <div class="dropdown-menu">
+                            <form method="post" class="dropdown-form">
                                 {% csrf_token %}
-                                <div class="row">
-                                    <div class="col-12 mt-2">
-                                        <h5>Новый клиент</h5>
-                                        <p class="p0 mt-2">Имя для отображения</p>
-                                        <input type="text" class="form-control" name="name" placeholder="">
-                                        <p class="p0 mt-2">Контактные данные</p>
-                                        <input type="text" class="form-control" name="phone" placeholder="">
-                                        <input type="hidden" class="form-control" name="iditem" value="{{ client_id }}">
-                                        <p class="p0 mt-2">Комментарий</p>
-                                        <textarea class="form-control" name="comment"
-                                                  placeholder="Написать комментарий"></textarea>
-                                        <input type="submit" name="adduser" value="Добавить" class="btn_main mt-2">
-                                    </div>
+                                <div class="form-group">
+                                    <h5 class="form-title">Новый клиент</h5>
+                                    <label class="form-label">Имя для отображения</label>
+                                    <input type="text" class="form-control" name="name">
+                                    <label class="form-label">Контактные данные</label>
+                                    <input type="text" class="form-control" name="phone">
+                                    <input type="hidden" class="form-control" name="iditem" value="{{ client_id }}">
+                                    <label class="form-label">Комментарий</label>
+                                    <textarea class="form-control" name="comment" placeholder="Написать комментарий"></textarea>
+                                    <button type="submit" name="adduser" class="nav_btn_flat mt-3">Добавить</button>
                                 </div>
                             </form>
-                        </ul>
+                        </div>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle my_a" href="#" id="navbarDropdown" role="button"
-                           data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
-                            <img src="{% static 'image/note.png' %}"> Добавить абонемент/сертификат
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown"
-                            style="width: 350px; padding: 15px; margin-left: -60px;">
-                            <form method="post">
+                        <button type="button" class="nav_btn_flat" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                            <i class="fas fa-ticket-alt"></i> Добавить абонемент
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <form method="post" class="dropdown-form">
                                 {% csrf_token %}
-                                <div class="row mt-2">
-                                    <div class="col-md-12"><h5>Создать абонемент/сертификат</h5></div>
-                                    <div class="col-md-12">
-                                        <p class="p0 mt-2">Выберите тип</p>
-                                        <select class="form-select" id="floatingSelect3" name="idoblast"
-                                                aria-label="Floating label select example">
-                                            <option value="0" disabled selected>Для кого абонемент/сертификат?</option>
-                                            <option value="1">Абонемент Школа</option>
-                                            <option value="2">Абонемент Студия</option>
-                                            <option value="10">Сертификат</option>
-                                        </select>
+                                <div class="form-group">
+                                    <h5 class="form-title">Создать абонемент/сертификат</h5>
+                                    <label class="form-label">Выберите тип</label>
+                                    <select class="form-select" name="idoblast">
+                                        <option value="0" disabled selected>Для кого абонемент/сертификат?</option>
+                                        <option value="1">Абонемент Школа</option>
+                                        <option value="2">Абонемент Студия</option>
+                                        <option value="10">Сертификат</option>
+                                    </select>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <label class="form-label">Цена</label>
+                                            <input type="number" placeholder="Цена" min="0" class="form-control" name="price">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">Часы</label>
+                                            <input type="number" placeholder="Кол-во часов" min="1" class="form-control" name="kolvohour">
+                                        </div>
                                     </div>
-                                    <div class="col-md-6 mt-2">
-                                        <p class="p0 mt-2">Цена</p>
-                                        <input type="number" placeholder="Цена" min="0" class="form-control"
-                                               name="price">
+                                    <label class="form-label">Срок действия (дни)</label>
+                                    <input type="number" placeholder="Срок действия (дни)" min="1" class="form-control" name="days">
+                                    <label class="form-label">Клиент</label>
+                                    <select class="form-select js-chosen" name="userid">
+                                        <option value="0">Укажите клиента</option>
+                                        {% for user in users %}
+                                        <option value="{{ user.id }}">{{ user.email }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-check mt-2">
+                                        <input type="checkbox" class="form-check-input" id="probnoe" name="probnoe" value="1">
+                                        <label class="form-check-label" for="probnoe">Абонемент с пробного занятия?</label>
                                     </div>
-                                    <div class="col-md-6 mt-2">
-                                        <p class="p0 mt-2">Часы</p>
-                                        <input type="number" placeholder="Кол-во часов" min="1" class="form-control"
-                                               name="kolvohour">
-                                    </div>
-                                    <div class="col-md-12 mt-2">
-                                        <p class="p0 mt-2">Срок действия (дни)</p>
-                                        <input type="number" placeholder="Срок действия (дни)" min="1"
-                                               class="form-control" name="days">
-                                    </div>
-                                    <div class="col-12 mt-2">
-                                        <p class="p0 mt-2">Клиент</p>
-                                        <select class="form-select js-chosen" name="userid">
-                                            <option value="0">Укажите клиента</option>
-                                            {% for user in users %}
-                                            <option value="{{ user.id }}">{{ user.email }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <label>
-                                            <input type="checkbox" value="1" name="probnoe">
-                                            Абонемент с пробного занятия?
-                                        </label>
-                                    </div>
-                                    <div class="col-6 mt-2">
-                                        <input type="submit" name="create_abon" class="btn_main" value="Создать">
-                                    </div>
+                                    <button type="submit" name="create_abon" class="nav_btn_flat mt-3">Создать</button>
                                 </div>
                             </form>
-                        </ul>
+                        </div>
                     </li>
                 </ul>
             </div>
