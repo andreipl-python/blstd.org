@@ -33,7 +33,7 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="bookingType" class="form-label">Тип брони</label>
-                            <select class="form-select" id="bookingType" name="bookingType" required>
+                            <select class="form-select" id="bookingType" name="bookingType">
                             </select>
                         </div>
                         <div class="col-md-6" id="durationContainer" style="display: none;">
@@ -51,7 +51,7 @@
                         <div class="col-md-6">
                             <label for="client" class="form-label">Клиент</label>
                             <select class="form-select js-chosen" id="client" name="client"
-                                    data-placeholder="Выберите клиента" required>
+                                    data-placeholder="Выберите клиента">
                                 <option value="" selected>Выберите клиента</option>
                                 {% for client in clients %}
                                 <option value="{{ client.id }}" data-comment="{{ client.comment|default:'' }}">{{ client.name }}</option>
@@ -89,7 +89,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="submit" class="btn btn-primary" form="bookingForm" id="submitBookingButton">
+                <button type="submit" class="btn btn-primary" form="bookingForm" id="submitBookingButton" disabled>
                     Сделать бронь
                 </button>
             </div>
@@ -133,6 +133,19 @@
                 commentDiv.hide();
             }
         });
+
+        // Функция проверки обязательных полей
+        function checkRequiredFields() {
+            const bookingType = $('#bookingType').val();
+            const bookingDuration = $('#bookingDuration').val();
+            const client = $('#client').val();
+            
+            const isValid = bookingType && bookingDuration && client;
+            $('#submitBookingButton').prop('disabled', !isValid);
+        }
+
+        // Добавляем обработчики для проверки полей
+        $('#bookingType, #bookingDuration, #client').on('change', checkRequiredFields);
     });
 
     function openModal(date, time, room_name, timeblocksjson, rooms_json_str, reservation_types_json_str,
@@ -236,6 +249,9 @@
         }
 
         initializeModal(specialists_json_str, availableTypes, maxEndTime);
+
+        // Деактивируем кнопку при открытии модального окна
+        $('#submitBookingButton').prop('disabled', true);
     }
 
     function initializeModal(specialists_json_str, availableTypes, maxEndTime) {

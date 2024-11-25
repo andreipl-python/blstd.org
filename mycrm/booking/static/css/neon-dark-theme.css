@@ -166,6 +166,13 @@ body {
     -webkit-text-fill-color: transparent;
 }
 
+/* Стили для заголовков временных блоков */
+.table th[colspan="4"] {
+    position: relative;
+    left: -15px;  /* Сдвигаем влево на половину ширины 15-минутной ячейки */
+    padding-left: 0 !important;
+}
+
 /* Контейнеры */
 .table-container {
     padding: 1.5rem;
@@ -227,21 +234,33 @@ body {
     font-weight: 600;
 }
 
+/* Стили для кнопки отправки формы */
 .btn-primary {
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    border: none;
-    box-shadow: 
-        0 0 15px rgba(59, 130, 246, 0.3),
-        0 0 30px rgba(37, 99, 235, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.5);
+    color: #e2e8f0;
+    font-weight: 500;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
     transition: all 0.3s ease;
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
 }
 
-.btn-primary:hover {
-    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+.btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     transform: translateY(-1px);
     box-shadow: 
-        0 0 20px rgba(96, 165, 250, 0.4),
-        0 0 40px rgba(59, 130, 246, 0.3);
+        0 0 20px rgba(37, 99, 235, 0.3),
+        0 0 10px rgba(37, 99, 235, 0.2);
+}
+
+.btn-primary:disabled {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    border: 1px solid rgba(71, 85, 105, 0.5);
+    color: #94a3b8;
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.7;
 }
 
 /* Модальные окна */
@@ -307,28 +326,6 @@ body {
 
 .modal .btn-close:hover {
     opacity: 1;
-}
-
-/* Стили для кнопки отправки формы */
-.modal .btn-primary {
-    background: #2563eb;
-    border: none;
-    color: #fff;
-    padding: 0.5rem 1.5rem;
-    border-radius: 6px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-.modal .btn-primary:hover {
-    background: #1d4ed8;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-}
-
-.modal .btn-primary:active {
-    transform: translateY(0);
-    box-shadow: none;
 }
 
 /* Общие стили для всех селектов в модальном окне */
@@ -1101,4 +1098,24 @@ body {
     padding: 1rem;
     min-width: 240px;
     max-width: 320px;
+}
+
+/* Стили для chosen */
+.chosen-container-single .chosen-single {
+    display: flex !important;
+    align-items: center !important;
+    height: 38px !important;
+    line-height: 38px !important;
+}
+
+.chosen-container-single .chosen-single span {
+    margin-top: 0 !important;
+    line-height: inherit !important;
+}
+
+.chosen-container-multi .chosen-choices li.search-choice {
+    display: flex !important;
+    align-items: center !important;
+    height: 28px !important;
+    line-height: 28px !important;
 }

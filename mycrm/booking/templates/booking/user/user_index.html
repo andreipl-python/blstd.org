@@ -130,8 +130,16 @@
             const specialist = $('#specialist').val();
             const duration = $('#bookingDuration').val();
 
+            console.log('Form validation:', {
+                bookingType,
+                client,
+                duration,
+                specialist
+            });
+
             // Проверяем обязательные поля
             if (!bookingType || !client || !duration) {
+                console.log('Validation failed');
                 Swal.fire({
                     icon: 'error',
                     title: 'Ошибка',
