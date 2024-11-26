@@ -55,18 +55,18 @@
                         <!-- Выпадающий список "Клиент" -->
                         <div class="col-md-6">
                             <label for="client" class="form-label">Клиент</label>
-                            <div style="position: relative;">
+                            <div class="client-select-container" style="position: relative;">
                                 <select class="form-select js-chosen" id="client" name="client" data-placeholder="Выберите клиента">
                                     <option value="" selected>Выберите клиента</option>
                                     {% for client in clients %}
                                     <option value="{{ client.id }}" data-comment="{{ client.comment|default:'' }}">{{ client.name }}</option>
                                     {% endfor %}
                                 </select>
-                                <div id="clientBalanceContainer" class="dot-container">
+                                <div id="clientBalanceContainer" class="dot-container" style="position: absolute; top: 5px; right: 20px;">
                                     <div id="clientBalanceDot" class="balance-dot"></div>
                                 </div>
                             </div>
-                            <div id="clientComment" class="text-muted small mt-1" style="display: none;"></div>
+                            <div id="clientComment" class="text-muted small mt-1"></div>
                         </div>
 
                         <!-- Выпадающий список "Специалист" -->
@@ -130,22 +130,49 @@
 
         // Обработчик выбора клиента
         $('#client').on('change', function() {
+            const selectedClient = $(this).val();
+            const $balanceDot = $('#clientBalanceDot');
+            const $balanceContainer = $('#clientBalanceContainer');
+            
+            // Если клиент не выбран, скрываем точку
+            if (!selectedClient) {
+                $balanceDot.hide();
+                $balanceContainer.removeAttr('data-tooltip');
+                $('#specialist-container').hide();
+                $('#specialist').val('').trigger("chosen:updated");
+                return;
+            }
+            
+            // Обработка комментария клиента
             const selectedOption = $(this).find('option:selected');
             const comment = selectedOption.attr('data-comment');
-            const balance = selectedOption.attr('data-balance');
             const commentDiv = $('#clientComment');
-            const balanceDiv = $('#clientBalance');
             
             if (comment && comment.trim() !== '') {
                 commentDiv.text(comment).show();
             } else {
                 commentDiv.hide();
             }
-            
-            if (balance) {
-                balanceDiv.text(`Баланс: ${balance} руб.`).show();
+
+            const specialistOptions = $('#specialist').find('option');
+            const userIds = specialistOptions.map(function () {
+                return Number($(this).data('user-id'));
+            }).get();
+
+            if (userIds.includes(Number(selectedClient))) {
+                $('#specialist-container').show();
+                $('#specialist').prop('disabled', true).trigger("chosen:updated");
             } else {
-                balanceDiv.hide();
+                $('#specialist-container').show();
+                $('#specialist').prop('disabled', false).trigger("chosen:updated");
+            }
+
+            // Обновляем опции длительности для пересчета баланса
+            const selectedTypeId = $('#bookingType').val();
+            if (selectedTypeId) {
+                const selectedTime = document.getElementById('timeField').value;
+                const maxEndTime = document.getElementById('maxEndTime').value;
+                updateBookingDurationOptions(selectedTime, maxEndTime, selectedTypeId);
             }
         });
 
@@ -182,6 +209,10 @@
         $('#serviceType').val('').trigger('chosen:updated');
         $('#bookingType').val('');
         $('#comment').val('');
+        
+        // Скрываем точку баланса и удаляем подсказку
+        $('#clientBalanceDot').hide();
+        $('#clientBalanceContainer').removeAttr('data-tooltip');
         
         // Скрываем контейнер услуг при открытии
         $('#serviceTypeContainer').hide();
@@ -247,9 +278,12 @@
         $('#durationContainer').attr('style', 'display: none !important');
         $('#bookingDuration').val('');
 
-        // Если есть только один тип брони, сразу вызываем обработчик change
+        // Если есть только один тип брони, выбираем его и показываем нужные элементы
         if (availableTypes.length === 1) {
-            $(bookingTypeSelect).trigger('change');
+            $(bookingTypeSelect).val(availableTypes[0].pk);
+            $('#client-specialist-row').show();
+            $('#serviceTypeContainer').show();
+            updateServicesList(availableTypes[0].pk);
         }
 
         initializeModal(specialists_json_str, availableTypes, maxEndTime);
@@ -285,26 +319,16 @@
         clientSelect.on('change', function () {
             const selectedClient = clientSelect.val();
             const selectedTypeId = bookingTypeSelect.value;
-            const balanceContainer = $('#clientBalanceContainer');
-            const balanceDot = $('#clientBalanceDot');
             
-            if (selectedClient && selectedTypeId) {
-                const client = cachedData.clients.find(c => c.id == selectedClient);
-                if (client?.balances) {
-                    const balance = client.balances[selectedTypeId];
-                    
-                    if (balance !== undefined && balance !== null) {
-                        balanceDot.removeClass('gray-dot').addClass('green-dot').show(); 
-                        balanceContainer.attr('data-tooltip', `Баланс тарифных единиц: ${balance}`); 
-                    } else {
-                        balanceDot.removeClass('green-dot').addClass('gray-dot').show(); 
-                        balanceContainer.attr('data-tooltip', 'Нет тарифных единиц для данного типа бронирования'); 
-                    }
-                } else {
-                    balanceDot.hide(); 
-                }
+            // Обработка комментария клиента
+            const selectedOption = $(this).find('option:selected');
+            const comment = selectedOption.attr('data-comment');
+            const commentDiv = $('#clientComment');
+            
+            if (comment && comment.trim() !== '') {
+                commentDiv.text(comment).show();
             } else {
-                balanceDot.hide(); 
+                commentDiv.hide();
             }
 
             if (!selectedClient) {
@@ -361,27 +385,7 @@
             
             const selectedTypeId = bookingTypeSelect.value;
             const selectedClientId = $('#client').val();
-            const balanceContainer = $('#clientBalanceContainer');
-            const balanceDot = $('#clientBalanceDot');
-
-            if (selectedClientId && selectedTypeId) {
-                const client = cachedData.clients.find(c => c.id == selectedClientId);
-                if (client?.balances) {
-                    const balance = client.balances[selectedTypeId];
-                    
-                    if (balance !== undefined && balance !== null) {
-                        balanceDot.removeClass('gray-dot').addClass('green-dot').show();
-                        balanceContainer.attr('data-tooltip', `Баланс тарифных единиц: ${balance}`);
-                    } else {
-                        balanceDot.removeClass('green-dot').addClass('gray-dot').show();
-                        balanceContainer.attr('data-tooltip', 'Нет тарифных единиц для данного типа бронирования');
-                    }
-                } else {
-                    balanceDot.hide(); 
-                }
-            } else {
-                balanceDot.hide(); 
-            }
+            updateBalanceIndicator(selectedClientId, selectedTypeId);
         });
 
         if (availableTypes.length === 1) {
@@ -389,6 +393,112 @@
             bookingTypeSelect.dispatchEvent(new Event('change'));
         }
     }
+
+    // Функция обновления индикатора баланса
+    function updateBalanceIndicator(selectedClientId, selectedTypeId) {
+        const $balanceContainer = $('#clientBalanceContainer');
+        const $balanceDot = $('#clientBalanceDot');
+        const $durationSelect = $('#bookingDuration');
+        
+        console.log('Параметры:', {
+            selectedClientId,
+            selectedTypeId,
+            duration: $durationSelect.val()
+        });
+
+        // Отладочный вывод для всех данных
+        console.log('Все тарифные единицы:', cachedData.tariffUnits);
+        console.log('Ищем тип бронирования:', selectedTypeId);
+        
+        // Получаем тарифную единицу для выбранного типа брони
+        const tariffUnit = cachedData.tariffUnits.find(tu => parseInt(tu.fields.reservation_type) === parseInt(selectedTypeId));
+        console.log('Найденная тарифная единица:', tariffUnit);
+        
+        if (!tariffUnit) {
+            console.error('Не найдена тарифная единица для типа:', selectedTypeId);
+            $balanceDot.removeClass('green-dot red-dot yellow-dot').addClass('gray-dot').show();
+            $balanceContainer.attr('data-tooltip', 'Ошибка: не найдена тарифная единица');
+            return;
+        }
+        
+        // Получаем длительность тарифной единицы в минутах из min_reservation_time
+        const minTime = tariffUnit.fields.min_reservation_time;
+        const [hours, minutes] = minTime.split(':').map(Number);
+        const tariffUnitMinutes = hours * 60 + minutes;
+        const tariffUnitHours = tariffUnitMinutes / 60;
+        
+        // Рассчитываем требуемое количество единиц
+        const duration = $durationSelect.val();
+        const [durationHours, durationMinutes] = duration.split(':').map(Number);
+        const durationHoursTotal = durationHours + (durationMinutes / 60);
+        const requiredUnits = Math.ceil(durationHoursTotal / tariffUnitHours);
+        
+        console.log('Расчет единиц:', {
+            tariffUnit: tariffUnit.fields,
+            minTime,
+            tariffUnitMinutes,
+            tariffUnitHours,
+            durationHoursTotal,
+            requiredUnits,
+            calculation: `${durationHoursTotal} / ${tariffUnitHours} = ${durationHoursTotal/tariffUnitHours} (округление вверх: ${requiredUnits})`
+        });
+        
+        // Если баланс не определен - серая точка
+        const client = cachedData.clients.find(c => c.id == selectedClientId);
+        console.log('Найденный клиент:', client);
+        
+        if (!client || client === 'undefined') {
+            console.log('Клиент не найден или undefined');
+            $balanceDot.hide();
+            $balanceContainer.removeAttr('data-tooltip');
+            return;
+        }
+        
+        if (!client?.balances) {
+            console.log('Нет информации о балансах клиента');
+            $balanceDot.removeClass('green-dot red-dot yellow-dot').addClass('gray-dot').show();
+            $balanceContainer.attr('data-tooltip', 'Нет информации о балансе');
+            return;
+        }
+
+        const balance = client.balances[selectedTypeId];
+        
+        // Если баланс = undefined или не определен - серая точка
+        if (typeof balance === 'undefined' || balance === null) {
+            console.log('Нет записи о балансе для данного типа бронирования');
+            $balanceDot.removeClass('green-dot red-dot yellow-dot').addClass('gray-dot').show();
+            $balanceContainer.attr('data-tooltip', 'Нет информации о балансе');
+            return;
+        }
+        
+        // Если баланс = 0 - красная точка
+        if (balance == 0) {
+            console.log('Баланс равен 0');
+            $balanceDot.removeClass('green-dot gray-dot yellow-dot').addClass('red-dot').show();
+            $balanceContainer.attr('data-tooltip', 'Баланс: 0 единиц');
+            return;
+        }
+        
+        // Если баланса недостаточно - желтая точка
+        if (balance < requiredUnits) {
+            console.log('Баланса недостаточно:', {balance, requiredUnits});
+            $balanceDot.removeClass('green-dot gray-dot red-dot').addClass('yellow-dot').show();
+            $balanceContainer.attr('data-tooltip', `Баланс: ${balance} единиц (требуется ${requiredUnits})`);
+            return;
+        }
+        
+        // Если баланс достаточный - зеленая точка
+        console.log('Баланс достаточный:', {balance, requiredUnits});
+        $balanceDot.removeClass('gray-dot red-dot yellow-dot').addClass('green-dot').show();
+        $balanceContainer.attr('data-tooltip', `Баланс: ${balance} единиц`);
+    }
+
+    // Обновляем индикатор при изменении длительности
+    $('#bookingDuration').on('change', function() {
+        const selectedClient = $('#client').val();
+        const selectedTypeId = $('#bookingType').val();
+        updateBalanceIndicator(selectedClient, selectedTypeId);
+    });
 
     function initializeServicesList() {
         if (!cachedData.services) {
@@ -462,33 +572,32 @@
     // Обработчик изменения типа бронирования
     $('#bookingType').on('change', function() {
         const selectedTypeId = $(this).val();
-
-        // Показываем/скрываем контейнер клиента и специалиста
-        const clientSpecialistRow = document.getElementById('client-specialist-row');
-        const durationContainer = document.getElementById('durationContainer');
         
-        if (selectedTypeId) {
-            clientSpecialistRow.style.display = 'flex';
-            
-            // Обновляем опции длительности и показываем контейнер
-            const time = document.getElementById('timeField').value;
-            const maxEndTime = document.getElementById('maxEndTime').value;
-            updateBookingDurationOptions(time, maxEndTime, selectedTypeId);
-            
-            // Принудительно показываем контейнер длительности
-            durationContainer.style.cssText = "display: block !important";
-        } else {
-            clientSpecialistRow.style.display = 'none';
-            $('#client').val('').trigger('chosen:updated');
-            $('#specialist').val('').trigger('chosen:updated');
-            
-            // Принудительно скрываем контейнер длительности
-            durationContainer.style.cssText = "display: none !important";
-            $('#bookingDuration').val('');
-            updateBookingLabel(document.getElementById('timeField').value);
+        // Скрываем контейнер услуг, если тип не выбран
+        if (!selectedTypeId) {
+            $('#serviceTypeContainer').hide();
+            return;
         }
+
+        // Показываем контейнер услуг
+        $('#serviceTypeContainer').show();
         
+        // Обновляем список услуг
         updateServicesList(selectedTypeId);
+        
+        // Обновляем опции длительности бронирования
+        const selectedTime = document.getElementById('timeField').value;
+        const maxEndTime = document.getElementById('maxEndTime').value;
+        updateBookingDurationOptions(selectedTime, maxEndTime, selectedTypeId);
+        
+        // Показываем строку с клиентом и специалистом
+        $('#client-specialist-row').show();
+    });
+
+    // Обработчик изменения длительности бронирования
+    $('#bookingDuration').on('change', function() {
+        const startTime = document.getElementById('timeField').value;
+        updateBookingLabel(startTime);
     });
 
     function updateBookingDurationOptions(selectedTime, maxEndTime, selectedTypeId) {
@@ -551,7 +660,7 @@
             
             const hours = Math.floor(minutes / 60);
             const mins = minutes % 60;
-            const text = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+            const text = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
             options.push(`<option value="${text}">${text}</option>`);
         }
 
@@ -570,6 +679,11 @@
             $(durationSelect).on('change', function() {
                 const startTime = document.getElementById('timeField').value;
                 updateBookingLabel(startTime);
+                
+                // Обновляем индикатор баланса
+                const selectedClient = $('#client').val();
+                const selectedTypeId = $('#bookingType').val();
+                updateBalanceIndicator(selectedClient, selectedTypeId);
             });
 
             // Вызываем обработчик сразу после установки начального значения
@@ -592,12 +706,6 @@
         const endTime = calculateEndTime(startTime, duration);
         fromtimeBookingLabel.textContent = `Бронь с ${startTime} до ${endTime}`;
     }
-
-    // Обработчик изменения длительности бронирования
-    $('#bookingDuration').on('change', function() {
-        const startTime = document.getElementById('timeField').value;
-        updateBookingLabel(startTime);
-    });
 
     function getMaxEndTime(timeblocks, rowSelector, currentCellIndex) {
         const timeBlocksArray = JSON.parse(timeblocks);
@@ -654,18 +762,4 @@
 
         return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
     }
-
-    // Обработчик выбора клиента для комментария и баланса
-    $('#client').on('chosen:selected', function(evt, params) {
-        // Обработка комментария
-        const selectedOption = $(this).find('option:selected');
-        const comment = selectedOption.attr('data-comment');
-        const commentDiv = $('#clientComment');
-        
-        if (comment && comment.trim() !== '') {
-            commentDiv.text(comment).show();
-        } else {
-            commentDiv.hide();
-        }
-    });
 </script>
