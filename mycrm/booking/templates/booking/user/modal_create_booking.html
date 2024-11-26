@@ -1,4 +1,8 @@
 {% load custom_filters %}
+{% load static %}
+<head>
+    <link rel="stylesheet" href="{% static 'css/neon-dark-theme.css' %}">
+</head>
 <!-- Модальное окно создания брони -->
 <p id="tariff_units_json" style="display: none;">{{ tariff_units_json }}</p>
 <p id="services_json" style="display: none;">{{ services_json }}</p>
@@ -19,7 +23,7 @@
             <div class="modal-body">
                 <form id="bookingForm" action="javascript:void(0);" method="POST">
                     {% csrf_token %}
-                    <!-- Время начала брони -->
+                    <!-- Время начала брони и скрытые поля -->
                     <div class="mb-3">
                         <label class="form-label" id="fromtimeBookingLabel">Бронь с</label>
                         <input type="hidden" id="dateField" name="date">
@@ -30,7 +34,7 @@
                         <input type="hidden" id="roomIdField" name="room_id">
                     </div>
 
-                    <!-- Выпадающий список "Тип брони" -->
+                    <!-- Выпадающие списки "Тип брони" и "Продолжительность бронирования" -->
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="bookingType" class="form-label">Тип брони</label>
@@ -46,20 +50,23 @@
                         </div>
                     </div>
 
-                    <!-- Выпадающие списки "Укажите клиента и Укажите специалиста" будет скрыт до выбора типа брони -->
+                    <!-- Выпадающие списки "Выберите клиента и Выберите специалиста" -->
                     <div class="row mb-3" id="client-specialist-row" style="display: none;">
                         <!-- Выпадающий список "Клиент" -->
                         <div class="col-md-6">
                             <label for="client" class="form-label">Клиент</label>
-                            <select class="form-select js-chosen" id="client" name="client"
-                                    data-placeholder="Выберите клиента">
-                                <option value="" selected>Выберите клиента</option>
-                                {% for client in clients %}
-                                <option value="{{ client.id }}" data-comment="{{ client.comment|default:'' }}">{{ client.name }}</option>
-                                {% endfor %}
-                            </select>
+                            <div style="position: relative;">
+                                <select class="form-select js-chosen" id="client" name="client" data-placeholder="Выберите клиента">
+                                    <option value="" selected>Выберите клиента</option>
+                                    {% for client in clients %}
+                                    <option value="{{ client.id }}" data-comment="{{ client.comment|default:'' }}">{{ client.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div id="clientBalanceContainer" class="dot-container">
+                                    <div id="clientBalanceDot" class="balance-dot"></div>
+                                </div>
+                            </div>
                             <div id="clientComment" class="text-muted small mt-1" style="display: none;"></div>
-                            <div id="clientBalance" class="text-success small mt-1" style="display: none;"></div>
                         </div>
 
                         <!-- Выпадающий список "Специалист" -->
@@ -69,7 +76,7 @@
                         </div>
                     </div>
 
-                    <!-- Выпадающий список "Укажите услугу" -->
+                    <!-- Выпадающий список "Укажите услуги" -->
                     <div class="row mb-3" id="serviceTypeContainer">
                         <div class="col">
                             <label for="serviceType" class="form-label"></label>
@@ -316,13 +323,14 @@
         bookingTypeSelect.addEventListener('change', updateClientVisibility);
         updateClientVisibility();
 
+        //Обработчик выбора клиента
         clientSelect.on('change', function () {
             const selectedClient = clientSelect.val();
             console.log("Выбранный клиент ID:", selectedClient);
 
-            // Добавляем отладку баланса
             const selectedTypeId = bookingTypeSelect.value;
-            const balanceDiv = $('#clientBalance');
+            const balanceContainer = $('#clientBalanceContainer');
+            const balanceDot = $('#clientBalanceDot');
             
             console.log('BALANCE DEBUG:', {
                 selectedClient,
@@ -344,23 +352,19 @@
                     console.log('BALANCE DEBUG: Balance value:', balance);
                     
                     if (balance !== undefined && balance !== null) {
-                        balanceDiv.removeClass('text-muted')
-                                 .addClass('text-success')
-                                 .text(`Баланс тарифных единиц: ${balance}`)
-                                 .show();
+                        balanceDot.removeClass('gray-dot').addClass('green-dot').show(); // Зеленая точка
+                        balanceContainer.attr('data-tooltip', `Баланс тарифных единиц: ${balance}`); // Всплывающее сообщение
                     } else {
-                        balanceDiv.removeClass('text-success')
-                                 .addClass('text-muted')
-                                 .text('Нет тарифных единиц для данного типа бронирования')
-                                 .show();
+                        balanceDot.removeClass('green-dot').addClass('gray-dot').show(); // Серая точка
+                        balanceContainer.attr('data-tooltip', 'Нет тарифных единиц для данного типа бронирования'); // Всплывающее сообщение
                     }
                 } else {
                     console.log('BALANCE DEBUG: No balances found for client');
-                    balanceDiv.hide();
+                    balanceDot.hide(); // Скрываем точку
                 }
             } else {
                 console.log('BALANCE DEBUG: Missing client or type ID');
-                balanceDiv.hide();
+                balanceDot.hide(); // Скрываем точку
             }
 
             if (!selectedClient) {
@@ -423,7 +427,8 @@
             // Добавляем обработку баланса
             const selectedTypeId = bookingTypeSelect.value;
             const selectedClientId = $('#client').val();
-            const balanceDiv = $('#clientBalance');
+            const balanceContainer = $('#clientBalanceContainer');
+            const balanceDot = $('#clientBalanceDot');
 
             if (selectedClientId && selectedTypeId) {
                 const client = cachedData.clients.find(c => c.id == selectedClientId);
@@ -432,21 +437,17 @@
                     console.log('BALANCE DEBUG: Balance for type', selectedTypeId, ':', balance);
                     
                     if (balance !== undefined && balance !== null) {
-                        balanceDiv.removeClass('text-muted')
-                                 .addClass('text-success')
-                                 .text(`Баланс тарифных единиц: ${balance}`)
-                                 .show();
+                        balanceDot.removeClass('gray-dot').addClass('green-dot').show();
+                        balanceContainer.attr('data-tooltip', `Баланс тарифных единиц: ${balance}`);
                     } else {
-                        balanceDiv.removeClass('text-success')
-                                 .addClass('text-muted')
-                                 .text('Нет тарифных единиц для данного типа бронирования')
-                                 .show();
+                        balanceDot.removeClass('green-dot').addClass('gray-dot').show();
+                        balanceContainer.attr('data-tooltip', 'Нет тарифных единиц для данного типа бронирования');
                     }
                 } else {
-                    balanceDiv.hide();
+                    balanceDot.hide(); // Скрываем точку
                 }
             } else {
-                balanceDiv.hide();
+                balanceDot.hide(); // Скрываем точку
             }
         });
 
@@ -800,70 +801,6 @@
         return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
     }
 
-    // Обработчик выбора клиента и типа бронирования
-    function updateClientBalance() {
-        const selectedClientId = $('#client').val();
-        const selectedTypeId = $('#bookingType').val();
-        const balanceDiv = $('#clientBalance');
-
-        console.log('DEBUG: updateClientBalance called with params:', {
-            selectedClientId,
-            selectedTypeId,
-            cachedClients: cachedData.clients.length
-        });
-        
-        if (!selectedClientId || !selectedTypeId) {
-            console.log('DEBUG: Missing required data:', {
-                hasClientId: !!selectedClientId,
-                hasTypeId: !!selectedTypeId
-            });
-            balanceDiv.hide();
-            return;
-        }
-        
-        // Находим клиента и его баланс
-        const client = cachedData.clients.find(c => c.id == selectedClientId);
-        console.log('DEBUG: Found client:', {
-            clientFound: !!client,
-            clientId: selectedClientId,
-            clientName: client ? client.name : 'not found',
-            hasBalances: client ? !!client.balances : false
-        });
-        
-        if (client && client.balances) {
-            const balance = client.balances[selectedTypeId];
-            console.log('DEBUG: Balance check:', {
-                typeId: selectedTypeId,
-                balance: balance,
-                allBalances: client.balances
-            });
-            
-            if (balance !== undefined && balance !== null) {
-                console.log('DEBUG: Showing balance:', balance);
-                balanceDiv.removeClass('text-muted').addClass('text-success')
-                         .text(`Баланс тарифных единиц: ${balance}`).show();
-            } else {
-                console.log('DEBUG: No balance found for type:', selectedTypeId);
-                balanceDiv.removeClass('text-success').addClass('text-muted')
-                         .text('Нет тарифных единиц для данного типа бронирования').show();
-            }
-        } else {
-            console.log('DEBUG: No client or balances found');
-            balanceDiv.hide();
-        }
-    }
-
-    // Добавляем обработчики событий для Chosen и обычного select
-    $('#client').on('chosen:selected', function(evt, params) {
-        console.log('Client chosen:selected event:', params);
-        updateClientBalance();
-    });
-
-    $('#bookingType').on('change', function() {
-        console.log('Booking type changed:', $(this).val());
-        updateClientBalance();
-    });
-
     // Обработчик выбора клиента для комментария и баланса
     $('#client').on('chosen:selected', function(evt, params) {
         // Обработка комментария
@@ -876,89 +813,5 @@
         } else {
             commentDiv.hide();
         }
-
-        // Обработка баланса
-        const selectedClientId = $(this).val();
-        const selectedTypeId = $('#bookingType').val();
-        const balanceDiv = $('#clientBalance');
-
-        console.log('Client and balance update:', { selectedClientId, selectedTypeId });
-
-        if (!selectedClientId || !selectedTypeId) {
-            balanceDiv.hide();
-            return;
-        }
-
-        const client = cachedData.clients.find(c => c.id == selectedClientId);
-        
-        if (client && client.balances) {
-            const balance = client.balances[selectedTypeId];
-            
-            if (balance !== undefined && balance !== null) {
-                balanceDiv.removeClass('text-muted')
-                         .addClass('text-success')
-                         .text(`Баланс тарифных единиц: ${balance}`)
-                         .show();
-            } else {
-                balanceDiv.removeClass('text-success')
-                         .addClass('text-muted')
-                         .text('Нет тарифных единиц для данного типа бронирования')
-                         .show();
-            }
-        } else {
-            balanceDiv.hide();
-        }
-    });
-
-    // Обработчик изменения типа бронирования
-    $('#bookingType').on('change', function () {
-        // Удаляем старый обработчик change для bookingType
-        bookingTypeSelect.removeEventListener('change', updateClientVisibility);
-
-        // Единый обработчик изменения типа бронирования через jQuery
-        $('#bookingType').on('change', function() {
-            const selectedTypeId = $(this).val();
-            const selectedClientId = $('#client').val();
-            const balanceDiv = $('#clientBalance');
-
-            // Обновляем видимость клиента
-            const optionsCount = this.options.length;
-            if (optionsCount === 1 || selectedTypeId) {
-                clientSpecialistRow.style.display = 'flex';
-            } else {
-                clientSpecialistRow.style.display = 'none';
-                specialistContainer.style.display = 'none';
-            }
-
-            // Обработка баланса
-            if (selectedClientId && selectedTypeId) {
-                const client = cachedData.clients.find(c => c.id == selectedClientId);
-                if (client?.balances) {
-                    const balance = client.balances[selectedTypeId];
-                    console.log('BALANCE DEBUG: Balance for type', selectedTypeId, ':', balance);
-                    
-                    if (balance !== undefined && balance !== null) {
-                        balanceDiv.removeClass('text-muted')
-                                 .addClass('text-success')
-                                 .text(`Баланс тарифных единиц: ${balance}`)
-                                 .show();
-                    } else {
-                        balanceDiv.removeClass('text-success')
-                                 .addClass('text-muted')
-                                 .text('Нет тарифных единиц для данного типа бронирования')
-                                 .show();
-                    }
-                } else {
-                    balanceDiv.hide();
-                }
-            } else {
-                balanceDiv.hide();
-            }
-
-            // Обновляем остальные элементы
-            updateSpecialistList(selectedTypeId);
-            updateServicesList(selectedTypeId);
-            updateBookingDurationOptions(document.getElementById('timeField').value, maxEndTime, selectedTypeId);
-        });
     });
 </script>

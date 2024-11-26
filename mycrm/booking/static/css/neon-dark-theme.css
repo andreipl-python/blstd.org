@@ -1119,3 +1119,60 @@ body {
     height: 28px !important;
     line-height: 28px !important;
 }
+
+/* Позиционирование контейнера с точкой */
+.dot-container {
+    position: absolute;
+    top: 5px; /* Отступ от верхнего края */
+    right: 20px; /* Отступ от правого края */
+    width: 10px; /* Размер контейнера для точки */
+    height: 10px;
+}
+
+/* Балансная точка */
+.balance-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.green-dot {
+    background-color: green;
+    animation: blink 1s infinite;
+}
+
+.gray-dot {
+    background-color: gray;
+}
+
+/* Подсказка */
+.dot-container[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 120%; /* Над точкой */
+    right: 50%;
+    transform: translateX(50%);
+    background-color: black;
+    color: white;
+    padding: 5px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+.dot-container[data-tooltip]:hover::before {
+    content: "";
+    position: absolute;
+    bottom: 110%;
+    right: 50%;
+    transform: translateX(50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: black transparent transparent transparent;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}

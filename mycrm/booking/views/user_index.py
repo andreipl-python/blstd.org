@@ -96,6 +96,33 @@ def user_index_view(request):
     bookings_in_range = add_blocks_datetime_range_and_room_name(bookings_in_range, 15)
     bookings_in_range_json = json.dumps(bookings_in_range)
 
+    # Получаем всех клиентов с их балансами
+    clients = Client.objects.prefetch_related('subscription_set__reservation_type').all()
+    print("DEBUG: Fetching clients with subscriptions")
+    
+    # Подготавливаем данные о балансах для каждого клиента
+    clients_with_balances = []
+    for client in clients:
+        print(f"DEBUG: Processing client ID: {client.id}, Name: {client.name}")
+        subscriptions = client.subscription_set.all()
+        print(f"DEBUG: Found {len(subscriptions)} subscriptions for client {client.id}")
+        
+        balances = {
+            subscription.reservation_type_id: subscription.balance 
+            for subscription in subscriptions
+        }
+        print(f"DEBUG: Client {client.id} balances by reservation type: {balances}")
+        
+        clients_with_balances.append({
+            'id': client.id,
+            'name': client.name,
+            'comment': client.comment,
+            'balances': balances
+        })
+    
+    clients_json = json.dumps(clients_with_balances)
+    print(f"DEBUG: Final clients JSON structure (first 200 chars): {clients_json[:200]}...")
+
     # Сортировка услуг: сначала "Аренда оборудования", затем "Прочее"
     services = Service.objects.select_related('group').prefetch_related('reservation_type').annotate(
         group_order=Case(
@@ -135,6 +162,8 @@ def user_index_view(request):
         'bookings_in_range': bookings_in_range_json,
         'reservation_types_json': reservation_types_json,
         'tariff_units_json': tariff_units_json,
+        'clients': clients,  # Добавляем клиентов в контекст
+        'clients_json': clients_json
     }
 
     return render(request, 'booking/user/user_index.html', context)
