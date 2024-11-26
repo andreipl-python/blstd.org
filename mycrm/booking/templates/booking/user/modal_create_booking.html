@@ -489,7 +489,7 @@
         
         // Если баланс достаточный - зеленая точка
         console.log('Баланс достаточный:', {balance, requiredUnits});
-        $balanceDot.removeClass('gray-dot red-dot yellow-dot').addClass('green-dot').show();
+        $balanceDot.removeClass('red-dot gray-dot yellow-dot').addClass('green-dot blink').show();
         $balanceContainer.attr('data-tooltip', `Баланс: ${balance} единиц`);
     }
 

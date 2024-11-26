@@ -194,6 +194,77 @@ body {
         0 0 15px rgba(59, 130, 246, 0.1);
 }
 
+/* Стили для индикаторов баланса */
+.client-select-container {
+    position: relative;
+}
+
+.dot-container {
+    position: absolute;
+    top: 5px;
+    right: 20px;
+    width: 8px;
+    height: 8px;
+    z-index: 1000;
+}
+
+.balance-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.green-dot {
+    background: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.green-dot.blink {
+    animation: blink 1.5s ease-in-out infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+}
+
+.yellow-dot {
+    background: #eab308;
+    box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
+}
+
+.red-dot {
+    background: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+.gray-dot {
+    background: #64748b;
+    box-shadow: 0 0 8px rgba(100, 116, 139, 0.6);
+}
+
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+[data-tooltip]:hover:after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    background: #1e293b;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1001;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    border: 1px solid #3b82f6;
+}
+
 /* Скроллбар */
 ::-webkit-scrollbar {
     width: 10px;
@@ -1118,61 +1189,4 @@ body {
     align-items: center !important;
     height: 28px !important;
     line-height: 28px !important;
-}
-
-/* Позиционирование контейнера с точкой */
-.dot-container {
-    position: absolute;
-    top: 5px; /* Отступ от верхнего края */
-    right: 20px; /* Отступ от правого края */
-    width: 10px; /* Размер контейнера для точки */
-    height: 10px;
-}
-
-/* Балансная точка */
-.balance-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-}
-
-.green-dot {
-    background-color: green;
-    animation: blink 1s infinite;
-}
-
-.gray-dot {
-    background-color: gray;
-}
-
-/* Подсказка */
-.dot-container[data-tooltip]:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 120%; /* Над точкой */
-    right: 50%;
-    transform: translateX(50%);
-    background-color: black;
-    color: white;
-    padding: 5px;
-    border-radius: 4px;
-    font-size: 12px;
-    white-space: nowrap;
-    z-index: 10;
-}
-
-.dot-container[data-tooltip]:hover::before {
-    content: "";
-    position: absolute;
-    bottom: 110%;
-    right: 50%;
-    transform: translateX(50%);
-    border-width: 5px;
-    border-style: solid;
-    border-color: black transparent transparent transparent;
-}
-
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
 }
