@@ -274,5 +274,3 @@ class Room(models.Model):
         db_table = 'rooms'
         verbose_name = 'Помещение'
         verbose_name_plural = 'Помещения'
-
-
