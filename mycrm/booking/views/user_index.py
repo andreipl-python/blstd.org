@@ -97,31 +97,46 @@ def user_index_view(request):
     bookings_in_range_json = json.dumps(bookings_in_range)
 
     # Получаем всех клиентов с их балансами
-    clients = Client.objects.prefetch_related('subscription_set__reservation_type').all()
-    print("DEBUG: Fetching clients with subscriptions")
+    clients = Client.objects.prefetch_related(
+        'subscription_set__reservation_type', 
+        'clientrating_set',
+        'group__client_set'
+    ).select_related('group').all()
     
     # Подготавливаем данные о балансах для каждого клиента
     clients_with_balances = []
     for client in clients:
-        print(f"DEBUG: Processing client ID: {client.id}, Name: {client.name}")
         subscriptions = client.subscription_set.all()
-        print(f"DEBUG: Found {len(subscriptions)} subscriptions for client {client.id}")
         
         balances = {
             subscription.reservation_type_id: subscription.balance 
             for subscription in subscriptions
         }
-        print(f"DEBUG: Client {client.id} balances by reservation type: {balances}")
+        
+        # Получаем количество оценок
+        rating_count = client.clientrating_set.count()
+        
+        # Подготавливаем данные о группе
+        group_data = None
+        if client.group:
+            group_data = {
+                'id': client.group.id,
+                'name': client.group.name,
+                'clients': [c.name for c in client.group.client_set.all() if c.id != client.id]
+            }
         
         clients_with_balances.append({
             'id': client.id,
             'name': client.name,
             'comment': client.comment,
-            'balances': balances
+            'phone': client.phone,
+            'rating': client.rating,
+            'rating_count': rating_count,
+            'balances': balances,
+            'group': group_data
         })
     
     clients_json = json.dumps(clients_with_balances)
-    print(f"DEBUG: Final clients JSON structure (first 200 chars): {clients_json[:200]}...")
 
     # Сортировка услуг: сначала "Аренда оборудования", затем "Прочее"
     services = Service.objects.select_related('group').prefetch_related('reservation_type').annotate(

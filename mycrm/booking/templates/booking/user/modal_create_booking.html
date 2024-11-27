@@ -68,16 +68,30 @@
                     <div class="row mb-3" id="client-specialist-row" style="display: none;">
                         <!-- Выпадающий список "Клиент" -->
                         <div class="col-md-6">
-                            <label for="client" class="form-label">Клиент</label>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label for="client" class="form-label d-flex align-items-center mb-0">
+                                    Клиент
+                                    <span class="client-phone-container ms-2" style="display: none;">
+                                        <i class="fas fa-phone text-muted" data-bs-toggle="tooltip"></i>
+                                    </span>
+                                </label>
+                                <span class="client-rating-container" style="display: none;">
+                                    <i class="fas fa-star rating-icon" data-bs-toggle="tooltip" data-bs-placement="top"></i>
+                                    <span class="client-rating"></span>
+                                </span>
+                            </div>
                             <div class="client-select-container" style="position: relative;">
                                 <select class="form-select js-chosen" id="client" name="client" data-placeholder="Выберите клиента">
                                     <option value="" selected>Выберите клиента</option>
-                                    {% for client in clients %}
+                                    {% for client in clients_json|parse_json %}
                                     <option value="{{ client.id }}" 
-                                            data-comment="{{ client.comment|default:'' }}" 
-                                            data-group-id="{{ client.group_id|default:'' }}"
+                                            data-comment="{{ client.comment|default:'' }}"
+                                            data-phone="{{ client.phone|default:'' }}"
+                                            data-rating="{{ client.rating|default:'' }}"
+                                            data-rating-count="{{ client.rating_count|default:0 }}"
+                                            data-group-id="{{ client.group.id|default:'' }}"
                                             data-group-name="{{ client.group.name|default:'' }}"
-                                            data-group-clients="{% for group_client in client.group.client_set.all %}{{ group_client.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                                            data-group-clients="{{ client.group.clients|join:', '|default:'' }}">
                                         {{ client.name }}
                                     </option>
                                     {% endfor %}
@@ -86,13 +100,19 @@
                                     <div id="clientBalanceDot" class="balance-dot"></div>
                                 </div>
                             </div>
-                            <div id="clientComment" class="text-muted small mt-1"></div>
+                            <div id="clientComment" class="text-muted small mt-1" style="display: none;">
+                                <i class="fas fa-comment text-muted"></i>
+                                <span class="comment-text ms-1"></span>
+                            </div>
                         </div>
 
                         <!-- Выпадающий список "Специалист" -->
                         <div class="col-md-6" id="specialist-container" style="display: none;">
-                            <label for="specialist" class="form-label">Специалист</label>
-                            <select class="form-select js-chosen" id="specialist" name="specialist"></select>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label for="specialist" class="form-label mb-0">Специалист</label>
+                            </div>
+                            <select class="form-select js-chosen" id="specialist" name="specialist" data-placeholder="Выберите специалиста">
+                            </select>
                         </div>
                     </div>
 
@@ -151,27 +171,107 @@
         // Обработчик выбора клиента
         $('#client').on('change', function() {
             const selectedClient = $(this).val();
+            const selectedOption = $(this).find('option:selected');
             const $balanceDot = $('#clientBalanceDot');
             const $balanceContainer = $('#clientBalanceContainer');
+            const $ratingContainer = $('.client-rating-container');
+            const $ratingIcon = $('.rating-icon');
+            const $ratingText = $('.client-rating');
+            const $phoneContainer = $('.client-phone-container');
+            const $commentDiv = $('#clientComment');
             
-            // Если клиент не выбран, скрываем точку
+            // Если клиент не выбран, скрываем всю информацию
             if (!selectedClient) {
                 $balanceDot.hide();
                 $balanceContainer.removeAttr('data-tooltip');
+                $ratingContainer.show();
+                $ratingIcon.removeClass('fa-star-half-alt text-danger text-warning').addClass('fa-star text-muted');
+                $ratingText.hide();
+                $phoneContainer.hide();
+                $commentDiv.hide();
                 $('#specialist-container').hide();
                 $('#specialist').val('').trigger("chosen:updated");
                 return;
             }
+
+            // Обрабатываем рейтинг
+            const rating = selectedOption.data('rating');
+            const ratingCount = parseInt(selectedOption.data('rating-count') || 0);
+            console.log('Rating data:', { 
+                rating, 
+                rawRatingCount: selectedOption.data('rating-count'),
+                parsedRatingCount: ratingCount, 
+                type: typeof ratingCount 
+            });
+            $ratingContainer.show();
             
-            // Обработка комментария клиента
-            const selectedOption = $(this).find('option:selected');
-            const comment = selectedOption.attr('data-comment');
-            const commentDiv = $('#clientComment');
-            
-            if (comment && comment.trim() !== '') {
-                commentDiv.text(comment).show();
+            if (rating) {
+                const ratingNum = parseFloat(rating.toString().replace(',', '.'));
+                
+                // Меняем иконку и цвет в зависимости от рейтинга
+                if (ratingNum >= 4) {
+                    $ratingIcon.removeClass('fa-star-half-alt text-danger text-muted').addClass('fa-star text-warning');
+                } else if (ratingNum >= 3) {
+                    $ratingIcon.removeClass('fa-star text-danger text-warning text-muted').addClass('fa-star-half-alt text-warning');
+                } else {
+                    $ratingIcon.removeClass('fa-star-half-alt text-warning text-muted').addClass('fa-star text-danger');
+                }
+                
+                $ratingText.text(rating).show();
+                
+                // Проверяем количество оценок и формируем тултип
+                const tooltipText = ratingCount > 0 
+                    ? `На основе ${ratingCount} ${ratingCount === 1 ? 'оценки' : 'оценок'}`
+                    : 'Нет оценок';
+                console.log('Tooltip text:', tooltipText);
+                
+                $ratingIcon
+                    .attr('title', tooltipText)
+                    .attr('data-bs-original-title', tooltipText)
+                    .tooltip('dispose')
+                    .tooltip();
+                
+                console.log('Rating icon attributes:', {
+                    title: $ratingIcon.attr('title'),
+                    'data-bs-original-title': $ratingIcon.attr('data-bs-original-title'),
+                    class: $ratingIcon.attr('class')
+                });
+                
             } else {
-                commentDiv.hide();
+                // Если рейтинг не найден - серая звездочка без текста
+                $ratingIcon.removeClass('fa-star-half-alt text-danger text-warning').addClass('fa-star text-muted');
+                $ratingText.hide();
+                $ratingIcon.attr('data-bs-original-title', 'Нет оценок');
+                // Инициализируем тултип
+                $ratingIcon.tooltip('dispose').tooltip();
+            }
+            
+            // Обрабатываем телефон
+            const phone = selectedOption.data('phone');
+            if (phone) {
+                const $phoneIcon = $phoneContainer.find('i');
+                // Уничтожаем старый тултип
+                const tooltipInstance = bootstrap.Tooltip.getInstance($phoneIcon[0]);
+                if (tooltipInstance) {
+                    tooltipInstance.dispose();
+                }
+                // Создаем новый тултип с номером телефона
+                $phoneIcon.attr('data-bs-original-title', phone);
+                new bootstrap.Tooltip($phoneIcon[0], {
+                    placement: 'top'
+                });
+                $phoneContainer.show();
+            } else {
+                $phoneContainer.hide();
+            }
+            
+            // Обрабатываем комментарий
+            const comment = selectedOption.data('comment');
+            if (comment) {
+                $('.comment-text').text(comment);
+                $commentDiv.show();
+            } else {
+                $commentDiv.hide();
             }
 
             // Показываем/скрываем переключатель групповой брони и иконку информации
@@ -185,8 +285,8 @@
                 
                 // Обновляем тултип с информацией о группе
                 const groupName = selectedOption.data('group-name');
-                const groupClients = selectedOption.data('group-clients').split(', ');
-                const tooltipText = `<b>Группа "${groupName}"</b><br><br>${groupClients.join('<br>')}`;
+                const groupClients = selectedOption.data('group-clients');
+                const tooltipText = `<b>Группа "${groupName}"</b><br><br>${groupClients}`;
 
                 // Уничтожаем старый тултип и создаем новый
                 const tooltipInstance = bootstrap.Tooltip.getInstance(groupInfoIcon[0]);
@@ -217,7 +317,7 @@
                 $('#specialist-container').show();
                 $('#specialist').prop('disabled', false).trigger("chosen:updated");
             }
-
+            
             // Обновляем опции длительности для пересчета баланса
             const selectedTypeId = $('#bookingType').val();
             if (selectedTypeId) {
@@ -250,7 +350,6 @@
             cachedData.reservationTypes = JSON.parse(reservation_types_json_str);
             // Не парсим services сразу, сделаем это при необходимости
         } catch (error) {
-            console.error('Ошибка при парсинге JSON данных в openModal:', error);
             return;
         }
 
@@ -260,6 +359,10 @@
         $('#serviceType').val('').trigger('chosen:updated');
         $('#bookingType').val('');
         $('#comment').val('');
+        
+        // Сброс рейтинга и телефона
+        $('.client-rating-container').hide();
+        $('.client-phone-container').hide().find('i').attr('data-bs-original-title', '').tooltip('dispose');
         
         // Скрываем точку баланса и удаляем подсказку
         $('#clientBalanceDot').hide();
@@ -294,7 +397,6 @@
         }
 
         if (!Array.isArray(cachedData.rooms)) {
-            console.error("rooms_json не является массивом:", cachedData.rooms);
             return;
         }
 
@@ -302,7 +404,6 @@
         const room = cachedData.rooms.find(room => String(room.pk) === roomId);
 
         if (!room) {
-            console.error("Комната не найдена");
             return;
         }
 
@@ -451,22 +552,10 @@
         const $balanceDot = $('#clientBalanceDot');
         const $durationSelect = $('#bookingDuration');
         
-        console.log('Параметры:', {
-            selectedClientId,
-            selectedTypeId,
-            duration: $durationSelect.val()
-        });
-
-        // Отладочный вывод для всех данных
-        console.log('Все тарифные единицы:', cachedData.tariffUnits);
-        console.log('Ищем тип бронирования:', selectedTypeId);
-        
         // Получаем тарифную единицу для выбранного типа брони
         const tariffUnit = cachedData.tariffUnits.find(tu => parseInt(tu.fields.reservation_type) === parseInt(selectedTypeId));
-        console.log('Найденная тарифная единица:', tariffUnit);
         
         if (!tariffUnit) {
-            console.error('Не найдена тарифная единица для типа:', selectedTypeId);
             $balanceDot.removeClass('green-dot red-dot yellow-dot').addClass('gray-dot').show();
             $balanceContainer.attr('data-tooltip', 'Ошибка: не найдена тарифная единица');
             return;
@@ -484,29 +573,16 @@
         const durationHoursTotal = durationHours + (durationMinutes / 60);
         const requiredUnits = Math.ceil(durationHoursTotal / tariffUnitHours);
         
-        console.log('Расчет единиц:', {
-            tariffUnit: tariffUnit.fields,
-            minTime,
-            tariffUnitMinutes,
-            tariffUnitHours,
-            durationHoursTotal,
-            requiredUnits,
-            calculation: `${durationHoursTotal} / ${tariffUnitHours} = ${durationHoursTotal/tariffUnitHours} (округление вверх: ${requiredUnits})`
-        });
-        
         // Если баланс не определен - серая точка
         const client = cachedData.clients.find(c => c.id == selectedClientId);
-        console.log('Найденный клиент:', client);
         
         if (!client || client === 'undefined') {
-            console.log('Клиент не найден или undefined');
             $balanceDot.hide();
             $balanceContainer.removeAttr('data-tooltip');
             return;
         }
         
         if (!client?.balances) {
-            console.log('Нет информации о балансах клиента');
             $balanceDot.removeClass('green-dot red-dot yellow-dot').addClass('gray-dot').show();
             $balanceContainer.attr('data-tooltip', 'Нет информации о балансе');
             return;
@@ -516,7 +592,6 @@
         
         // Если баланс = undefined или не определен - серая точка
         if (typeof balance === 'undefined' || balance === null) {
-            console.log('Нет записи о балансе для данного типа бронирования');
             $balanceDot.removeClass('green-dot red-dot yellow-dot').addClass('gray-dot').show();
             $balanceContainer.attr('data-tooltip', 'Нет информации о балансе');
             return;
@@ -524,7 +599,6 @@
         
         // Если баланс = 0 - красная точка
         if (balance == 0) {
-            console.log('Баланс равен 0');
             $balanceDot.removeClass('green-dot gray-dot yellow-dot').addClass('red-dot').show();
             $balanceContainer.attr('data-tooltip', 'Баланс: 0 единиц');
             return;
@@ -532,14 +606,12 @@
         
         // Если баланса недостаточно - желтая точка
         if (balance < requiredUnits) {
-            console.log('Баланса недостаточно:', {balance, requiredUnits});
             $balanceDot.removeClass('green-dot gray-dot red-dot').addClass('yellow-dot').show();
             $balanceContainer.attr('data-tooltip', `Баланс: ${balance} единиц (требуется ${requiredUnits})`);
             return;
         }
         
         // Если баланс достаточный - зеленая точка
-        console.log('Баланс достаточный:', {balance, requiredUnits});
         $balanceDot.removeClass('red-dot gray-dot yellow-dot').addClass('green-dot blink').show();
         $balanceContainer.attr('data-tooltip', `Баланс: ${balance} единиц`);
     }
@@ -556,7 +628,6 @@
             try {
                 cachedData.services = JSON.parse(document.getElementById('services_json').textContent);
             } catch (error) {
-                console.error('Ошибка при инициализации списка услуг:', error);
                 return false;
             }
         }
@@ -765,7 +836,6 @@
         // Получаем родительскую строку текущей ячейки
         const currentCell = document.querySelector(`${rowSelector}:nth-child(${currentCellIndex + 1})`);
         if (!currentCell || !currentCell.parentElement) {
-            console.error('Current cell or its parent not found');
             return addHourToTime(timeArray[timeArray.length - 1]);
         }
 

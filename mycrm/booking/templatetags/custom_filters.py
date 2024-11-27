@@ -1,5 +1,6 @@
 from django import template
 from datetime import datetime, timedelta
+import json
 
 register = template.Library()
 
@@ -48,3 +49,12 @@ def to_int(value):
         return int(value)
     except (ValueError, TypeError):
         return None
+
+
+@register.filter(name='parse_json')
+def parse_json(value):
+    """Парсит JSON строку в Python объект"""
+    try:
+        return json.loads(value)
+    except (ValueError, TypeError):
+        return []
