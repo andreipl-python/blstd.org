@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 from django.utils import timezone
 
-from booking.models import Reservation, Room, Service, Specialist
+from booking.models import Reservation, Room, Service, Specialist, ReservationStatusType
 
 
 def parse_datetime(date: str, time: str) -> datetime:
@@ -113,6 +113,9 @@ def create_booking_view(request):
 
         # Создаем бронь в транзакции
         with transaction.atomic():
+            # Получаем статус "Не подтверждена"
+            pending_status = ReservationStatusType.objects.get(name='Не подтверждена')
+            
             # Создаем запись о брони
             reservation = Reservation.objects.create(
                 datetimestart=start_datetime,
@@ -121,7 +124,7 @@ def create_booking_view(request):
                 client_id=client_id,
                 room=room,
                 reservation_type_id=booking_type,
-                status=0,  # PENDING
+                status=pending_status,  # Используем объект статуса
                 comment=comment
             )
 

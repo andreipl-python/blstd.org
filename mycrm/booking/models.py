@@ -46,9 +46,9 @@ PositiveIntegerField – положительное целое число."""
 class Subscription(models.Model):
     """Модель для хранения информации об абонементах"""
     id = models.AutoField(primary_key=True)
-    client = models.ForeignKey('Client', on_delete=models.PROTECT, help_text='ID клиента')
-    reservation_type = models.ForeignKey('ReservationType', on_delete=models.PROTECT, help_text='ID сценария')
-    balance = models.IntegerField(help_text='Баланс тарифных единиц')
+    client = models.ForeignKey('Client', on_delete=models.PROTECT, help_text='ID клиента', verbose_name='ID клиента')
+    reservation_type = models.ForeignKey('ReservationType', on_delete=models.PROTECT, help_text='ID сценария', verbose_name='ID сценария')
+    balance = models.IntegerField(help_text='Баланс тарифных единиц', verbose_name='Баланс тарифных единиц')
 
     class Meta:
         db_table = 'subscriptions'
@@ -147,9 +147,11 @@ class TariffUnit(models.Model):
     """Модель для хранения информации о тарифных единицах"""
 
     reservation_type = models.ForeignKey('ReservationType', on_delete=models.PROTECT,
-                                         help_text='ID типа бронирования (сценария)')
-    min_reservation_time = models.TimeField(help_text='Минимальное время бронирования (размер тарифной единицы)')
-    tariff_unit_cost = models.DecimalField(max_digits=10, decimal_places=2, help_text='Стоимость тарифной единицы')
+                                         help_text='ID типа бронирования (сценария)', verbose_name='ID сценария')
+    min_reservation_time = models.TimeField(help_text='Минимальное время бронирования (размер тарифной единицы)',
+                                            verbose_name='Минимальное время бронирования')
+    tariff_unit_cost = models.DecimalField(max_digits=10, decimal_places=2, help_text='Стоимость тарифной единицы', 
+                                            verbose_name='Стоимость тарифной единицы')
 
     class Meta:
         db_table = 'tariff_units'
@@ -221,7 +223,8 @@ class Specialist(models.Model):
                                help_text='ID клиента (для тех случаев, когда специалист выступает в роли клиента '
                                          'для бронирования)', verbose_name='ID клиента', null=True)
     reservation_type = models.ManyToManyField('ReservationType', related_name='reservation_types',
-                                              help_text='Типы бронирования доступные для специалиста')
+                                              help_text='Типы бронирования доступные для специалиста',
+                                              verbose_name='Типы бронирования',)
 
     class Meta:
         db_table = 'specialists'
@@ -238,7 +241,8 @@ class Client(models.Model):
                                blank=True)
     phone = models.CharField(max_length=150, help_text='Телефон клиента', verbose_name='Телефон клиента', null=True,
                              blank=True)
-    group = models.ForeignKey('ClientGroup', on_delete=models.PROTECT, help_text='ID группы клиента', null=True)
+    group = models.ForeignKey('ClientGroup', on_delete=models.PROTECT, help_text='ID группы клиента', verbose_name='ID группы клиента',
+                             null=True)
 
     class Meta:
         db_table = 'clients'
@@ -269,7 +273,7 @@ class ClientGroup(models.Model):
 class ClientRating(models.Model):
     """Модель для хранения оценок клиентов"""
     client = models.ForeignKey('Client', on_delete=models.PROTECT, help_text='ID клиента', null=False)
-    rating = models.IntegerField(help_text='Оценка выставленная клиенту', null=False, blank=False)
+    rating = models.IntegerField(help_text='Оценка выставленная клиенту', verbose_name='Оценка клиента', null=False, blank=False)
     comment = models.TextField(help_text='Комментарий к оценке', verbose_name='Комментарий к оценке', null=True,
                                blank=True)
 
@@ -287,8 +291,9 @@ class Room(models.Model):
     hourstart = models.TimeField(help_text="Время начала работы помещения", verbose_name="Начало работы")
     hourend = models.TimeField(help_text="Время окончания работы помещения", verbose_name="Конец работы")
     reservation_type = models.ManyToManyField('ReservationType', related_name='rooms',
-                                              help_text="Типы бронирования, доступные для помещения")
-    service = models.ManyToManyField('Service', related_name='services', help_text='Услуги доступные для помещения')
+                                              help_text="Типы бронирования, доступные для помещения",
+                                              verbose_name="Типы бронирования")
+    service = models.ManyToManyField('Service', related_name='services', help_text='Услуги доступные для помещения', verbose_name='Услуги')
 
     class Meta:
         db_table = 'rooms'
