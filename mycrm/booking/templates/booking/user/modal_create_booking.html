@@ -2,6 +2,7 @@
 {% load static %}
 <head>
     <link rel="stylesheet" href="{% static 'css/neon-dark-theme.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <!-- Модальное окно создания брони -->
 <p id="tariff_units_json" style="display: none;">{{ tariff_units_json }}</p>
@@ -29,9 +30,14 @@
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <label class="form-label" id="fromtimeBookingLabel">Бронь с</label>
-                            <div class="form-check form-switch" style="display: none;">
-                                <input class="form-check-input" type="checkbox" role="switch" id="groupBookingSwitch">
-                                <label class="form-check-label" for="groupBookingSwitch">Групповое</label>
+                            <div class="d-flex align-items-center">
+                                <div class="form-check form-switch" style="display: none; margin-left: 10px;">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="groupBookingSwitch">
+                                    <label class="form-check-label" for="groupBookingSwitch">
+                                        Групповая бронь
+                                    </label>
+                                    <i class="fas fa-users group-info-icon" style="margin-left: 5px; cursor: pointer; display: none;" data-bs-toggle="tooltip"></i>
+                                </div>
                             </div>
                         </div>
                         <input type="hidden" id="dateField" name="date">
@@ -67,7 +73,13 @@
                                 <select class="form-select js-chosen" id="client" name="client" data-placeholder="Выберите клиента">
                                     <option value="" selected>Выберите клиента</option>
                                     {% for client in clients %}
-                                    <option value="{{ client.id }}" data-comment="{{ client.comment|default:'' }}" data-group-id="{{ client.group_id|default:'' }}">{{ client.name }}</option>
+                                    <option value="{{ client.id }}" 
+                                            data-comment="{{ client.comment|default:'' }}" 
+                                            data-group-id="{{ client.group_id|default:'' }}"
+                                            data-group-name="{{ client.group.name|default:'' }}"
+                                            data-group-clients="{% for group_client in client.group.client_set.all %}{{ group_client.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                                        {{ client.name }}
+                                    </option>
                                     {% endfor %}
                                 </select>
                                 <div id="clientBalanceContainer" class="dot-container" style="position: absolute; top: 5px; right: 20px;">
@@ -162,13 +174,34 @@
                 commentDiv.hide();
             }
 
-            // Показываем/скрываем переключатель групповой брони
+            // Показываем/скрываем переключатель групповой брони и иконку информации
             const groupId = selectedOption.data('group-id');
             const groupSwitch = $('#groupBookingSwitch').closest('.form-check');
+            const groupInfoIcon = $('.group-info-icon');
+            
             if (groupId) {
                 groupSwitch.show();
+                groupInfoIcon.show();
+                
+                // Обновляем тултип с информацией о группе
+                const groupName = selectedOption.data('group-name');
+                const groupClients = selectedOption.data('group-clients').split(', ');
+                const tooltipText = `<b>Группа "${groupName}"</b><br><br>${groupClients.join('<br>')}`;
+
+                // Уничтожаем старый тултип и создаем новый
+                const tooltipInstance = bootstrap.Tooltip.getInstance(groupInfoIcon[0]);
+                if (tooltipInstance) {
+                    tooltipInstance.dispose();
+                }
+
+                groupInfoIcon.attr('data-bs-original-title', tooltipText);
+                new bootstrap.Tooltip(groupInfoIcon[0], {
+                    placement: 'top',
+                    html: true
+                });
             } else {
                 groupSwitch.hide();
+                groupInfoIcon.hide();
                 $('#groupBookingSwitch').prop('checked', false);
             }
 
@@ -780,4 +813,9 @@
 
         return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
     }
+
+    // Инициализируем тултипы Bootstrap при загрузке страницы
+    $(document).ready(function() {
+        $('[data-bs-toggle="tooltip"]').tooltip();
+    });
 </script>
