@@ -56,16 +56,29 @@ class Subscription(models.Model):
         verbose_name_plural = "Абонементы"
 
 
-class ReservationStatus(IntEnum):
-    """Статусы брони"""
+class ReservationStatusType(models.Model):
+    """Модель для хранения типов статусов бронирования"""
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(
+        max_length=100,
+        help_text='Название статуса',
+        verbose_name='Название',
+        unique=True
+    )
+    description = models.TextField(
+        help_text='Описание статуса',
+        verbose_name='Описание',
+        null=True,
+        blank=True
+    )
 
-    PENDING = 0  # Не подтверждена
-    CONFIRMED_UNPAID = 1  # Подтверждена, но не оплачена
-    CONFIRMED_PAID = 2  # Подтверждена и оплачена
+    class Meta:
+        db_table = 'reservation_status_types'
+        verbose_name = "Тип статуса бронирования"
+        verbose_name_plural = "Типы статусов бронирования"
 
-    @classmethod
-    def choices(cls):
-        return [(status.value, status.name) for status in cls]
+    def __str__(self):
+        return self.name
 
 
 class Reservation(models.Model):
@@ -92,22 +105,29 @@ class Reservation(models.Model):
     reservation_type = models.ForeignKey('ReservationType', on_delete=PROTECT,
                                          help_text='ID типа бронирования (шаблона направления)',
                                          verbose_name='ID типа брони', null=False)
-    status = models.IntegerField(help_text='Статус брони (не подтверждена, подтверждена, оплачена)',
-                                 choices=ReservationStatus.choices(), default=ReservationStatus.PENDING.value,
-                                 verbose_name="Статус брони", null=False, blank=False)
+    status = models.ForeignKey('ReservationStatusType', on_delete=models.PROTECT,
+                              help_text='Статус брони',
+                              verbose_name='Статус',
+                              null=True)
     comment = models.TextField(help_text='Комментарий к брони', verbose_name='Комментарий', null=True)
     services = models.ManyToManyField('Service', related_name='reservations',
                                     help_text='Услуги, включенные в бронь',
                                     verbose_name='Услуги', blank=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text='Дата создания брони',
+        verbose_name='Создана'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text='Дата обновления брони',
+        verbose_name='Обновлена'
+    )
 
     class Meta:
         db_table = 'reservations'
         verbose_name = "Бронь"
         verbose_name_plural = "Брони"
-
-    def clean(self):
-        if self.status not in [status.value for status in ReservationStatus]:
-            raise ValidationError("Недопустимое значение статуса брони.")
 
 
 class ReservationType(models.Model):

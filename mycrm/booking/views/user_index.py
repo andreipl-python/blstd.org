@@ -1,12 +1,12 @@
 import json
 from typing import Tuple, List, Dict, Any
-
 from django.db.models import QuerySet, Q, Case, When, Value, IntegerField
 from django.contrib.auth.decorators import login_required
 from django.core.serializers import serialize
 from django.shortcuts import render
 from datetime import datetime, timedelta, date
 from calendar import monthrange
+from django.utils import timezone
 
 from booking.models import Client, Room, Service, Reservation, ReservationType, Specialist, TariffUnit, ServiceGroup
 
@@ -16,12 +16,12 @@ from .menu2 import menu2_view
 def generate_days_of_month(request_range: str = None) -> list[dict[str, datetime | str | int]]:
     """Функция определяет текущий месяц и возврашает список дней месяца, начальную и конечную даты"""
     days_of_month = []
-    today = datetime.today()
+    today = timezone.now()
     if request_range == 'day7':
         start_date = today
         number_of_days = 8
     else:
-        start_date = datetime(today.year, today.month, 1)
+        start_date = timezone.datetime(today.year, today.month, 1, tzinfo=today.tzinfo)
         _, number_of_days = monthrange(today.year, today.month)
 
     for day in range(number_of_days):
@@ -37,7 +37,10 @@ def generate_days_of_month(request_range: str = None) -> list[dict[str, datetime
 
 def generate_time_blocks(starttime: str, hours_interval: int, num_blocks: int) -> list[dict]:
     """Функция возвращает временной диапазон"""
-    start_time = datetime.strptime(starttime, "%H:%M")  # Время, с которого начинается отсчёт
+    naive_start_time = datetime.strptime(starttime, "%H:%M")  # Время, с которого начинается отсчёт
+    start_time = timezone.make_aware(
+        timezone.datetime.combine(timezone.now().date(), naive_start_time.time())
+    )
     interval = timedelta(hours=hours_interval)  # Интервал между временными блоками (1 час)
     num_blocks = num_blocks  # Количество блоков
     time_blocks = []

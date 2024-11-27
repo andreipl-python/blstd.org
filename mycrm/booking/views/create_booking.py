@@ -8,6 +8,7 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
+from django.utils import timezone
 
 from booking.models import Reservation, Room, Service, Specialist
 
@@ -16,7 +17,8 @@ def parse_datetime(date: str, time: str) -> datetime:
     """Функция для парсинга даты и времени в объект datetime"""
     date_obj = dateparser.parse(date, languages=['ru'])
     time_obj = datetime.strptime(time, '%H:%M')
-    return datetime.combine(date_obj.date(), time_obj.time())
+    naive_datetime = datetime.combine(date_obj.date(), time_obj.time())
+    return timezone.make_aware(naive_datetime)
 
 
 def check_room_availability(room: Room, start_datetime: datetime, end_datetime: datetime) -> bool:
@@ -96,7 +98,8 @@ def create_booking_view(request):
             return JsonResponse({"success": False, "error": "Специалист не найден"})
 
         # Вычисляем время начала и конца брони
-        start_datetime = datetime.strptime(full_datetime, '%Y-%m-%d %H:%M:%S')
+        naive_start_datetime = datetime.strptime(full_datetime, '%Y-%m-%d %H:%M:%S')
+        start_datetime = timezone.make_aware(naive_start_datetime)
         duration_hours, duration_minutes = map(int, booking_duration.split(':'))
         end_datetime = start_datetime + timedelta(hours=duration_hours, minutes=duration_minutes)
 
