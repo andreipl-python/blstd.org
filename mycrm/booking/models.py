@@ -299,3 +299,30 @@ class Room(models.Model):
         db_table = 'rooms'
         verbose_name = 'Помещение'
         verbose_name_plural = 'Помещения'
+
+
+class SpecialistColor(models.Model):
+    specialist = models.OneToOneField(
+        Specialist, 
+        on_delete=models.PROTECT,
+        related_name='color_scheme',
+        verbose_name='Специалист'
+    )
+    primary_color = models.CharField(
+        max_length=7,
+        help_text='HEX код цвета (например, #FF5733)',
+        verbose_name='Основной цвет'
+    )
+    secondary_color = models.CharField(
+        max_length=7,
+        help_text='HEX код цвета для градиента',
+        verbose_name='Дополнительный цвет'
+    )
+    
+    def __str__(self):
+        return f'Цветовая схема: {self.specialist.name}'
+
+    class Meta:
+        db_table = 'specialist_colors'
+        verbose_name = 'Цветовая схема специалиста'
+        verbose_name_plural = 'Цветовые схемы специалистов'
