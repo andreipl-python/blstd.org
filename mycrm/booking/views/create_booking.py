@@ -8,9 +8,8 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
-from django.utils import timezone
 
-from booking.models import Reservation, Room, Service, Specialist, ReservationStatusType
+from booking.models import Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup
 
 
 def parse_datetime(date: str, time: str) -> datetime:
@@ -18,7 +17,7 @@ def parse_datetime(date: str, time: str) -> datetime:
     date_obj = dateparser.parse(date, languages=['ru'])
     time_obj = datetime.strptime(time, '%H:%M')
     naive_datetime = datetime.combine(date_obj.date(), time_obj.time())
-    return timezone.make_aware(naive_datetime)
+    return naive_datetime
 
 
 def check_room_availability(room: Room, start_datetime: datetime, end_datetime: datetime) -> bool:
@@ -34,14 +33,27 @@ def check_room_availability(room: Room, start_datetime: datetime, end_datetime: 
     if start_time < room_start or end_time > room_end:
         raise ValidationError("Время бронирования выходит за рамки рабочего времени помещения")
 
-    # Проверяем пересечение с другими бронями
-    overlapping_bookings = Reservation.objects.filter(
+    # Получаем все брони для проверки
+    existing_bookings = Reservation.objects.filter(
         room=room,
-        datetimestart__lt=end_datetime,
-        datetimeend__gt=start_datetime
-    )
-    if overlapping_bookings.exists():
-        raise ValidationError("На это время уже есть бронирование")
+    ).exclude(status__name='Отменена')
+    
+    # Проверяем пересечения вручную
+    for booking in existing_bookings:
+        # Приводим время существующей брони к naive datetime
+        booking_start = booking.datetimestart.replace(tzinfo=None)
+        booking_end = booking.datetimeend.replace(tzinfo=None)
+        
+        # Пропускаем бронь, если она заканчивается точно тогда, когда начинается новая
+        if booking_end == start_datetime:
+            continue
+            
+        # Проверяем пересечение
+        if (booking_start < end_datetime and booking_end > start_datetime):
+            print(f"Конфликт с бронью: {booking.id}")
+            print(f"Существующая бронь: {booking_start} - {booking_end}")
+            print(f"Новая бронь: {start_datetime} - {end_datetime}")
+            raise ValidationError("На это время уже есть бронирование")
 
     return True
 
@@ -72,6 +84,8 @@ def create_booking_view(request):
         specialist_id = request.POST.get('specialist')
         specialist_id = int(specialist_id) if specialist_id else None
         client_id = int(request.POST.get('client'))
+        client_group_id = request.POST.get('client_group')
+        client_group_id = int(client_group_id) if client_group_id else None
         booking_duration = request.POST.get('bookingDuration')
         comment = request.POST.get('comment', '')
         room_id = int(request.POST.get('room_id'))
@@ -89,19 +103,23 @@ def create_booking_view(request):
         # Получаем объекты из базы
         try:
             room = Room.objects.get(id=room_id)
-            specialist = None
-            if specialist_id:
-                specialist = Specialist.objects.get(id=specialist_id)
+            specialist = Specialist.objects.get(id=specialist_id) if specialist_id else None
+            client_group = ClientGroup.objects.get(id=client_group_id) if client_group_id else None
         except Room.DoesNotExist:
             return JsonResponse({"success": False, "error": "Комната не найдена"})
         except Specialist.DoesNotExist:
             return JsonResponse({"success": False, "error": "Специалист не найден"})
+        except ClientGroup.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Группа не найдена"})
 
         # Вычисляем время начала и конца брони
-        naive_start_datetime = datetime.strptime(full_datetime, '%Y-%m-%d %H:%M:%S')
-        start_datetime = timezone.make_aware(naive_start_datetime)
+        start_datetime = datetime.strptime(full_datetime, '%Y-%m-%d %H:%M:%S')
+        # Добавляем 3 часа к времени перед сохранением
+        start_datetime = start_datetime + timedelta(hours=3)
         duration_hours, duration_minutes = map(int, booking_duration.split(':'))
         end_datetime = start_datetime + timedelta(hours=duration_hours, minutes=duration_minutes)
+
+        print(f"Start time: {start_datetime}, End time: {end_datetime}")  # Для отладки
 
         # Проверяем доступность
         try:
@@ -122,9 +140,10 @@ def create_booking_view(request):
                 datetimeend=end_datetime,
                 specialist=specialist,
                 client_id=client_id,
+                client_group=client_group,
                 room=room,
                 reservation_type_id=booking_type,
-                status=pending_status,  # Используем объект статуса
+                status=pending_status,
                 comment=comment
             )
 

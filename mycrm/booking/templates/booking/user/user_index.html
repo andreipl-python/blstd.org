@@ -179,6 +179,14 @@
             if (specialist) {
                 formData.append('specialist', specialist);
             }
+            
+            // Добавляем ID группы, если включено групповое бронирование
+            const selectedClientData = cachedData.clients.find(c => c.id === parseInt(client));
+            const isGroupBooking = $('#groupBookingSwitch').is(':checked');
+            if (isGroupBooking && selectedClientData && selectedClientData.group) {
+                formData.append('client_group', selectedClientData.group.id);
+            }
+            
             formData.append('bookingDuration', duration);
             formData.append('full_datetime', fullDatetime);
             formData.append('room_id', $('#roomIdField').val());

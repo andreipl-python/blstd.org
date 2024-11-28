@@ -285,8 +285,9 @@
                 
                 // Обновляем тултип с информацией о группе
                 const groupName = selectedOption.data('group-name');
-                const groupClients = selectedOption.data('group-clients');
-                const tooltipText = `<b>Группа "${groupName}"</b><br><br>${groupClients}`;
+                const groupClients = selectedOption.data('group-clients').split(',').map(client => client.trim());
+                const clientsList = groupClients.map(client => `• ${client}`).join('<br>');
+                const tooltipText = `<b>Группа "${groupName}"</b><br><br>${clientsList}`;
 
                 // Уничтожаем старый тултип и создаем новый
                 const tooltipInstance = bootstrap.Tooltip.getInstance(groupInfoIcon[0]);
@@ -367,6 +368,16 @@
         // Скрываем точку баланса и удаляем подсказку
         $('#clientBalanceDot').hide();
         $('#clientBalanceContainer').removeAttr('data-tooltip');
+        
+        // Сброс и скрытие элементов группового бронирования
+        $('#groupBookingSwitch').prop('checked', false);
+        $('#groupBookingSwitch').closest('.form-check').hide();
+        const groupInfoIcon = $('.group-info-icon');
+        const tooltipInstance = bootstrap.Tooltip.getInstance(groupInfoIcon[0]);
+        if (tooltipInstance) {
+            tooltipInstance.dispose();
+        }
+        groupInfoIcon.hide();
         
         // Скрываем контейнер услуг при открытии
         $('#serviceTypeContainer').hide();
