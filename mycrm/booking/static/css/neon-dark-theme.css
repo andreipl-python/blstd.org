@@ -89,8 +89,9 @@ body {
     top: 5px;
     height: 30px;
     background: linear-gradient(135deg, 
-        #a960ee 0%, 
-        #90a0f7 100%
+        rgba(98, 54, 140, 0.85) 0%,
+        rgba(127, 71, 182, 0.8) 50%,
+        rgba(84, 93, 143, 0.75) 100%
     );
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 9px;
@@ -106,9 +107,9 @@ body {
 
 .booking-block:hover {
     background: linear-gradient(135deg, 
-        #b76aff 0%, 
-        #a960ee 50%,
-        #90a0f7 100%
+        rgba(108, 64, 150, 0.9) 0%,
+        rgba(137, 81, 192, 0.85) 50%,
+        rgba(94, 103, 153, 0.8) 100%
     );
     box-shadow: 
         inset 0 1px 3px rgba(255, 255, 255, 0.4),

@@ -1,0 +1,42 @@
+/* Индикатор статуса - базовые стили */
+div.booking-block div.booking-status-indicator {
+    position: absolute !important;
+    top: 3px !important;
+    right: 3px !important;
+    width: 12px !important;
+    height: 12px !important;
+    border-radius: 50% !important;
+    z-index: 999 !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Требует подтверждения - красная мигающая */
+div.booking-block.booking-status-1 div.booking-status-indicator {
+    background: #e74c3c !important;
+    box-shadow: 0 0 8px #e74c3c !important;
+    animation: blink 1s ease-in-out infinite !important;
+}
+
+/* Подтверждено, не оплачено - желтая */
+div.booking-block.booking-status-2 div.booking-status-indicator {
+    background: #ffd700 !important;
+    box-shadow: 0 0 8px #ffd700 !important;
+}
+
+/* Подтверждено и оплачено - зеленая */
+div.booking-block.booking-status-3 div.booking-status-indicator {
+    background: #2ecc71 !important;
+    box-shadow: 0 0 8px #2ecc71 !important;
+}
+
+/* Завершено - без точки */
+div.booking-block.booking-status-5 div.booking-status-indicator {
+    display: none !important;
+}
+
+/* Анимация мигания */
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}

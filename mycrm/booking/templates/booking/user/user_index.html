@@ -5,8 +5,9 @@
 <head>
     <title>CRM</title>
     {% include 'booking/add/head.html' %}
-    <link rel="stylesheet" href="{% static 'css/main.css' %}">
-    <link rel="stylesheet" href="{% static 'css/neon-dark-theme.css' %}">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/neon-dark-theme.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/status-indicators.css' %}?v={% now 'U' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.js"></script>
 
@@ -300,10 +301,25 @@
                     // Создаем один общий блок бронирования
                     const bookingBlock = document.createElement('div');
                     bookingBlock.className = 'booking-block';
-                    bookingBlock.style.width = (width - 2) + 'px'; // -2px для небольшого отступа
+                    bookingBlock.style.width = (width - 2) + 'px';
+                    bookingBlock.classList.add(`booking-status-${booking.status_id}`);
+                    
+                    // Добавляем индикатор статуса
+                    const indicator = document.createElement('div');
+                    indicator.className = 'booking-status-indicator';
+                    bookingBlock.appendChild(indicator);
+                    
+                    // Делаем первую ячейку relative для правильного позиционирования
+                    firstCell.style.position = 'relative';
                     
                     // Добавляем блок в первую ячейку
                     firstCell.appendChild(bookingBlock);
+                    
+                    // Делаем остальные ячейки прозрачными
+                    for (let i = 1; i < bookingCells.length; i++) {
+                        bookingCells[i].style.background = 'none';
+                        bookingCells[i].style.border = 'none';
+                    }
                     
                     // Добавляем обработчик события для всех ячеек
                     bookingCells.forEach(function(cell) {
