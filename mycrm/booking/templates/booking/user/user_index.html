@@ -299,15 +299,7 @@
                 // Если нашли ячейки для бронирования
                 if (firstCell && bookingCells.length > 0) {
                     // Создаем один общий блок бронирования
-                    const bookingBlock = document.createElement('div');
-                    bookingBlock.className = 'booking-block';
-                    bookingBlock.style.width = (width - 2) + 'px';
-                    bookingBlock.classList.add(`booking-status-${booking.status_id}`);
-                    
-                    // Добавляем индикатор статуса
-                    const indicator = document.createElement('div');
-                    indicator.className = 'booking-status-indicator';
-                    bookingBlock.appendChild(indicator);
+                    const bookingBlock = createBookingBlock(booking, width);
                     
                     // Делаем первую ячейку relative для правильного позиционирования
                     firstCell.style.position = 'relative';
@@ -337,6 +329,45 @@
                     });
                 }
             });
+        }
+
+        function createBookingBlock(booking, cellWidth) {
+            console.log('Booking object:', booking); // Добавляем вывод всего объекта booking
+            
+            const block = document.createElement('div');
+            block.className = 'booking-block';
+            block.classList.add(`booking-status-${booking.status_id}`);
+            
+            // Получаем цвета специалистов из контекста
+            const specialistColors = JSON.parse('{{ specialist_colors|safe }}');
+            console.log('Loaded specialist colors:', specialistColors);
+
+            // Получаем цвета для специалиста
+            const specialistId = booking.specialist_id;
+            console.log('Specialist ID:', specialistId);
+            
+            const colors = specialistColors[specialistId] || {
+                primary: '#a960ee',
+                secondary: '#90a0f7'
+            };
+            console.log('Colors for specialist', specialistId, ':', colors);
+            
+            // Применяем цвета к блоку
+            block.style.background = `linear-gradient(135deg, 
+                ${colors.primary}99 0%,
+                ${colors.primary}99 50%,
+                ${colors.secondary}99 100%
+            )`;
+            
+            // Добавляем индикатор статуса
+            const statusIndicator = document.createElement('div');
+            statusIndicator.className = 'booking-status-indicator';
+            block.appendChild(statusIndicator);
+            
+            // Устанавливаем ширину блока
+            block.style.width = (cellWidth - 2) + 'px';
+            
+            return block;
         }
 
         updateBookedCells();

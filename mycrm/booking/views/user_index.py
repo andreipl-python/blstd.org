@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, date
 from calendar import monthrange
 from django.utils import timezone
 
-from booking.models import Client, Room, Service, Reservation, ReservationType, Specialist, TariffUnit, ServiceGroup
+from booking.models import Client, Room, Service, Reservation, ReservationType, Specialist, TariffUnit, ServiceGroup, SpecialistColor
 
 from .menu2 import menu2_view
 
@@ -76,6 +76,8 @@ def add_blocks_datetime_range_and_room_name(reservation_objects: QuerySet, defau
             'client_name': client.name,
             'client_comment': client.comment,
             'client_phone': client.phone,
+            'specialist_id': reservation.specialist_id,  # Добавляем ID специалиста
+            'status_id': reservation.status.id if reservation.status else 1  # По умолчанию "Не подтверждена"
         })
 
     return result
@@ -125,7 +127,7 @@ def user_index_view(request):
             group_data = {
                 'id': client.group.id,
                 'name': client.group.name,
-                'clients': [c.name for c in client.group.client_set.all() if c.id != client.id]
+                'clients': [c.name for c in client.group.client_set.all()]
             }
         
         clients_with_balances.append({
@@ -165,6 +167,30 @@ def user_index_view(request):
     tariff_units = TariffUnit.objects.all()
     tariff_units_json = serialize('json', tariff_units, use_natural_primary_keys=True)
 
+    specialist_colors = {
+        color.specialist_id: {
+            'primary': color.primary_color,
+            'secondary': color.secondary_color
+        }
+        for color in SpecialistColor.objects.all()
+    }
+    
+    # Добавляем отладочный вывод
+    print("Specialist colors:")
+    for color in SpecialistColor.objects.all():
+        print(f"{color.specialist.name}: {color.primary_color} / {color.secondary_color}")
+    
+    # Добавляем цвета по умолчанию для специалистов без настроенных цветов
+    for specialist in specialists:
+        if specialist.id not in specialist_colors:
+            specialist_colors[specialist.id] = {
+                'primary': '#a960ee',
+                'secondary': '#90a0f7'
+            }
+    
+    print("Final colors dict:", specialist_colors)
+    specialist_colors_json = json.dumps(specialist_colors)
+
     context = {
         **menu2_context,
         'days_of_month': days_of_month,
@@ -181,7 +207,8 @@ def user_index_view(request):
         'reservation_types_json': reservation_types_json,
         'tariff_units_json': tariff_units_json,
         'clients': clients,  # Добавляем клиентов в контекст
-        'clients_json': clients_json
+        'clients_json': clients_json,
+        'specialist_colors': specialist_colors_json
     }
 
     return render(request, 'booking/user/user_index.html', context)
