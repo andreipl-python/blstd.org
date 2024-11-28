@@ -89,20 +89,65 @@ body {
     transition: all 0.3s ease;
     z-index: 4;
     cursor: pointer;
-    box-shadow: 
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
-        0 0 15px rgba(169, 96, 238, 0.5),
-        0 0 30px rgba(144, 160, 247, 0.2);
     backdrop-filter: blur(4px);
 }
 
 .booking-block:hover {
+    transform: scale(1.02) translateY(-2px);
+    filter: brightness(1.2);
+    z-index: 100;
     box-shadow: 
-        inset 0 1px 3px rgba(255, 255, 255, 0.4),
-        0 0 20px rgba(169, 96, 238, 0.7),
-        0 0 40px rgba(183, 106, 255, 0.4),
-        0 0 60px rgba(144, 160, 247, 0.2);
-    transform: translateY(-2px);
+        0 0 15px var(--specialist-primary-color),
+        0 0 30px var(--specialist-primary-color),
+        0 0 45px var(--specialist-primary-color),
+        0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Индикаторы статуса бронирования */
+.booking-block .booking-status-indicator {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    z-index: 5;
+}
+
+/* Неподтвержденная бронь */
+.booking-block.booking-status-1 .booking-status-indicator {
+    background-color: #ff3333;
+    box-shadow: 0 0 15px #ff3333;
+    animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 51, 51, 0.9);
+    }
+    
+    50% {
+        transform: scale(1.2);
+        box-shadow: 0 0 25px 10px rgba(255, 51, 51, 0.9);
+    }
+    
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 51, 51, 0.9);
+    }
+}
+
+/* Подтвержденная, но не оплаченная бронь */
+.booking-block.booking-status-2 .booking-status-indicator {
+    background-color: #ffd700;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+}
+
+/* Подтвержденная и оплаченная бронь */
+.booking-block.booking-status-3 .booking-status-indicator {
+    background-color: #00ff00;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
 }
 
 /* Стили для выбранных ячеек */

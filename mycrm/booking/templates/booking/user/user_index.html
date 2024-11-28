@@ -252,6 +252,7 @@
 
         function updateBookedCells() {
             var cells = document.querySelectorAll('td[room_name]');
+            var bookingCellsArray = []; // Очищаем массив перед обновлением
             
             // Сначала очищаем все ячейки
             cells.forEach(function(cell) {
@@ -312,21 +313,6 @@
                         bookingCells[i].style.background = 'none';
                         bookingCells[i].style.border = 'none';
                     }
-                    
-                    // Добавляем обработчик события для всех ячеек
-                    bookingCells.forEach(function(cell) {
-                        cell.addEventListener('mouseover', function() {
-                            bookingBlock.style.transform = 'translateY(-1px)';
-                            bookingBlock.style.boxShadow = 'inset 0 1px 3px rgba(255, 255, 255, 0.9), 0 0 20px rgba(169, 96, 238, 0.8), 0 0 30px rgba(183, 106, 255, 0.4)';
-                            bookingBlock.style.background = 'linear-gradient(135deg, #b76aff 0%, #a960ee 50%, #90a0f7 100%)';
-                        });
-                        
-                        cell.addEventListener('mouseout', function() {
-                            bookingBlock.style.transform = '';
-                            bookingBlock.style.boxShadow = 'inset 0 1px 2px rgba(255, 255, 255, 0.8), 0 0 10px rgba(169, 96, 238, 0.5)';
-                            bookingBlock.style.background = 'linear-gradient(135deg, #a960ee 0%, #90a0f7 100%)';
-                        });
-                    });
                 }
             });
         }
@@ -358,6 +344,10 @@
                 ${colors.primary}99 50%,
                 ${colors.secondary}99 100%
             )`;
+            
+            // Добавляем CSS-переменные для цветов
+            block.style.setProperty('--specialist-primary-color', colors.primary + '80');
+            block.style.setProperty('--specialist-secondary-color', colors.secondary + '80');
             
             // Добавляем индикатор статуса
             const statusIndicator = document.createElement('div');
