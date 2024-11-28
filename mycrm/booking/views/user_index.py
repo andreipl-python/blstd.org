@@ -166,6 +166,7 @@ def user_index_view(request):
 
     tariff_units = TariffUnit.objects.all()
     tariff_units_json = serialize('json', tariff_units, use_natural_primary_keys=True)
+    print(tariff_units_json)
 
     specialist_colors = {
         color.specialist_id: {
@@ -174,11 +175,7 @@ def user_index_view(request):
         }
         for color in SpecialistColor.objects.all()
     }
-    
-    # Добавляем отладочный вывод
-    print("Specialist colors:")
-    for color in SpecialistColor.objects.all():
-        print(f"{color.specialist.name}: {color.primary_color} / {color.secondary_color}")
+
     
     # Добавляем цвета по умолчанию для специалистов без настроенных цветов
     for specialist in specialists:
@@ -188,7 +185,6 @@ def user_index_view(request):
                 'secondary': '#90a0f7'
             }
     
-    print("Final colors dict:", specialist_colors)
     specialist_colors_json = json.dumps(specialist_colors)
 
     context = {

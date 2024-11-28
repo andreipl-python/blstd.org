@@ -55,6 +55,9 @@ class Subscription(models.Model):
         verbose_name = "Абонемент"
         verbose_name_plural = "Абонементы"
 
+    def __str__(self):
+        return f"{self.client} - {self.reservation_type} ({self.balance} ед.)"
+
 
 class ReservationStatusType(models.Model):
     """Модель для хранения типов статусов бронирования"""
@@ -132,7 +135,6 @@ class Reservation(models.Model):
 
 class ReservationType(models.Model):
     """Модель для хранения информации о типах бронирования (шаблонах направлений)"""
-
     id = models.AutoField(primary_key=True)
     name = models.CharField(help_text='Наименование типа бронирования (шаблона направления)',
                             verbose_name='Наименование типа бронирования', max_length=100, null=False, unique=True)
@@ -141,6 +143,9 @@ class ReservationType(models.Model):
         db_table = 'reservation_types'
         verbose_name = "Тип бронирования (шаблон направления)"
         verbose_name_plural = "Типы бронирования (шаблоны направлений)"
+
+    def __str__(self):
+        return self.name
 
 
 class TariffUnit(models.Model):
@@ -157,6 +162,9 @@ class TariffUnit(models.Model):
         db_table = 'tariff_units'
         verbose_name = "Тарифная единица"
         verbose_name_plural = "Тарифные единицы"
+
+    def __str__(self):
+        return f"{self.reservation_type} - {self.min_reservation_time} ({self.tariff_unit_cost} руб.)"
 
 
 class ServiceGroup(models.Model):
@@ -231,6 +239,9 @@ class Specialist(models.Model):
         verbose_name = "Специалист"
         verbose_name_plural = "Специалисты"
 
+    def __str__(self):
+        return self.name
+
 
 class Client(models.Model):
     """Модель для хранения информации о клиентах"""
@@ -248,6 +259,9 @@ class Client(models.Model):
         db_table = 'clients'
         verbose_name = "Клиент"
         verbose_name_plural = "Клиенты"
+
+    def __str__(self):
+        return self.name
 
     @property
     def rating(self):
@@ -282,6 +296,9 @@ class ClientRating(models.Model):
         verbose_name = 'Оценка клиента'
         verbose_name_plural = 'Оценки клиентов'
 
+    def __str__(self):
+        return f"Оценка {self.rating} для {self.client}"
+
 
 class Room(models.Model):
     """Модель для хранения информации о помещениях"""
@@ -299,6 +316,9 @@ class Room(models.Model):
         db_table = 'rooms'
         verbose_name = 'Помещение'
         verbose_name_plural = 'Помещения'
+
+    def __str__(self):
+        return self.name
 
 
 class SpecialistColor(models.Model):
@@ -326,3 +346,29 @@ class SpecialistColor(models.Model):
         db_table = 'specialist_colors'
         verbose_name = 'Цветовая схема специалиста'
         verbose_name_plural = 'Цветовые схемы специалистов'
+
+
+class CancellationPolicy(models.Model):
+    """Модель для хранения правил отмены бронирования"""
+    
+    reservation_type = models.OneToOneField(
+        'ReservationType',
+        on_delete=models.PROTECT,
+        related_name='cancellation_policy',
+        help_text='Тип бронирования, к которому применяется политика отмены',
+        verbose_name='Тип бронирования'
+    )
+    
+    hours_before = models.PositiveIntegerField(
+        help_text='За сколько часов до начала брони можно отменить без штрафа',
+        verbose_name='Часов до начала',
+        default=2
+    )
+    
+    class Meta:
+        db_table = 'cancellation_policies'
+        verbose_name = 'Правило отмены бронирования'
+        verbose_name_plural = 'Правила отмены бронирования'
+
+    def __str__(self):
+        return f'Политика отмены для {self.reservation_type.name}'

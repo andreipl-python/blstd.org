@@ -131,16 +131,8 @@
             const specialist = $('#specialist').val();
             const duration = $('#bookingDuration').val();
 
-            console.log('Form validation:', {
-                bookingType,
-                client,
-                duration,
-                specialist
-            });
-
             // Проверяем обязательные поля
             if (!bookingType || !client || !duration) {
-                console.log('Validation failed');
                 Swal.fire({
                     icon: 'error',
                     title: 'Ошибка',
@@ -317,26 +309,21 @@
             });
         }
 
-        function createBookingBlock(booking, cellWidth) {
-            console.log('Booking object:', booking); // Добавляем вывод всего объекта booking
-            
+        function createBookingBlock(booking, cellWidth) {            
             const block = document.createElement('div');
             block.className = 'booking-block';
             block.classList.add(`booking-status-${booking.status_id}`);
             
             // Получаем цвета специалистов из контекста
             const specialistColors = JSON.parse('{{ specialist_colors|safe }}');
-            console.log('Loaded specialist colors:', specialistColors);
 
             // Получаем цвета для специалиста
             const specialistId = booking.specialist_id;
-            console.log('Specialist ID:', specialistId);
             
             const colors = specialistColors[specialistId] || {
                 primary: '#a960ee',
                 secondary: '#90a0f7'
             };
-            console.log('Colors for specialist', specialistId, ':', colors);
             
             // Применяем цвета к блоку
             block.style.background = `linear-gradient(135deg, 
