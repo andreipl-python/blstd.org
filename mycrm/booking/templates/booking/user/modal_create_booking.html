@@ -287,6 +287,7 @@
             const $ratingText = $('.client-rating');
             const $phoneContainer = $('.client-phone-container');
             const $commentDiv = $('#clientComment');
+            const selectedTypeId = $('#bookingType').val();
             
             // Если клиент не выбран, скрываем всю информацию
             if (!selectedClient) {
@@ -300,6 +301,10 @@
                 $('#specialist-container').hide();
                 $('#specialist').val('').trigger("chosen:updated");
                 return;
+            }
+
+            if (selectedTypeId) {
+                updateBalanceIndicator(selectedClient, selectedTypeId);
             }
 
             // Обрабатываем рейтинг
