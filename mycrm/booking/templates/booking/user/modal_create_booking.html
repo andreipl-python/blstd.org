@@ -280,6 +280,7 @@
         $('#client').on('change', function() {
             const selectedClient = $(this).val();
             const selectedOption = $(this).find('option:selected');
+            const selectedTypeId = $('#bookingType').val();
             const $balanceDot = $('#clientBalanceDot');
             const $balanceContainer = $('#clientBalanceContainer');
             const $ratingContainer = $('.client-rating-container');
@@ -292,14 +293,15 @@
             if (!selectedClient) {
                 $balanceDot.hide();
                 $balanceContainer.removeAttr('data-tooltip');
-                $ratingContainer.show();
-                $ratingIcon.removeClass('fa-star-half-alt text-danger text-warning').addClass('fa-star text-muted');
-                $ratingText.hide();
+                $ratingContainer.hide();
                 $phoneContainer.hide();
                 $commentDiv.hide();
-                $('#specialist-container').hide();
-                $('#specialist').val('').trigger("chosen:updated");
                 return;
+            }
+
+            // Обновляем индикатор баланса если выбран тип бронирования
+            if (selectedClient && selectedTypeId) {
+                updateBalanceIndicator(selectedClient, selectedTypeId);
             }
 
             // Обрабатываем рейтинг
@@ -723,7 +725,9 @@
     $('#bookingDuration').on('change', function() {
         const selectedClient = $('#client').val();
         const selectedTypeId = $('#bookingType').val();
-        updateBalanceIndicator(selectedClient, selectedTypeId);
+        if (selectedClient && selectedTypeId) {
+            updateBalanceIndicator(selectedClient, selectedTypeId);
+        }
     });
 
     function initializeServicesList() {
