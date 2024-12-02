@@ -160,10 +160,8 @@
     };
 
     function calculateBookingCost(selectedTypeId, duration) {
-        console.log('calculateBookingCost вызван:', { selectedTypeId, duration });
         
         if (!selectedTypeId || !duration) {
-            console.log('Нет типа бронирования или длительности');
             return 0;
         }
         
@@ -172,10 +170,8 @@
             unit.fields.reservation_type === parseInt(selectedTypeId)
         );
         
-        console.log('Найдена тарифная единица:', tariffUnit);
         
         if (!tariffUnit) {
-            console.log('Тарифная единица не найдена');
             return 0;
         }
         
@@ -183,30 +179,17 @@
         const [minHours, minMinutes] = tariffUnit.fields.min_reservation_time.split(':').map(Number);
         const minDuration = minHours * 60 + minMinutes;
         const unitCost = parseFloat(tariffUnit.fields.tariff_unit_cost);
-        
-        console.log('Параметры тарифа:', {
-            minHours,
-            minMinutes,
-            minDuration,
-            unitCost
-        });
+
         
         // Получаем выбранную длительность в минутах
         const [durationHours, durationMinutes] = duration.split(':').map(Number);
         const totalDurationMinutes = durationHours * 60 + durationMinutes;
-        
-        console.log('Параметры длительности:', {
-            durationHours,
-            durationMinutes,
-            totalDurationMinutes
-        });
-        
+
         // Вычисляем количество тарифных единиц (округляем вверх)
         const units = Math.ceil(totalDurationMinutes / minDuration);
         
         // Вычисляем общую стоимость
         const cost = (units * unitCost).toFixed(2);
-        console.log('Итоговый расчет:', { units, cost });
         
         return cost;
     }
@@ -245,14 +228,12 @@
         const selectedTypeId = $('#bookingType').val();
         const duration = $('#bookingDuration').val();
         
-        console.log('updateBookingCost вызван:', { selectedTypeId, duration });
         
         const cost = calculateBookingCost(selectedTypeId, duration);
         
         const $costContainer = $('#bookingCostContainer');
         const $costSpan = $('#bookingCost');
         
-        console.log('Обновление отображения стоимости:', { cost });
         
         if (cost > 0) {
             $costSpan.text(cost);
@@ -305,12 +286,6 @@
             // Обрабатываем рейтинг
             const rating = selectedOption.data('rating');
             const ratingCount = parseInt(selectedOption.data('rating-count') || 0);
-            console.log('Rating data:', { 
-                rating, 
-                rawRatingCount: selectedOption.data('rating-count'),
-                parsedRatingCount: ratingCount, 
-                type: typeof ratingCount 
-            });
             $ratingContainer.show();
             
             if (rating) {
@@ -331,20 +306,13 @@
                 const tooltipText = ratingCount > 0 
                     ? `На основе ${ratingCount} ${ratingCount === 1 ? 'оценки' : 'оценок'}`
                     : 'Нет оценок';
-                console.log('Tooltip text:', tooltipText);
                 
                 $ratingIcon
                     .attr('title', tooltipText)
                     .attr('data-bs-original-title', tooltipText)
                     .tooltip('dispose')
                     .tooltip();
-                
-                console.log('Rating icon attributes:', {
-                    title: $ratingIcon.attr('title'),
-                    'data-bs-original-title': $ratingIcon.attr('data-bs-original-title'),
-                    class: $ratingIcon.attr('class')
-                });
-                
+                                
             } else {
                 // Если рейтинг не найден - серая звездочка без текста
                 $ratingIcon.removeClass('fa-star-half-alt text-danger text-warning').addClass('fa-star text-muted');
@@ -411,13 +379,11 @@
         
         // Обновляем стоимость при изменении типа бронирования или длительности
         $('#bookingType, #bookingDuration').on('change', function() {
-            console.log('Событие change на', this.id);
             updateBookingCost();
         });
         
         // Обновляем индикатор баланса при изменении длительности
         $('#bookingDuration').on('change', function() {
-            console.log('Изменена длительность:', $(this).val());
             const startTime = document.getElementById('timeField').value;
             updateBookingLabel(startTime);
             
@@ -592,6 +558,10 @@
                 return;
             }
 
+            if (selectedClient && selectedTypeId) {
+                updateBalanceIndicator(selectedClient, selectedTypeId);
+            }
+
             const specialistOptions = specialistSelect.find('option');
             const userIds = specialistOptions.map(function () {
                 return Number($(this).data('user-id'));
@@ -637,18 +607,28 @@
             updateSpecialistList(bookingTypeSelect.value);
             updateServicesList(bookingTypeSelect.value);
             updateBookingDurationOptions(document.getElementById('timeField').value, maxEndTime, bookingTypeSelect.value);
-            
-            const selectedTypeId = bookingTypeSelect.value;
-            const selectedClientId = $('#client').val();
-            updateBalanceIndicator(selectedClientId, selectedTypeId);
         });
 
         if (availableTypes.length === 1) {
             bookingTypeSelect.value = availableTypes[0].pk;
             bookingTypeSelect.dispatchEvent(new Event('change'));
         }
+         // Добавляем вызов updateBalanceIndicator
+        const selectedClient = $('#client').val();
+        const selectedTypeId = $('#bookingType').val();
+        if (selectedClient && selectedTypeId) {
+            updateBalanceIndicator(selectedClient, selectedTypeId);
+        }
     }
 
+      // Обработчик изменения длительности для обновления баланса
+      $('#bookingDuration').on('change', function() {
+        const selectedClient = $('#client').val();
+        const selectedTypeId = $('#bookingType').val();
+        if (selectedClient && selectedTypeId) {
+            updateBalanceIndicator(selectedClient, selectedTypeId);
+        }
+    });
     // Функция обновления индикатора баланса
     function updateBalanceIndicator(selectedClientId, selectedTypeId) {
         const $balanceContainer = $('#clientBalanceContainer');
@@ -902,7 +882,6 @@
             
             // Добавляем новый обработчик события
             $(durationSelect).on('change', function() {
-                console.log('Изменена длительность:', $(this).val());
                 const startTime = document.getElementById('timeField').value;
                 updateBookingLabel(startTime);
                 
