@@ -16,9 +16,14 @@
             <div class="modal-header">
                 <div class="d-flex justify-content-between align-items-center w-100">
                     <div class="d-flex align-items-center">
-                        <h5 class="modal-title" id="createBookingModalLabel">Бронь с <span id="modalStartTime"></span> до <span id="modalEndTime"></span></h5>
+                        <h5 class="modal-title" id="createBookingModalLabel">Бронь <span id="modalStartTime"></span> до <span id="modalEndTime"></span></h5>
                     </div>
                     <div class="d-flex align-items-center">
+                        <div id="bookingCostContainer" class="me-3" style="display: none;">
+                            <span class="badge bg-success fs-6">
+                                <span id="bookingCost">0</span>&nbsp;BYN
+                            </span>
+                        </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                 </div>
@@ -154,6 +159,109 @@
         tariffUnits: JSON.parse(document.getElementById('tariff_units_json').textContent)
     };
 
+    function calculateBookingCost(selectedTypeId, duration) {
+        console.log('calculateBookingCost вызван:', { selectedTypeId, duration });
+        
+        if (!selectedTypeId || !duration) {
+            console.log('Нет типа бронирования или длительности');
+            return 0;
+        }
+        
+        // Находим тарифную единицу для выбранного типа бронирования
+        const tariffUnit = cachedData.tariffUnits.find(unit => 
+            unit.fields.reservation_type === parseInt(selectedTypeId)
+        );
+        
+        console.log('Найдена тарифная единица:', tariffUnit);
+        
+        if (!tariffUnit) {
+            console.log('Тарифная единица не найдена');
+            return 0;
+        }
+        
+        // Получаем минимальное время бронирования и стоимость единицы
+        const [minHours, minMinutes] = tariffUnit.fields.min_reservation_time.split(':').map(Number);
+        const minDuration = minHours * 60 + minMinutes;
+        const unitCost = parseFloat(tariffUnit.fields.tariff_unit_cost);
+        
+        console.log('Параметры тарифа:', {
+            minHours,
+            minMinutes,
+            minDuration,
+            unitCost
+        });
+        
+        // Получаем выбранную длительность в минутах
+        const [durationHours, durationMinutes] = duration.split(':').map(Number);
+        const totalDurationMinutes = durationHours * 60 + durationMinutes;
+        
+        console.log('Параметры длительности:', {
+            durationHours,
+            durationMinutes,
+            totalDurationMinutes
+        });
+        
+        // Вычисляем количество тарифных единиц (округляем вверх)
+        const units = Math.ceil(totalDurationMinutes / minDuration);
+        
+        // Вычисляем общую стоимость
+        const cost = (units * unitCost).toFixed(2);
+        console.log('Итоговый расчет:', { units, cost });
+        
+        return cost;
+    }
+
+    /**
+     * Обновляет отображение стоимости бронирования.
+     *
+     * Получает стоимость бронирования, используя calculateBookingCost,
+     * и обновляет отображение стоимости на странице.
+     *
+     * @param {string} selectedTypeId - ID типа брони, выбранного пользователем
+     * @param {string} duration - выбранная длительность бронирования
+     * @return {void}
+     */
+    /**
+     * Обновляет отображение стоимости бронирования.
+     *
+     * Получает ID типа брони, выбранного пользователем, и выбранную
+     * длительность бронирования, вычисляет стоимость бронирования с
+     * помощью calculateBookingCost, и обновляет отображение стоимости
+     * на странице.
+     *
+     * @return {void}
+     */
+    /**
+     * Обновляет отображение стоимости бронирования.
+     *
+     * Получает ID типа брони, выбранного пользователем, и выбранную
+     * длительность бронирования, вычисляет стоимость бронирования с
+     * помощью calculateBookingCost, и обновляет отображение стоимости
+     * на странице.
+     *
+     * @return {void}
+     */
+    function updateBookingCost() {
+        const selectedTypeId = $('#bookingType').val();
+        const duration = $('#bookingDuration').val();
+        
+        console.log('updateBookingCost вызван:', { selectedTypeId, duration });
+        
+        const cost = calculateBookingCost(selectedTypeId, duration);
+        
+        const $costContainer = $('#bookingCostContainer');
+        const $costSpan = $('#bookingCost');
+        
+        console.log('Обновление отображения стоимости:', { cost });
+        
+        if (cost > 0) {
+            $costSpan.text(cost);
+            $costContainer.show();
+        } else {
+            $costContainer.hide();
+        }
+    }
+
     // Инициализация Chosen при загрузке страницы
     document.addEventListener('DOMContentLoaded', function() {
         // Инициализация Chosen для клиента
@@ -274,38 +382,6 @@
                 $commentDiv.hide();
             }
 
-            // Показываем/скрываем переключатель групповой брони и иконку информации
-            const groupId = selectedOption.data('group-id');
-            const groupSwitch = $('#groupBookingSwitch').closest('.form-check');
-            const groupInfoIcon = $('.group-info-icon');
-            
-            if (groupId) {
-                groupSwitch.show();
-                groupInfoIcon.show();
-                
-                // Обновляем тултип с информацией о группе
-                const groupName = selectedOption.data('group-name');
-                const groupClients = selectedOption.data('group-clients').split(',').map(client => client.trim());
-                const clientsList = groupClients.map(client => `• ${client}`).join('<br>');
-                const tooltipText = `<b>Группа "${groupName}"</b><br><br>${clientsList}`;
-
-                // Уничтожаем старый тултип и создаем новый
-                const tooltipInstance = bootstrap.Tooltip.getInstance(groupInfoIcon[0]);
-                if (tooltipInstance) {
-                    tooltipInstance.dispose();
-                }
-
-                groupInfoIcon.attr('data-bs-original-title', tooltipText);
-                new bootstrap.Tooltip(groupInfoIcon[0], {
-                    placement: 'top',
-                    html: true
-                });
-            } else {
-                groupSwitch.hide();
-                groupInfoIcon.hide();
-                $('#groupBookingSwitch').prop('checked', false);
-            }
-
             const specialistOptions = $('#specialist').find('option');
             const userIds = specialistOptions.map(function () {
                 return Number($(this).data('user-id'));
@@ -317,14 +393,6 @@
             } else {
                 $('#specialist-container').show();
                 $('#specialist').prop('disabled', false).trigger("chosen:updated");
-            }
-            
-            // Обновляем опции длительности для пересчета баланса
-            const selectedTypeId = $('#bookingType').val();
-            if (selectedTypeId) {
-                const selectedTime = document.getElementById('timeField').value;
-                const maxEndTime = document.getElementById('maxEndTime').value;
-                updateBookingDurationOptions(selectedTime, maxEndTime, selectedTypeId);
             }
         });
 
@@ -340,6 +408,25 @@
 
         // Добавляем обработчики для проверки полей
         $('#bookingType, #bookingDuration, #client').on('change', checkRequiredFields);
+        
+        // Обновляем стоимость при изменении типа бронирования или длительности
+        $('#bookingType, #bookingDuration').on('change', function() {
+            console.log('Событие change на', this.id);
+            updateBookingCost();
+        });
+        
+        // Обновляем индикатор баланса при изменении длительности
+        $('#bookingDuration').on('change', function() {
+            console.log('Изменена длительность:', $(this).val());
+            const startTime = document.getElementById('timeField').value;
+            updateBookingLabel(startTime);
+            
+            // Обновляем индикатор баланса и стоимость
+            const selectedClient = $('#client').val();
+            const selectedTypeId = $('#bookingType').val();
+            updateBalanceIndicator(selectedClient, selectedTypeId);
+            updateBookingCost();
+        });
     });
 
     function openModal(date, time, room_name, timeblocksjson, rooms_json_str, reservation_types_json_str,
@@ -377,6 +464,7 @@
         if (tooltipInstance) {
             tooltipInstance.dispose();
         }
+
         groupInfoIcon.hide();
         
         // Скрываем контейнер услуг при открытии
@@ -429,7 +517,7 @@
             : '<option value="" selected>Сделайте выбор</option>' +
               availableTypes.map(type => 
                   `<option value="${type.pk}">${type.fields.name}</option>`
-              ).join('');
+              ).join(' ');
 
         const rowSelector = cell.getAttribute('table_row_selectors');
         const currentCellIndex = Array.from(cell.parentElement.children).indexOf(cell);
@@ -453,6 +541,10 @@
 
         // Деактивируем кнопку при открытии модального окна
         $('#submitBookingButton').prop('disabled', true);
+        
+        // Сбрасываем стоимость
+        $('#bookingCostContainer').hide();
+        $('#bookingCost').text('0');
     }
 
     function initializeModal(specialists_json_str, availableTypes, maxEndTime) {
@@ -810,13 +902,15 @@
             
             // Добавляем новый обработчик события
             $(durationSelect).on('change', function() {
+                console.log('Изменена длительность:', $(this).val());
                 const startTime = document.getElementById('timeField').value;
                 updateBookingLabel(startTime);
                 
-                // Обновляем индикатор баланса
+                // Обновляем индикатор баланса и стоимость
                 const selectedClient = $('#client').val();
                 const selectedTypeId = $('#bookingType').val();
                 updateBalanceIndicator(selectedClient, selectedTypeId);
+                updateBookingCost();
             });
 
             // Вызываем обработчик сразу после установки начального значения
