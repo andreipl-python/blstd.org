@@ -116,6 +116,14 @@ class Reservation(models.Model):
     services = models.ManyToManyField('Service', related_name='reservations',
                                     help_text='Услуги, включенные в бронь',
                                     verbose_name='Услуги', blank=True)
+    total_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Общая стоимость брони',
+        verbose_name='Стоимость',
+        null=True,
+        blank=True
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         help_text='Дата создания брони',

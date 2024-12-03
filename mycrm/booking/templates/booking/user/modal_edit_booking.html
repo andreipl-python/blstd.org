@@ -32,7 +32,7 @@
                             <p><strong>Клиент:</strong> <span id="modalClientInfo"></span></p>
                             <p><strong>Специалист:</strong> <span id="modalSpecialistInfo"></span></p>
                             <p><strong>Услуга:</strong> <span id="modalService"></span></p>
-                            <p><strong>Стоимость:</strong> <span id="modalPrice"></span></p>
+                            <p><strong>Стоимость:</strong> <span id="modalPrice"></span> руб.</p>
                         </div>
                     </div>
                     <div class="row mt-2">
@@ -70,6 +70,15 @@
                             <select id="editSpecialist" name="specialist" class="form-select">
                                 <!-- Опции будут добавлены динамически -->
                             </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="editTotalCost" class="form-label">Стоимость</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="editTotalCost" name="total_cost" step="0.01" min="0">
+                                <span class="input-group-text">руб.</span>
+                            </div>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -133,12 +142,13 @@
             document.getElementById('modalClientInfo').textContent = booking.client_name;
             document.getElementById('modalSpecialistInfo').textContent = booking.specialist_name || 'Не назначен';
             document.getElementById('modalService').textContent = booking.service_name || 'Не указана';
-            document.getElementById('modalPrice').textContent = booking.price || '0';
+            document.getElementById('modalPrice').textContent = booking.total_cost || '0';
             document.getElementById('modalComment').textContent = booking.comment || 'Нет комментария';
 
             // Заполнение формы редактирования
             document.getElementById('editStartTime').value = booking.start_time;
             document.getElementById('editComment').value = booking.comment || '';
+            document.getElementById('editTotalCost').value = booking.total_cost || '';
 
             // Заполнение select'ов
             if (booking.client_id) {

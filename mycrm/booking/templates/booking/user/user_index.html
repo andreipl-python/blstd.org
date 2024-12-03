@@ -185,6 +185,12 @@
             formData.append('room_id', $('#roomIdField').val());
             formData.append('comment', $('#comment').val());
 
+            // Добавляем стоимость брони
+            const bookingCost = $('#bookingCost').text();
+            if (bookingCost) {
+                formData.append('total_cost', bookingCost);
+            }
+
             // Добавляем выбранные услуги
             const selectedServices = $('#serviceType').val();
             if (selectedServices && selectedServices.length > 0) {

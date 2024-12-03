@@ -90,6 +90,8 @@ def create_booking_view(request):
         comment = request.POST.get('comment', '')
         room_id = int(request.POST.get('room_id'))
         full_datetime = request.POST.get('full_datetime')
+        total_cost = request.POST.get('total_cost')
+        total_cost = float(total_cost) if total_cost else None
         
         print("Received full_datetime:", full_datetime)
 
@@ -144,7 +146,8 @@ def create_booking_view(request):
                 room=room,
                 reservation_type_id=booking_type,
                 status=pending_status,
-                comment=comment
+                comment=comment,
+                total_cost=total_cost
             )
 
             # Добавляем услуги

@@ -29,6 +29,7 @@ def get_booking_details(request, booking_id):
             'specialist_name': str(booking.specialist) if booking.specialist else None,
             'service_name': ', '.join([str(service) for service in booking.services.all()]),
             'price': str(booking.get_total_price()) if hasattr(booking, 'get_total_price') else '',
+            'total_cost': str(booking.total_cost) if booking.total_cost else '',
             'status': booking.status.id,
             'status_name': booking.status.name,
             'comment': booking.comment,
@@ -61,6 +62,8 @@ def edit_booking_view(request, booking_id):
         client_group_id = int(client_group_id) if client_group_id else None
         booking_duration = request.POST.get('bookingDuration')
         comment = request.POST.get('comment', '')
+        total_cost = request.POST.get('total_cost')
+        total_cost = float(total_cost) if total_cost else None
         room_id = int(request.POST.get('room_id', booking.room.id))
         start_time = request.POST.get('start_time')
 
@@ -119,6 +122,7 @@ def edit_booking_view(request, booking_id):
             booking.room = room
             booking.reservation_type_id = booking_type
             booking.comment = comment
+            booking.total_cost = total_cost
             booking.save()
 
             # Обновляем услуги
