@@ -1,7 +1,13 @@
 from django.urls import path
 from .views_all import *
-
 from .views import user_index_view, create_booking_view
+from .views.edit_booking import (
+    get_booking_details,
+    edit_booking_view,
+    delete_booking_view,
+    cancel_booking_view,
+    confirm_booking_view
+)
 
 urlpatterns = [
     path('', user_index_view, name='index'),
@@ -19,4 +25,11 @@ urlpatterns = [
     path('user_stats_profit/', user_index_view, name='stats_profit'),
     path('user_stats_all/', user_index_view, name='stats_all'),
     path('create_booking/', create_booking_view, name='create_booking'),
+    
+    # Редактирование брони
+    path('booking/get-booking-details/<int:booking_id>/', get_booking_details, name='get_booking_details'),
+    path('booking/edit/<int:booking_id>/', edit_booking_view, name='edit_booking'),
+    path('booking/delete/<int:booking_id>/', delete_booking_view, name='delete_booking'),
+    path('booking/cancel/<int:booking_id>/', cancel_booking_view, name='cancel_booking'),
+    path('booking/confirm/<int:booking_id>/', confirm_booking_view, name='confirm_booking'),
 ]

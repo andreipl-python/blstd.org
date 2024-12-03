@@ -275,11 +275,12 @@
                             cell.classList.remove('available');
                             cell.classList.add('booked');
                             
+
                             // Добавляем атрибуты для модального окна
                             cell.setAttribute('data-bs-target', '#editBookingModal');
-                            cell.setAttribute('booking-id', booking.id);
-                            cell.setAttribute('onclick', 'openEditModal(this)');
+                            cell.setAttribute('data-booking-id', booking.id);
                             
+
                             if (!firstCell) {
                                 firstCell = cell;
                             }
@@ -313,43 +314,45 @@
             const block = document.createElement('div');
             block.className = 'booking-block';
             block.classList.add(`booking-status-${booking.status_id}`);
+            block.setAttribute('data-bs-toggle', 'modal');
+            block.setAttribute('data-bs-target', '#editBookingModal');
+            block.setAttribute('data-booking-id', booking.id);
+            block.style.cursor = 'pointer';
             
             // Получаем цвета специалистов из контекста
             const specialistColors = JSON.parse('{{ specialist_colors|safe }}');
-
-            // Получаем цвета для специалиста
             const specialistId = booking.specialist_id;
-            
             const colors = specialistColors[specialistId] || {
                 primary: '#a960ee',
                 secondary: '#90a0f7'
             };
             
-            // Применяем цвета к блоку
             block.style.background = `linear-gradient(135deg, 
                 ${colors.primary}99 0%,
                 ${colors.primary}99 50%,
                 ${colors.secondary}99 100%
             )`;
             
-            // Добавляем CSS-переменные для цветов
             block.style.setProperty('--specialist-primary-color', colors.primary + '80');
             block.style.setProperty('--specialist-secondary-color', colors.secondary + '80');
             
-            // Добавляем индикатор статуса
             const statusIndicator = document.createElement('div');
             statusIndicator.className = 'booking-status-indicator';
             block.appendChild(statusIndicator);
             
-            // Устанавливаем ширину блока
-            block.style.width = (cellWidth - 2) + 'px';
+            const bookingInfo = document.createElement('div');
+            bookingInfo.className = 'booking-info';
+            bookingInfo.innerHTML = `
+                <div class="booking-time">${booking.start_time} - ${booking.end_time}</div>
+                <div class="booking-client">${booking.client_name}</div>
+                ${booking.specialist_name ? `<div class="booking-specialist">${booking.specialist_name}</div>` : ''}
+            `;
+            block.appendChild(bookingInfo);
             
+            block.style.width = (cellWidth - 2) + 'px';
             return block;
         }
 
-        updateBookedCells();
-
-        // Назначение атрибутов parent_table_id и parent_row_id
         function assignParentAttributes() {
             var tables = document.querySelectorAll('table');
             tables.forEach(function(table) {
@@ -368,6 +371,7 @@
             });
         }
 
+        updateBookedCells();
         assignParentAttributes();
     });
 </script>

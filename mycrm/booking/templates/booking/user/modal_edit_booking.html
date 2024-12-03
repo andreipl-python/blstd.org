@@ -1,170 +1,302 @@
 {% load custom_filters %}
-<!-- Модальное окно редактирования брони -->
+{% load static %}
+<head>
+    <link rel="stylesheet" href="{% static 'css/neon-dark-theme.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
 <div class="modal fade" id="editBookingModal" tabindex="-1" aria-labelledby="editBookingModalLabel"
      aria-hidden="true">
-    <div class="modal-dialog"
-         style="top: 0; left: 0; position: absolute; margin: 0; min-width: 800px; max-width: 800px;">
+    <div class="modal-dialog" style="min-width: 800px; max-width: 800px;">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editBookingLabel"
-                    style="display: inline-block; white-space: nowrap; overflow: hidden;
-                    text-overflow: ellipsis; max-width: 100%;">
-                    Редактировать бронь
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <div class="d-flex align-items-center">
+                        <h5 class="modal-title" id="editBookingModalLabel">
+                            Бронирование #<span id="modalBookingId"></span>
+                            <span class="badge" id="modalBookingStatus"></span>
+                        </h5>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
             </div>
             <div class="modal-body">
-                <form id="bookingForm">
-                    <!-- ID брони -->
+                <!-- Информация о брони -->
+                <div class="booking-info mb-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Время:</strong> <span id="modalStartTime"></span> - <span id="modalEndTime"></span></p>
+                            <p><strong>Длительность:</strong> <span id="modalDuration"></span></p>
+                            <p><strong>Помещение:</strong> <span id="modalRoom"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Клиент:</strong> <span id="modalClientInfo"></span></p>
+                            <p><strong>Специалист:</strong> <span id="modalSpecialistInfo"></span></p>
+                            <p><strong>Услуга:</strong> <span id="modalService"></span></p>
+                            <p><strong>Стоимость:</strong> <span id="modalPrice"></span></p>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <p><strong>Комментарий:</strong></p>
+                            <p id="modalComment" class="border p-2 rounded"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Форма редактирования -->
+                <form id="editBookingForm" action="javascript:void(0);" method="POST" style="display: none;">
+                    {% csrf_token %}
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="editStartTime" class="form-label">Время начала</label>
+                            <input type="text" class="form-control" id="editStartTime" name="start_time" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editDuration" class="form-label">Длительность</label>
+                            <select id="editDuration" name="duration" class="form-select">
+                                <!-- Опции будут добавлены динамически -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="editClient" class="form-label">Клиент</label>
+                            <select id="editClient" name="client" class="form-select">
+                                <!-- Опции будут добавлены динамически -->
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editSpecialist" class="form-label">Специалист</label>
+                            <select id="editSpecialist" name="specialist" class="form-select">
+                                <!-- Опции будут добавлены динамически -->
+                            </select>
+                        </div>
+                    </div>
                     <div class="mb-3">
-                        <label class="form-label" id="BookingIdLabel">Редактируем бронь с ID</label>
+                        <label for="editComment" class="form-label">Комментарий</label>
+                        <textarea class="form-control" id="editComment" name="comment" rows="3"></textarea>
                     </div>
-
-                    <!-- Поля "Клиент" и "Статус клиента" -->
-                    <div class="row mb-3">
-                        <div class="col">
-                            <label for="bookingClientName">Клиент</label>
-                            <select id="bookingClientName" class="form-control" disabled></select>
-                        </div>
-
-                        <div class="col">
-                            <label for="bookingClientStatus">Статус клиента</label>
-                            <select id="bookingClientStatus" class="form-control" disabled>
-                                <option selected>Действующий клиент</option>
-                            </select>
-                        </div>
-
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col">
-                            <span id="clientAbons">Абонементы и сертификаты + новый <br>7 из 10 ч, 298 руб Ш 6дн</span>
-                        </div>
-
-                        <div class="col">
-                            <span id="clientInfo">Информация о клиенте:</span>
-                        </div>
-                    </div>
-
-                    <!-- Выпадающий список "Тип брони" -->
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <label for="bookingType" class="form-label">Тип брони</label>
-                            <select class="form-select" id="bookingType" name="bookingType">
-                                <option selected value="0">Сделайте выбор</option>
-                                <option disabled value="0">- Услуги школы -</option>
-                                {% for user in users %}
-                                {% if user.role == 'usluga_school' %}
-                                <option value="{{ user.id }}">{{ user.email }}</option>
-                                {% endif %}
-                                {% endfor %}
-                                <option disabled value="0">- Услуги студии -</option>
-                                {% for user in users %}
-                                {% if user.role == 'usluga_studia' %}
-                                <option value="{{ user.id }}">{{ user.email }}</option>
-                                {% endif %}
-                                {% endfor %}
-                                <option disabled value="0">- Сотрудники -</option>
-                                {% for user in users %}
-                                {% if user.role == 'prepod' %}
-                                <option value="{{ user.id }}">{{ user.email }}</option>
-                                {% endif %}
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Выпадающие списки "Зал", "Дата" и "Длительность" -->
-                    <div class="row mb-3">
-                        <div class="col">
-                            <label for="bookingRoom" class="form-label" style="white-space: nowrap; overflow: hidden;">
-                                Зал
-                            </label>
-                            <select class="form-select" id="bookingRoom" name="bookingRoom">
-                                {% for room in rooms %}
-                                <option value="{{ room.id }}">{{ room.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col">
-                            <label for="bookingDate" class="form-label" style="white-space: nowrap; overflow: hidden;">
-                                Дата
-                            </label>
-                            <input type="date" class="form-control" id="bookingDate" name="bookingDate">
-                        </div>
-
-                        <div class="col">
-                            <label for="bookingDuration" class="form-label"
-                                   style="white-space: nowrap; overflow: hidden;">
-                                Длительность
-                            </label>
-                            <select class="form-select" id="bookingDuration" name="bookingDuration">
-                                {% for duration in booking_durations %}
-                                <option value="{{ duration }}">{{ duration }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col">
-                            <label for="comment" class="form-label"></label>
-                            <textarea class="form-control" id="comment" name="comment"
-                                      placeholder="Комментарий"></textarea>
-                        </div>
-                    </div>
-
-                    <input type="hidden" id="dateField" name="date" value="">
-                    <input type="hidden" id="timeField" name="time" value="">
-                    <input type="hidden" id="roomNameField" name="room_name" value="">
-
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="submit" class="btn btn-primary" form="bookingForm" id="deleteBookingButton">
-                    Удалить бронь
-                </button>
-                <button type="submit" class="btn btn-primary" form="bookingForm" id="escapeBookingButton">
-                    Отмена брони
-                </button>
-                <button type="submit" class="btn btn-primary" form="bookingForm" id="editBookingButton">
-                    Редактировать
-                </button>
+                <div class="d-flex justify-content-between w-100">
+                    <div>
+                        <!-- Левая группа кнопок -->
+                        <button type="button" class="btn btn-danger me-2" id="deleteBookingBtn">Удалить</button>
+                        <button type="button" class="btn btn-warning me-2" id="cancelBookingBtn">Отменить бронь</button>
+                    </div>
+                    <div>
+                        <!-- Правая группа кнопок -->
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Закрыть</button>
+                        <button type="button" class="btn btn-success me-2" id="confirmBookingBtn" style="display: none;">Подтвердить</button>
+                        <button type="button" class="btn btn-primary" id="editBookingBtn">Редактировать</button>
+                        <button type="submit" class="btn btn-primary" form="editBookingForm" id="saveBookingBtn" style="display: none;">Сохранить</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Функция для открытия модального окна в заполненной ячейке (редактирование бронирования)
-    function openEditModal(element) {
-        var bookingsInRange = JSON.parse(document.getElementById('bookings_in_range').textContent);
+    document.addEventListener('DOMContentLoaded', function() {
+        const editBookingModal = document.getElementById('editBookingModal');
+        const editBookingForm = document.getElementById('editBookingForm');
+        const editBookingBtn = document.getElementById('editBookingBtn');
+        const saveBookingBtn = document.getElementById('saveBookingBtn');
+        const confirmBookingBtn = document.getElementById('confirmBookingBtn');
+        const deleteBookingBtn = document.getElementById('deleteBookingBtn');
+        const cancelBookingBtn = document.getElementById('cancelBookingBtn');
 
-        const bookingId = element.getAttribute('booking-id');
-        const BookingIdLabel = document.getElementById('BookingIdLabel');
-        BookingIdLabel.textContent = `Редактируем бронь с ID ${bookingId}`;
+        // Инициализация Chosen
+        $("#editClient").chosen({
+            width: "100%",
+            no_results_text: "Ничего не найдено"
+        });
+        
+        $("#editSpecialist").chosen({
+            width: "100%",
+            no_results_text: "Ничего не найдено"
+        });
 
-        bookingsInRange.forEach(function(booking) {
+        // Функция для заполнения данных брони
+        function fillBookingData(booking) {
+            // Заголовок и статус
+            document.getElementById('modalBookingId').textContent = booking.id;
+            document.getElementById('modalBookingStatus').textContent = booking.status_name;
+            document.getElementById('modalBookingStatus').className = `badge bg-${getStatusColor(booking.status)}`;
 
-                        if (booking.id === parseInt(bookingId, 10)) {
-                        const bookingClientName = booking.client_name;
-                        const bookingClientInfo = booking.client_comment;
+            // Основная информация
+            document.getElementById('modalStartTime').textContent = booking.start_time;
+            document.getElementById('modalEndTime').textContent = booking.end_time;
+            document.getElementById('modalDuration').textContent = booking.duration;
+            document.getElementById('modalRoom').textContent = booking.room_name;
+            document.getElementById('modalClientInfo').textContent = booking.client_name;
+            document.getElementById('modalSpecialistInfo').textContent = booking.specialist_name || 'Не назначен';
+            document.getElementById('modalService').textContent = booking.service_name || 'Не указана';
+            document.getElementById('modalPrice').textContent = booking.price || '0';
+            document.getElementById('modalComment').textContent = booking.comment || 'Нет комментария';
 
-                        const bookingClientNameSelect = document.getElementById('bookingClientName');
-                        const newOption = document.createElement('option');
-                        newOption.textContent = bookingClientName;
-                        newOption.selected = true;
-                        bookingClientNameSelect.appendChild(newOption);
+            // Заполнение формы редактирования
+            document.getElementById('editStartTime').value = booking.start_time;
+            document.getElementById('editComment').value = booking.comment || '';
 
-                        const bookingClientInfoSpan = document.getElementById('clientInfo');
-                        bookingClientInfoSpan.textContent = `Информация о клиенте: ${bookingClientInfo}`;
+            // Заполнение select'ов
+            if (booking.client_id) {
+                $('#editClient').val(booking.client_id).trigger('chosen:updated');
+            }
+            if (booking.specialist_id) {
+                $('#editSpecialist').val(booking.specialist_id).trigger('chosen:updated');
+            }
+            if (booking.duration_minutes) {
+                const hours = Math.floor(booking.duration_minutes / 60);
+                const minutes = booking.duration_minutes % 60;
+                $('#editDuration').val(`${hours}:${minutes.toString().padStart(2, '0')}`);
+            }
 
-                        const bookingRoomSelect = document.getElementById('bookingRoom');
-                        bookingRoomSelect.value = booking.idroom;
-                        console.log('booking.idroom', booking.idroom)
-
-                        }
-            });
+            // Управление видимостью кнопки подтверждения
+            confirmBookingBtn.style.display = booking.status === 1 ? 'inline-block' : 'none';
         }
+
+        // Функция для определения цвета статуса
+        function getStatusColor(status) {
+            const statusColors = {
+                1: 'warning',   // Ожидает подтверждения
+                2: 'success',   // Подтверждено
+                3: 'danger',    // Отменено
+                4: 'info'       // Завершено
+            };
+            return statusColors[status] || 'secondary';
+        }
+
+        // Обработчик открытия модального окна
+        editBookingModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const bookingId = button.getAttribute('data-booking-id');
+            
+            // Сброс формы и скрытие её
+            editBookingForm.style.display = 'none';
+            editBookingBtn.style.display = 'inline-block';
+            saveBookingBtn.style.display = 'none';
+            
+            // Запрос данных брони с сервера
+            fetch(`/booking/get-booking-details/${bookingId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        fillBookingData(data.booking);
+                    } else {
+                        throw new Error(data.error || 'Ошибка при получении данных');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при получении данных брони:', error);
+                    alert('Не удалось загрузить данные брони');
+                });
+        });
+
+        // Обработчик кнопки "Редактировать"
+        editBookingBtn.addEventListener('click', function() {
+            editBookingForm.style.display = 'block';
+            editBookingBtn.style.display = 'none';
+            saveBookingBtn.style.display = 'inline-block';
+        });
+
+        // Обработчик кнопки "Удалить"
+        deleteBookingBtn.addEventListener('click', function() {
+            if (confirm('Вы уверены, что хотите удалить эту бронь?')) {
+                const bookingId = document.getElementById('modalBookingId').textContent;
+                fetch(`/booking/delete/${bookingId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        throw new Error(data.error || 'Ошибка при удалении');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при удалении брони:', error);
+                    alert('Не удалось удалить бронь');
+                });
+            }
+        });
+
+        // Обработчик кнопки "Отменить бронь"
+        cancelBookingBtn.addEventListener('click', function() {
+            if (confirm('Вы уверены, что хотите отменить эту бронь?')) {
+                const bookingId = document.getElementById('modalBookingId').textContent;
+                fetch(`/booking/cancel/${bookingId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        throw new Error(data.error || 'Ошибка при отмене');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при отмене брони:', error);
+                    alert('Не удалось отменить бронь');
+                });
+            }
+        });
+
+        // Обработчик кнопки "Подтвердить"
+        confirmBookingBtn.addEventListener('click', function() {
+            const bookingId = document.getElementById('modalBookingId').textContent;
+            fetch(`/booking/confirm/${bookingId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    throw new Error(data.error || 'Ошибка при подтверждении');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при подтверждении брони:', error);
+                alert('Не удалось подтвердить бронь');
+            });
+        });
+
+        // Обработчик отправки формы редактирования
+        editBookingForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const bookingId = document.getElementById('modalBookingId').textContent;
+            const formData = new FormData(this);
+
+            fetch(`/booking/edit/${bookingId}/`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    throw new Error(data.error || 'Ошибка при сохранении');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при сохранении изменений:', error);
+                alert('Не удалось сохранить изменения');
+            });
+        });
+    });
 </script>
