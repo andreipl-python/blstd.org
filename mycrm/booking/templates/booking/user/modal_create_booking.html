@@ -203,17 +203,21 @@
     function updateBookingCost() {
         const selectedTypeId = $('#bookingType').val();
         const duration = $('#bookingDuration').val();
-        
+        const costContainer = $('#bookingCostContainer');
+        const costElement = $('#bookingCost');
+
+        if (!selectedTypeId || !duration) {
+            costContainer.hide();
+            return;
+        }
+
         const cost = calculateBookingCost(selectedTypeId, duration);
         
-        const $costContainer = $('#bookingCostContainer');
-        const $costSpan = $('#bookingCost');
-        
-        if (cost > 0) {
-            $costSpan.text(cost);
-            $costContainer.show();
+        if (cost !== null) {
+            costElement.text(cost);
+            costContainer.show();  // Показываем контейнер как только стоимость рассчитана
         } else {
-            $costContainer.hide();
+            costContainer.hide();
         }
     }
 
@@ -590,7 +594,18 @@
 
         if (availableTypes.length === 1) {
             bookingTypeSelect.value = availableTypes[0].pk;
+            
+            // Вызываем событие change для обновления длительности
             bookingTypeSelect.dispatchEvent(new Event('change'));
+            
+            // Проверяем состояние после события
+            const durationSelect = document.getElementById('bookingDuration');
+            
+            if (durationSelect && durationSelect.value) {
+                setTimeout(() => {
+                    updateBookingCost();
+                }, 100);
+            }
         }
     }
 
@@ -859,9 +874,13 @@
 
             // Вызываем обработчик сразу после установки начального значения
             $(durationSelect).trigger('change');
+
+            // Если есть только один вариант продолжительности и тип брони выбран
+            if (options.length === 1 && $('#bookingType').val()) {
+                updateBookingCost();
+            }
         }
         
-        // Принудительно показываем контейнер в любом случае
         durationContainer.style.cssText = "display: block !important";
     }
 

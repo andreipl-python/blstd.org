@@ -311,10 +311,6 @@
         }
 
         function createBookingBlock(booking, cellWidth) {
-            // Отладочный вывод
-            console.log('Booking data:', booking);
-            console.log('Comment:', booking.comment);
-            
             const block = document.createElement('div');
             block.className = `booking-block booking-status-${booking.status_id}`;
             block.setAttribute('data-bs-toggle', 'modal');
@@ -357,7 +353,6 @@
             
             // Проверяем наличие комментария в разных полях
             const commentText = booking.comment || booking.notes || '';
-            console.log('Comment text:', commentText);
             
             bookingInfo.innerHTML = `
                 <div class="booking-content">
