@@ -9,15 +9,13 @@
     <div class="modal-dialog" style="min-width: 800px; max-width: 800px;">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="d-flex justify-content-between align-items-center w-100">
-                    <div class="d-flex align-items-center">
-                        <h5 class="modal-title" id="editBookingModalLabel">
-                            Бронь #<span id="modalBookingId"></span>
-                            <span class="badge" id="modalBookingStatus"></span>
-                        </h5>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="d-flex align-items-center">
+                    <h5 class="modal-title me-3" id="editBookingModalLabel">
+                        Редактирование брони #<span id="modalBookingId"></span>
+                        <span class="badge" id="modalBookingStatus"></span>
+                    </h5>
                 </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <!-- Информация о брони -->
@@ -105,7 +103,6 @@
                 </div>
                 <div>
                     <!-- Правая группа кнопок -->
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
                     <button type="submit" class="btn btn-primary">Сохранить</button>
                 </div>
             </div>
