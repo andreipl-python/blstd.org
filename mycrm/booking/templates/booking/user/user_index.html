@@ -281,10 +281,10 @@
                             cell.classList.remove('available');
                             cell.classList.add('booked');
                             
-
-                            // Добавляем атрибуты для модального окна
-                            cell.setAttribute('data-bs-target', '#editBookingModal');
-                            cell.setAttribute('data-booking-id', booking.id);
+                            // Убираем атрибуты модального окна с ячейки
+                            cell.removeAttribute('data-bs-target');
+                            cell.removeAttribute('data-bs-toggle');
+                            cell.removeAttribute('data-booking-id');
                             
 
                             if (!firstCell) {
@@ -407,11 +407,8 @@
 <script>
     function checkBlockOverflow(block) {
         const content = block.querySelector('.booking-content');
-        console.log('Checking block:', block);
-        console.log('Content width:', content?.scrollWidth, 'Block width:', block.offsetWidth);
         if (content && content.scrollWidth > block.offsetWidth) {
             block.classList.add('needs-expand');
-            console.log('Added needs-expand class');
         }
     }
 

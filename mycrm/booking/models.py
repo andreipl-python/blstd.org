@@ -380,3 +380,70 @@ class CancellationPolicy(models.Model):
 
     def __str__(self):
         return f'Политика отмены для {self.reservation_type.name}'
+
+
+class PaymentType(models.Model):
+    """Модель для хранения типов оплаты"""
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(
+        max_length=100,
+        help_text='Название типа оплаты',
+        verbose_name='Название',
+        unique=True
+    )
+    description = models.TextField(
+        help_text='Описание типа оплаты',
+        verbose_name='Описание',
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        db_table = 'payment_types'
+        verbose_name = "Тип оплаты"
+        verbose_name_plural = "Типы оплаты"
+
+    def __str__(self):
+        return self.name
+
+
+class Payment(models.Model):
+    """Модель для хранения информации о платежах"""
+    id = models.AutoField(primary_key=True)
+    reservation = models.ForeignKey(
+        'Reservation',
+        on_delete=models.PROTECT,
+        help_text='Бронь, к которой относится платёж',
+        verbose_name='Бронь'
+    )
+    payment_type = models.ForeignKey(
+        'PaymentType',
+        on_delete=models.PROTECT,
+        help_text='Тип платежа',
+        verbose_name='Тип платежа'
+    )
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Сумма платежа',
+        verbose_name='Сумма'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text='Дата создания платежа',
+        verbose_name='Создан'
+    )
+    comment = models.TextField(
+        help_text='Комментарий к платежу',
+        verbose_name='Комментарий',
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        db_table = 'payments'
+        verbose_name = "Платёж"
+        verbose_name_plural = "Платежи"
+
+    def __str__(self):
+        return f"Платёж {self.id} для брони {self.reservation.id}"

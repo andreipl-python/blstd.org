@@ -1,0 +1,104 @@
+{% load custom_filters %}
+{% load static %}
+<div class="modal fade" id="paymentBookingModal" tabindex="-1" aria-labelledby="paymentBookingModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentBookingModalLabel">Оплата брони #<span id="paymentBookingId"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="paymentBookingForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="paymentType" class="form-label">Тип оплаты</label>
+                        <select class="form-select" id="paymentType" name="payment_type" required>
+                            {% for payment_type in payment_types %}
+                                <option value="{{ payment_type.id }}">{{ payment_type.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="paymentAmount" class="form-label">Сумма</label>
+                        <input type="number" class="form-control" id="paymentAmount" name="amount" step="0.01" required readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="paymentComment" class="form-label">Комментарий</label>
+                        <textarea class="form-control" id="paymentComment" name="comment" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" onclick="submitPayment()">Оплатить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const paymentBookingModal = document.getElementById('paymentBookingModal');
+        if (!paymentBookingModal) return;
+
+        // При открытии модального окна оплаты
+        paymentBookingModal.addEventListener('show.bs.modal', function(event) {
+            const modalBookingId = document.getElementById('modalBookingId');
+            const modalPrice = document.getElementById('modalPrice');
+            
+            if (!modalBookingId || !modalPrice) return;
+            
+            const bookingId = modalBookingId.textContent;
+            const totalCost = modalPrice.textContent;
+            
+            // Устанавливаем ID брони и сумму
+            document.getElementById('paymentBookingId').textContent = bookingId;
+            document.getElementById('paymentAmount').value = totalCost.replace(/[^\d.]/g, '');
+        });
+    });
+
+    // Функция отправки формы оплаты
+    function submitPayment() {
+        const bookingId = document.getElementById('paymentBookingId').textContent;
+        const form = document.getElementById('paymentBookingForm');
+        if (!form || !bookingId) return;
+
+        const formData = new FormData(form);
+        const csrfToken = formData.get('csrfmiddlewaretoken');
+
+        const data = {
+            payment_type: parseInt(formData.get('payment_type')),
+            amount: parseFloat(formData.get('amount')),
+            comment: formData.get('comment') || ''
+        };
+
+        fetch(`/booking/payment/${bookingId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Закрываем оба модальных окна
+                const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentBookingModal'));
+                const editModal = bootstrap.Modal.getInstance(document.getElementById('editBookingModal'));
+                
+                if (paymentModal) paymentModal.hide();
+                if (editModal) editModal.hide();
+                
+                // Перезагружаем страницу для обновления статуса
+                location.reload();
+            } else {
+                alert('Ошибка при внесении оплаты: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Ошибка при выполнении запроса: ' + error);
+        });
+    }
+</script>

@@ -4,15 +4,16 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import get_object_or_404
-
-from booking.models import Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup
-from .create_booking import check_room_availability, check_specialist_availability
+from django.shortcuts import get_object_or_404, render
+from ..models import Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup, PaymentType
 
 def get_booking_details(request, booking_id):
     """Получение детальной информации о брони"""
     try:
         booking = get_object_or_404(Reservation, id=booking_id)
+        
+        # Получаем типы оплаты
+        payment_types = PaymentType.objects.all()
         
         # Формируем словарь с данными брони
         booking_data = {
@@ -21,26 +22,30 @@ def get_booking_details(request, booking_id):
             'end_time': booking.datetimeend.strftime('%Y-%m-%d %H:%M'),
             'duration': f"{(booking.datetimeend - booking.datetimestart).seconds // 3600}:{((booking.datetimeend - booking.datetimestart).seconds % 3600) // 60:02d}",
             'duration_minutes': (booking.datetimeend - booking.datetimestart).seconds // 60,
-            'room_id': booking.room.id,
-            'room_name': booking.room.name,
-            'client_id': booking.client.id,
-            'client_name': str(booking.client),
+            'room_id': booking.room.id if booking.room else None,
+            'room_name': booking.room.name if booking.room else 'Не указано',
+            'client_id': booking.client.id if booking.client else None,
+            'client_name': str(booking.client) if booking.client else 'Не указан',
             'specialist_id': booking.specialist.id if booking.specialist else None,
             'specialist_name': str(booking.specialist) if booking.specialist else None,
-            'service_name': ', '.join([str(service) for service in booking.services.all()]),
-            'price': str(booking.get_total_price()) if hasattr(booking, 'get_total_price') else '',
-            'total_cost': str(booking.total_cost) if booking.total_cost else '',
-            'status': booking.status.id,
-            'status_name': booking.status.name,
+            'service_name': ', '.join([str(service) for service in booking.services.all()]) if booking.services.exists() else None,
+            'total_cost': str(booking.total_cost) if booking.total_cost else '0',
+            'status': booking.status.id if booking.status else None,
+            'status_name': booking.status.name if booking.status else 'Не указан',
             'comment': booking.comment,
-            'reservation_type': booking.reservation_type.id,
-            'client_group_id': booking.client_group.id if booking.client_group else None,
-            'services': [service.id for service in booking.services.all()]
+            'payment_types': [{'id': pt.id, 'name': pt.name} for pt in payment_types]
         }
         
-        return JsonResponse({'success': True, 'booking': booking_data})
+        return JsonResponse({
+            'success': True, 
+            'booking': booking_data
+        })
+        
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
 
 @csrf_exempt
 def edit_booking_view(request, booking_id):
@@ -166,8 +171,7 @@ def cancel_booking_view(request, booking_id):
 
     try:
         booking = get_object_or_404(Reservation, id=booking_id)
-        cancelled_status = ReservationStatusType.objects.get(name='Отменена')
-        booking.status = cancelled_status
+        booking.status_id = 4
         booking.save()
         return JsonResponse({"success": True})
     except Exception as e:
@@ -181,11 +185,9 @@ def confirm_booking_view(request, booking_id):
     """Подтверждение брони"""
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Неверный метод запроса"})
-
     try:
         booking = get_object_or_404(Reservation, id=booking_id)
-        confirmed_status = ReservationStatusType.objects.get(name='Подтверждена')
-        booking.status = confirmed_status
+        booking.status_id = 2  # Статус "Подтверждена, но не оплачена"
         booking.save()
         return JsonResponse({"success": True})
     except Exception as e:

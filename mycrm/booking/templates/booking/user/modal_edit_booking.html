@@ -88,224 +88,204 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <div class="d-flex justify-content-between w-100">
-                    <div>
-                        <!-- Левая группа кнопок -->
-                        <button type="button" class="btn btn-danger me-2" id="deleteBookingBtn">Удалить</button>
-                        <button type="button" class="btn btn-warning me-2" id="cancelBookingBtn">Отменить</button>
-                    </div>
-                    <div>
-                        <!-- Правая группа кнопок -->
-                        <button type="button" class="btn btn-success me-2" id="confirmBookingBtn" style="display: none;">Подтвердить</button>
-                        <button type="button" class="btn btn-primary me-2" id="editBookingBtn">Редактировать</button>
-                        <button type="submit" class="btn btn-primary" form="editBookingForm" id="saveBookingBtn" style="display: none;">Сохранить</button>
-                    </div>
+                <div class="me-auto">
+                    <!-- Левая группа кнопок -->
+                    <button type="button" class="btn btn-danger me-2" id="deleteBookingBtn">Удалить</button>
+                    <button type="button" class="btn btn-warning me-2" id="cancelBookingBtn">Отменить</button>
+                    <button type="button" class="btn btn-success me-2" id="confirmBookingBtn">Подтвердить</button>
+                    <button type="button" class="btn btn-success" id="paymentBookingBtn" style="display: none;" 
+                            data-bs-toggle="modal" data-bs-target="#paymentBookingModal">
+                        Внести оплату
+                    </button>
+                </div>
+                <div>
+                    <!-- Правая группа кнопок -->
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+{% include 'booking/user/modal_payment_booking.html' with payment_types=payment_types %}
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const editBookingModal = document.getElementById('editBookingModal');
-        const editBookingForm = document.getElementById('editBookingForm');
-        const editBookingBtn = document.getElementById('editBookingBtn');
-        const saveBookingBtn = document.getElementById('saveBookingBtn');
-        const confirmBookingBtn = document.getElementById('confirmBookingBtn');
+        if (!editBookingModal) return;
+
         const deleteBookingBtn = document.getElementById('deleteBookingBtn');
         const cancelBookingBtn = document.getElementById('cancelBookingBtn');
+        const confirmBookingBtn = document.getElementById('confirmBookingBtn');
+        const paymentBookingBtn = document.getElementById('paymentBookingBtn');
 
-        // Инициализация Chosen
-        $("#editClient").chosen({
-            width: "100%",
-            no_results_text: "Ничего не найдено"
-        });
-        
-        $("#editSpecialist").chosen({
-            width: "100%",
-            no_results_text: "Ничего не найдено"
-        });
-
-        // Функция для заполнения данных брони
-        function fillBookingData(booking) {
-            // Заголовок и статус
-            document.getElementById('modalBookingId').textContent = booking.id;
-            document.getElementById('modalBookingStatus').textContent = booking.status_name;
-            document.getElementById('modalBookingStatus').className = `badge bg-${getStatusColor(booking.status)}`;
-
-            // Основная информация
-            document.getElementById('modalStartTime').textContent = booking.start_time;
-            document.getElementById('modalEndTime').textContent = booking.end_time;
-            document.getElementById('modalDuration').textContent = booking.duration;
-            document.getElementById('modalRoom').textContent = booking.room_name;
-            document.getElementById('modalClientInfo').textContent = booking.client_name;
-            document.getElementById('modalSpecialistInfo').textContent = booking.specialist_name || 'Не назначен';
-            document.getElementById('modalService').textContent = booking.service_name || 'Не указана';
-            document.getElementById('modalPrice').textContent = booking.total_cost || '0';
-            document.getElementById('modalComment').textContent = booking.comment || 'Нет комментария';
-
-            // Заполнение формы редактирования
-            document.getElementById('editStartTime').value = booking.start_time;
-            document.getElementById('editComment').value = booking.comment || '';
-            document.getElementById('editTotalCost').value = booking.total_cost || '';
-
-            // Заполнение select'ов
-            if (booking.client_id) {
-                $('#editClient').val(booking.client_id).trigger('chosen:updated');
-            }
-            if (booking.specialist_id) {
-                $('#editSpecialist').val(booking.specialist_id).trigger('chosen:updated');
-            }
-            if (booking.duration_minutes) {
-                const hours = Math.floor(booking.duration_minutes / 60);
-                const minutes = booking.duration_minutes % 60;
-                $('#editDuration').val(`${hours}:${minutes.toString().padStart(2, '0')}`);
+        function updateModalWithBookingData(data) {
+            if (!data) return;
+            
+            // Обновляем основную информацию
+            document.getElementById('modalBookingId').textContent = data.id;
+            document.getElementById('modalStartTime').textContent = data.start_time;
+            document.getElementById('modalEndTime').textContent = data.end_time;
+            document.getElementById('modalDuration').textContent = data.duration;
+            document.getElementById('modalRoom').textContent = data.room_name;
+            document.getElementById('modalClientInfo').textContent = data.client_name;
+            document.getElementById('modalSpecialistInfo').textContent = data.specialist_name || 'Не назначен';
+            document.getElementById('modalService').textContent = data.service_name || 'Не указана';
+            document.getElementById('modalPrice').textContent = data.total_cost || '0';
+            document.getElementById('modalComment').textContent = data.comment || '';
+            
+            // Обновляем статус и его цвет
+            const statusBadge = document.getElementById('modalBookingStatus');
+            if (statusBadge) {
+                statusBadge.textContent = data.status_name;
+                statusBadge.className = 'badge ' + getStatusColor(data.status);
             }
 
-            // Управление видимостью кнопки подтверждения
-            confirmBookingBtn.style.display = booking.status === 1 ? 'inline-block' : 'none';
+            // Управляем видимостью кнопок в зависимости от статуса
+            if (confirmBookingBtn) {
+                confirmBookingBtn.style.display = data.status === 1 ? 'inline-block' : 'none';
+            }
+            if (paymentBookingBtn) {
+                paymentBookingBtn.style.display = data.status === 2 ? 'inline-block' : 'none';
+            }
+            if (cancelBookingBtn) {
+                cancelBookingBtn.style.display = [1, 2].includes(data.status) ? 'inline-block' : 'none';
+            }
         }
 
-        // Функция для определения цвета статуса
         function getStatusColor(status) {
             const statusColors = {
-                1: 'danger',    // Требует подтверждения (красный #ff3333)
-                2: 'warning',   // Подтверждено, не оплачено (желтый #ffd700)
-                3: 'success',   // Подтверждено и оплачено (зеленый #2ecc71)
-                5: 'secondary'  // Завершено (без индикатора)
+                1: 'bg-danger',     // Требует подтверждения (красный #ff3333)
+                2: 'bg-warning',    // Подтверждено, не оплачено (желтый #ffd700)
+                3: 'bg-success',    // Подтверждено и оплачено (зеленый #2ecc71)
+                4: 'bg-danger',     // Отменена (красный)
+                5: 'bg-secondary'   // Завершена
             };
-            return statusColors[status] || 'secondary';
+            return statusColors[status] || 'bg-secondary';
         }
 
         // Обработчик открытия модального окна
         editBookingModal.addEventListener('show.bs.modal', function(event) {
             const button = event.relatedTarget;
+            if (!button) return;
+            
             const bookingId = button.getAttribute('data-booking-id');
-            
-            // Сброс формы и скрытие её
-            editBookingForm.style.display = 'none';
-            editBookingBtn.style.display = 'inline-block';
-            saveBookingBtn.style.display = 'none';
-            
-            // Запрос данных брони с сервера
+            if (!bookingId) return;
+
+            // Проверяем, не загружены ли уже данные для этой брони
+            const currentBookingId = document.getElementById('modalBookingId').textContent;
+            if (currentBookingId === bookingId) return;
+
+            // Загружаем данные брони
             fetch(`/booking/get-booking-details/${bookingId}/`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('Received booking data:', data); // Для отладки
                     if (data.success) {
-                        fillBookingData(data.booking);
+                        updateModalWithBookingData(data.booking);
                     } else {
-                        throw new Error(data.error || 'Ошибка при получении данных');
+                        throw new Error(data.error || 'Ошибка при загрузке данных брони');
                     }
                 })
                 .catch(error => {
-                    console.error('Ошибка при получении данных брони:', error);
-                    alert('Не удалось загрузить данные брони');
+                    console.error('Error loading booking details:', error);
+                    alert('Ошибка при загрузке данных брони: ' + error.message);
                 });
         });
 
-        // Обработчик кнопки "Редактировать"
-        editBookingBtn.addEventListener('click', function() {
-            editBookingForm.style.display = 'block';
-            editBookingBtn.style.display = 'none';
-            saveBookingBtn.style.display = 'inline-block';
-        });
-
-        // Обработчик кнопки "Удалить"
-        deleteBookingBtn.addEventListener('click', function() {
-            if (confirm('Вы уверены, что хотите удалить эту бронь?')) {
+        // Обработчики кнопок действий
+        if (confirmBookingBtn) {
+            confirmBookingBtn.addEventListener('click', function() {
                 const bookingId = document.getElementById('modalBookingId').textContent;
-                fetch(`/booking/delete/${bookingId}/`, {
+                if (!bookingId) return;
+
+                fetch(`/booking/confirm/${bookingId}/`, {
                     method: 'POST',
                     headers: {
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json'
                     }
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        const modal = bootstrap.Modal.getInstance(editBookingModal);
+                        if (modal) modal.hide();
                         location.reload();
                     } else {
-                        throw new Error(data.error || 'Ошибка при удалении');
+                        alert('Ошибка при подтверждении брони: ' + data.error);
                     }
                 })
                 .catch(error => {
-                    console.error('Ошибка при удалении брони:', error);
-                    alert('Не удалось удалить бронь');
+                    alert('Ошибка при выполнении запроса: ' + error);
                 });
-            }
-        });
+            });
+        }
 
-        // Обработчик кнопки "Отменить бронь"
-        cancelBookingBtn.addEventListener('click', function() {
-            if (confirm('Вы уверены, что хотите отменить эту бронь?')) {
+        if (cancelBookingBtn) {
+            cancelBookingBtn.addEventListener('click', function() {
+                if (!confirm('Вы уверены, что хотите отменить эту бронь?')) return;
+
                 const bookingId = document.getElementById('modalBookingId').textContent;
+                if (!bookingId) return;
+
                 fetch(`/booking/cancel/${bookingId}/`, {
                     method: 'POST',
                     headers: {
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json'
                     }
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        const modal = bootstrap.Modal.getInstance(editBookingModal);
+                        if (modal) modal.hide();
                         location.reload();
                     } else {
-                        throw new Error(data.error || 'Ошибка при отмене');
+                        alert('Ошибка при отмене брони: ' + data.error);
                     }
                 })
                 .catch(error => {
-                    console.error('Ошибка при отмене брони:', error);
-                    alert('Не удалось отменить бронь');
+                    alert('Ошибка при выполнении запроса: ' + error);
                 });
-            }
-        });
-
-        // Обработчик кнопки "Подтвердить"
-        confirmBookingBtn.addEventListener('click', function() {
-            const bookingId = document.getElementById('modalBookingId').textContent;
-            fetch(`/booking/confirm/${bookingId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    throw new Error(data.error || 'Ошибка при подтверждении');
-                }
-            })
-            .catch(error => {
-                console.error('Ошибка при подтверждении брони:', error);
-                alert('Не удалось подтвердить бронь');
             });
-        });
+        }
 
-        // Обработчик отправки формы редактирования
-        editBookingForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const bookingId = document.getElementById('modalBookingId').textContent;
-            const formData = new FormData(this);
+        if (deleteBookingBtn) {
+            deleteBookingBtn.addEventListener('click', function() {
+                if (!confirm('Вы уверены, что хотите удалить эту бронь?')) return;
 
-            fetch(`/booking/edit/${bookingId}/`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    throw new Error(data.error || 'Ошибка при сохранении');
-                }
-            })
-            .catch(error => {
-                console.error('Ошибка при сохранении изменений:', error);
-                alert('Не удалось сохранить изменения');
+                const bookingId = document.getElementById('modalBookingId').textContent;
+                if (!bookingId) return;
+
+                fetch(`/booking/delete/${bookingId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const modal = bootstrap.Modal.getInstance(editBookingModal);
+                        if (modal) modal.hide();
+                        location.reload();
+                    } else {
+                        alert('Ошибка при удалении брони: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Ошибка при выполнении запроса: ' + error);
+                });
             });
-        });
+        }
     });
 </script>
