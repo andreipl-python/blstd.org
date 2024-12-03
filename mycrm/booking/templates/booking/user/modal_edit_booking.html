@@ -12,7 +12,7 @@
                 <div class="d-flex justify-content-between align-items-center w-100">
                     <div class="d-flex align-items-center">
                         <h5 class="modal-title" id="editBookingModalLabel">
-                            Бронирование #<span id="modalBookingId"></span>
+                            Бронь #<span id="modalBookingId"></span>
                             <span class="badge" id="modalBookingStatus"></span>
                         </h5>
                     </div>
@@ -83,13 +83,12 @@
                     <div>
                         <!-- Левая группа кнопок -->
                         <button type="button" class="btn btn-danger me-2" id="deleteBookingBtn">Удалить</button>
-                        <button type="button" class="btn btn-warning me-2" id="cancelBookingBtn">Отменить бронь</button>
+                        <button type="button" class="btn btn-warning me-2" id="cancelBookingBtn">Отменить</button>
                     </div>
                     <div>
                         <!-- Правая группа кнопок -->
-                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Закрыть</button>
                         <button type="button" class="btn btn-success me-2" id="confirmBookingBtn" style="display: none;">Подтвердить</button>
-                        <button type="button" class="btn btn-primary" id="editBookingBtn">Редактировать</button>
+                        <button type="button" class="btn btn-primary me-2" id="editBookingBtn">Редактировать</button>
                         <button type="submit" class="btn btn-primary" form="editBookingForm" id="saveBookingBtn" style="display: none;">Сохранить</button>
                     </div>
                 </div>
@@ -161,10 +160,10 @@
         // Функция для определения цвета статуса
         function getStatusColor(status) {
             const statusColors = {
-                1: 'warning',   // Ожидает подтверждения
-                2: 'success',   // Подтверждено
-                3: 'danger',    // Отменено
-                4: 'info'       // Завершено
+                1: 'danger',    // Требует подтверждения (красный #ff3333)
+                2: 'warning',   // Подтверждено, не оплачено (желтый #ffd700)
+                3: 'success',   // Подтверждено и оплачено (зеленый #2ecc71)
+                5: 'secondary'  // Завершено (без индикатора)
             };
             return statusColors[status] || 'secondary';
         }
