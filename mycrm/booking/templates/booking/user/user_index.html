@@ -311,6 +311,10 @@
         }
 
         function createBookingBlock(booking, cellWidth) {
+            // Отладочный вывод
+            console.log('Booking data:', booking);
+            console.log('Comment:', booking.comment);
+            
             const block = document.createElement('div');
             block.className = `booking-block booking-status-${booking.status_id}`;
             block.setAttribute('data-bs-toggle', 'modal');
@@ -340,14 +344,27 @@
             block.style.setProperty('--specialist-secondary-color', colors.secondary + '80');
 
             const bookingInfo = document.createElement('div');
-            const timeStr = `${booking.start_time} - ${booking.end_time}`;
+            
+            // Форматируем время из datetime в формат HH:MM
+            const formatTime = (dateStr) => {
+                const date = new Date(dateStr);
+                return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            };
+
+            const startTime = formatTime(booking.blocks_datetime_range[0]);
+            const endTime = formatTime(booking.blocks_datetime_range[booking.blocks_datetime_range.length - 1]);
+            const timeStr = `${startTime} - ${endTime}`;
+            
+            // Проверяем наличие комментария в разных полях
+            const commentText = booking.comment || booking.notes || '';
+            console.log('Comment text:', commentText);
             
             bookingInfo.innerHTML = `
                 <div class="booking-content">
                     <span class="booking-client">${booking.client_name || 'Без имени'}</span>
                     <span class="booking-separator">·</span>
                     <span class="booking-time">${timeStr}</span>
-                    ${booking.comment ? `<span class="booking-separator">·</span><span class="booking-comment">${booking.comment}</span>` : ''}
+                    ${commentText ? `<span class="booking-separator">·</span><span class="booking-comment">${commentText}</span>` : ''}
                 </div>`;
 
             const statusIndicator = document.createElement('div');

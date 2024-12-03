@@ -76,8 +76,9 @@ def add_blocks_datetime_range_and_room_name(reservation_objects: QuerySet, defau
             'client_name': client.name,
             'client_comment': client.comment,
             'client_phone': client.phone,
-            'specialist_id': reservation.specialist_id,  # Добавляем ID специалиста
-            'status_id': reservation.status.id if reservation.status else 1  # По умолчанию "Не подтверждена"
+            'specialist_id': reservation.specialist_id,
+            'status_id': reservation.status.id if reservation.status else 1,
+            'comment': reservation.comment  # Добавляем комментарий к брони
         })
 
     return result
@@ -103,7 +104,7 @@ def user_index_view(request):
 
     # Получаем всех клиентов с их балансами
     clients = Client.objects.prefetch_related(
-        'subscription_set__reservation_type', 
+        'subscription_set__reservation_type',
         'clientrating_set',
         'group__client_set'
     ).select_related('group').all()
@@ -114,7 +115,7 @@ def user_index_view(request):
         subscriptions = client.subscription_set.all()
         
         balances = {
-            subscription.reservation_type_id: subscription.balance 
+            subscription.reservation_type_id: subscription.balance
             for subscription in subscriptions
         }
         
