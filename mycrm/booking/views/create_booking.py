@@ -120,7 +120,7 @@ def create_booking_view(request):
         # Вычисляем время начала и конца брони
         start_datetime = datetime.strptime(full_datetime, '%Y-%m-%d %H:%M:%S')
         # Добавляем 3 часа к времени перед сохранением
-        start_datetime = start_datetime + timedelta(hours=3)
+        start_datetime = start_datetime
         duration_hours, duration_minutes = map(int, booking_duration.split(':'))
         end_datetime = start_datetime + timedelta(hours=duration_hours, minutes=duration_minutes)
 

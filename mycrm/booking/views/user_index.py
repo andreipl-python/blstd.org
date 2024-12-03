@@ -170,7 +170,6 @@ def user_index_view(request):
 
     tariff_units = TariffUnit.objects.all()
     tariff_units_json = serialize('json', tariff_units, use_natural_primary_keys=True)
-    print(tariff_units_json)
 
     specialist_colors = {
         color.specialist_id: {
