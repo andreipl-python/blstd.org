@@ -33,10 +33,10 @@ def check_room_availability(room: Room, start_datetime: datetime, end_datetime: 
     if start_time < room_start or end_time > room_end:
         raise ValidationError("Время бронирования выходит за рамки рабочего времени помещения")
 
-    # Получаем все брони для проверки
+    # Получаем все брони для проверки, исключая отмененные
     existing_bookings = Reservation.objects.filter(
         room=room,
-    ).exclude(status__name='Отменена')
+    ).exclude(status_id=4)
     
     # Проверяем пересечения вручную
     for booking in existing_bookings:
@@ -60,8 +60,11 @@ def check_room_availability(room: Room, start_datetime: datetime, end_datetime: 
 
 def check_specialist_availability(specialist: Specialist, start_datetime: datetime, end_datetime: datetime) -> bool:
     """Проверка доступности специалиста"""
-    overlapping_bookings = Reservation.objects.filter(
+    # Получаем все брони специалиста, исключая отмененные
+    existing_bookings = Reservation.objects.filter(
         specialist=specialist,
+    ).exclude(status_id=4)
+    overlapping_bookings = existing_bookings.filter(
         datetimestart__lt=end_datetime,
         datetimeend__gt=start_datetime
     )

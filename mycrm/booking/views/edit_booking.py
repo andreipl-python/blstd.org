@@ -89,31 +89,32 @@ def edit_booking_view(request, booking_id):
         end_datetime = start_datetime + timedelta(hours=duration_hours, minutes=duration_minutes)
 
         # Проверяем доступность (исключая текущую бронь)
+        def check_booking_conflicts(booking_id, room, specialist, start_datetime, end_datetime):
+            """Проверка конфликтов при редактировании брони"""
+            # Проверяем пересечения с другими бронями для помещения
+            room_conflicts = Reservation.objects.filter(
+                room=room,
+                datetimestart__lt=end_datetime,
+                datetimeend__gt=start_datetime
+            ).exclude(id=booking_id).exclude(status_id=4)
+
+            if room_conflicts.exists():
+                raise ValidationError("Выбранное время пересекается с другими бронями помещения")
+
+            # Проверяем пересечения с другими бронями для специалиста
+            specialist_conflicts = Reservation.objects.filter(
+                specialist=specialist,
+                datetimestart__lt=end_datetime,
+                datetimeend__gt=start_datetime
+            ).exclude(id=booking_id).exclude(status_id=4)
+
+            if specialist_conflicts.exists():
+                raise ValidationError("Выбранное время пересекается с другими бронями специалиста")
+
+            return True
+
         try:
-            # Модифицируем запрос для исключения текущей брони при проверке
-            existing_bookings = Reservation.objects.filter(
-                room=room
-            ).exclude(
-                id=booking_id
-            ).exclude(
-                status__name='Отменена'
-            )
-            
-            for existing_booking in existing_bookings:
-                if (existing_booking.datetimestart < end_datetime and 
-                    existing_booking.datetimeend > start_datetime):
-                    raise ValidationError("На это время уже есть бронирование")
-
-            if specialist:
-                existing_specialist_bookings = Reservation.objects.filter(
-                    specialist=specialist,
-                    datetimestart__lt=end_datetime,
-                    datetimeend__gt=start_datetime
-                ).exclude(id=booking_id)
-                
-                if existing_specialist_bookings.exists():
-                    raise ValidationError("Специалист уже занят в это время")
-
+            check_booking_conflicts(booking_id, room, specialist, start_datetime, end_datetime)
         except ValidationError as e:
             return JsonResponse({"success": False, "error": str(e)})
 

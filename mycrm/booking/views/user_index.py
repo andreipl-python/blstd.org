@@ -98,7 +98,10 @@ def user_index_view(request):
 
     start_date = days_of_month[0]['date']
     end_date = days_of_month[-1]['date']
-    bookings_in_range = Reservation.objects.filter(Q(datetimestart__gte=start_date), Q(datetimeend__lte=end_date))
+    bookings_in_range = Reservation.objects.filter(
+        Q(datetimestart__gte=start_date),
+        Q(datetimeend__lte=end_date)
+    ).exclude(status_id=4)
     bookings_in_range = add_blocks_datetime_range_and_room_name(bookings_in_range, 15)
     bookings_in_range_json = json.dumps(bookings_in_range)
 
