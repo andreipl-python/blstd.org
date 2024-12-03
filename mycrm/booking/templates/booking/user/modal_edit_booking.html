@@ -93,9 +93,14 @@
                     <button type="button" class="btn btn-danger me-2" id="deleteBookingBtn">Удалить</button>
                     <button type="button" class="btn btn-warning me-2" id="cancelBookingBtn">Отменить</button>
                     <button type="button" class="btn btn-success me-2" id="confirmBookingBtn">Подтвердить</button>
-                    <button type="button" class="btn btn-success" id="paymentBookingBtn" style="display: none;" 
-                            data-bs-toggle="modal" data-bs-target="#paymentBookingModal">
-                        Внести оплату
+                    <button type="button" 
+                            class="btn btn-success" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#paymentBookingModal"
+                            data-booking-id=""
+                            data-total-cost=""
+                            id="openPaymentModalBtn">
+                        Оплатить
                     </button>
                 </div>
                 <div>
@@ -118,7 +123,7 @@
         const deleteBookingBtn = document.getElementById('deleteBookingBtn');
         const cancelBookingBtn = document.getElementById('cancelBookingBtn');
         const confirmBookingBtn = document.getElementById('confirmBookingBtn');
-        const paymentBookingBtn = document.getElementById('paymentBookingBtn');
+        const paymentBookingBtn = document.getElementById('openPaymentModalBtn');
 
         function updateModalWithBookingData(data) {
             if (!data) return;
@@ -151,6 +156,22 @@
             }
             if (cancelBookingBtn) {
                 cancelBookingBtn.style.display = [1, 2].includes(data.status) ? 'inline-block' : 'none';
+            }
+            
+            // Обновляем данные для кнопки оплаты
+            const paymentBtn = document.getElementById('openPaymentModalBtn');
+            if (paymentBtn) {
+                paymentBtn.setAttribute('data-booking-id', data.id);
+                paymentBtn.setAttribute('data-total-cost', data.total_cost);
+                
+                // Добавляем обработчик для корректного переключения между модальными окнами
+                paymentBtn.onclick = function() {
+                    const editModal = document.getElementById('editBookingModal');
+                    if (editModal) {
+                        editModal.classList.remove('show');
+                        editModal.style.display = 'none';
+                    }
+                };
             }
         }
 

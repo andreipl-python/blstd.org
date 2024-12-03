@@ -5,7 +5,8 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404, render
-from ..models import Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup, PaymentType
+from ..models import Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup, PaymentType, Payment
+import json
 
 def get_booking_details(request, booking_id):
     """Получение детальной информации о брони"""
@@ -195,4 +196,53 @@ def confirm_booking_view(request, booking_id):
         return JsonResponse({
             "success": False,
             "error": f"Ошибка при подтверждении брони: {str(e)}"
+        })
+
+@csrf_exempt
+def process_payment_view(request, booking_id):
+    """Обработка платежа для брони"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Метод не поддерживается'})
+    
+    try:
+        # Получаем данные из запроса
+        data = json.loads(request.body)
+        payment_type_id = data.get('payment_type')
+        amount = data.get('amount')
+        comment = data.get('comment', '')
+
+        # Проверяем обязательные поля
+        if not payment_type_id or not amount:
+            return JsonResponse({
+                'success': False,
+                'error': 'Не указан тип оплаты или сумма'
+            })
+
+        # Получаем объекты из базы данных
+        booking = get_object_or_404(Reservation, id=booking_id)
+        payment_type = get_object_or_404(PaymentType, id=payment_type_id)
+
+        with transaction.atomic():
+            # Создаем запись об оплате
+            payment = Payment.objects.create(
+                reservation=booking,
+                payment_type=payment_type,
+                amount=amount,
+                comment=comment
+            )
+
+            # Обновляем статус брони на "Оплачено"
+            paid_status = ReservationStatusType.objects.get(id=3)  # ID 3 = Оплачено
+            booking.status = paid_status
+            booking.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Оплата успешно добавлена'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
         })

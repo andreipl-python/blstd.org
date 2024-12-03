@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, date
 from calendar import monthrange
 from django.utils import timezone
 
-from booking.models import Client, Room, Service, Reservation, ReservationType, Specialist, TariffUnit, ServiceGroup, SpecialistColor
+from booking.models import Client, Room, Service, Reservation, ReservationType, Specialist, TariffUnit, ServiceGroup, SpecialistColor, PaymentType
 
 from .menu2 import menu2_view
 
@@ -191,6 +191,9 @@ def user_index_view(request):
     
     specialist_colors_json = json.dumps(specialist_colors)
 
+    # Получаем типы платежей
+    payment_types = PaymentType.objects.all()
+
     context = {
         **menu2_context,
         'days_of_month': days_of_month,
@@ -208,7 +211,8 @@ def user_index_view(request):
         'tariff_units_json': tariff_units_json,
         'clients': clients,  # Добавляем клиентов в контекст
         'clients_json': clients_json,
-        'specialist_colors': specialist_colors_json
+        'specialist_colors': specialist_colors_json,
+        'payment_types': payment_types,
     }
 
     return render(request, 'booking/user/user_index.html', context)

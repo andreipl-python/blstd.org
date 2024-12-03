@@ -6,7 +6,8 @@ from .views.edit_booking import (
     edit_booking_view,
     delete_booking_view,
     cancel_booking_view,
-    confirm_booking_view
+    confirm_booking_view,
+    process_payment_view
 )
 
 urlpatterns = [
@@ -33,4 +34,5 @@ urlpatterns = [
     path('booking/cancel/<int:booking_id>/', cancel_booking_view, name='cancel_booking'),
     path('booking/confirm/<int:booking_id>/', confirm_booking_view, name='confirm_booking'),
     path('booking/payment/<int:booking_id>/', payment_booking_view, name='payment_booking'),
+    path('booking/process-payment/<int:booking_id>/', process_payment_view, name='process_payment'),
 ]

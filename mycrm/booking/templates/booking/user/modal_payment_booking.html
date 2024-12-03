@@ -5,7 +5,10 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="paymentBookingModalLabel">Оплата брони #<span id="paymentBookingId"></span></h5>
+                <div class="d-flex align-items-center">
+                    <h5 class="modal-title me-3" id="paymentBookingModalLabel">Оплата брони #<span id="paymentBookingId"></span></h5>
+                    <span class="badge bg-success fs-6" id="bookingTotalCost"></span>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -44,61 +47,117 @@
 
         // При открытии модального окна оплаты
         paymentBookingModal.addEventListener('show.bs.modal', function(event) {
-            const modalBookingId = document.getElementById('modalBookingId');
-            const modalPrice = document.getElementById('modalPrice');
+            const button = event.relatedTarget;
+            const bookingId = button.getAttribute('data-booking-id');
+            const totalCost = button.getAttribute('data-total-cost');
             
-            if (!modalBookingId || !modalPrice) return;
-            
-            const bookingId = modalBookingId.textContent;
-            const totalCost = modalPrice.textContent;
-            
-            // Устанавливаем ID брони и сумму
+            // Устанавливаем ID брони
             document.getElementById('paymentBookingId').textContent = bookingId;
-            document.getElementById('paymentAmount').value = totalCost.replace(/[^\d.]/g, '');
+            
+            // Устанавливаем сумму к оплате
+            const paymentAmount = document.getElementById('paymentAmount');
+            const bookingTotalCost = document.getElementById('bookingTotalCost');
+            if (totalCost) {
+                paymentAmount.value = totalCost;
+                bookingTotalCost.textContent = totalCost + ' ₽';
+            }
+
+            // Получаем данные о брони для заполнения типов платежей
+            fetch(`/booking/get_booking_details/${bookingId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.booking.payment_types) {
+                        const paymentTypeSelect = document.getElementById('paymentType');
+                        paymentTypeSelect.innerHTML = ''; // Очищаем текущие опции
+                        
+                        // Добавляем новые опции из полученных данных
+                        data.booking.payment_types.forEach(type => {
+                            const option = document.createElement('option');
+                            option.value = type.id;
+                            option.textContent = type.name;
+                            paymentTypeSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        });
+
+        // При закрытии модального окна оплаты
+        paymentBookingModal.addEventListener('hidden.bs.modal', function(event) {
+            // Убираем затемнение и восстанавливаем возможность прокрутки
+            const modalBackdrops = document.getElementsByClassName('modal-backdrop');
+            while (modalBackdrops.length > 0) {
+                modalBackdrops[0].parentNode.removeChild(modalBackdrops[0]);
+            }
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+            
+            // Показываем модальное окно редактирования брони
+            const editBookingModal = document.getElementById('editBookingModal');
+            if (editBookingModal) {
+                editBookingModal.classList.add('show');
+                editBookingModal.style.display = 'block';
+            }
         });
     });
 
     // Функция отправки формы оплаты
     function submitPayment() {
         const bookingId = document.getElementById('paymentBookingId').textContent;
-        const form = document.getElementById('paymentBookingForm');
-        if (!form || !bookingId) return;
+        const paymentType = document.getElementById('paymentType').value;
+        const amount = document.getElementById('paymentAmount').value;
+        const comment = document.getElementById('paymentComment').value;
 
-        const formData = new FormData(form);
-        const csrfToken = formData.get('csrfmiddlewaretoken');
+        // Проверяем обязательные поля
+        if (!bookingId || !paymentType || !amount) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Ошибка',
+                text: 'Пожалуйста, заполните все обязательные поля'
+            });
+            return;
+        }
 
-        const data = {
-            payment_type: parseInt(formData.get('payment_type')),
-            amount: parseFloat(formData.get('amount')),
-            comment: formData.get('comment') || ''
-        };
-
-        fetch(`/booking/payment/${bookingId}/`, {
+        // Отправляем данные на сервер
+        fetch(`/booking/process-payment/${bookingId}/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': csrfToken,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
             },
-            body: JSON.stringify(data)
+            body: JSON.stringify({
+                payment_type: paymentType,
+                amount: amount,
+                comment: comment
+            })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Закрываем оба модальных окна
-                const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentBookingModal'));
-                const editModal = bootstrap.Modal.getInstance(document.getElementById('editBookingModal'));
-                
-                if (paymentModal) paymentModal.hide();
-                if (editModal) editModal.hide();
-                
-                // Перезагружаем страницу для обновления статуса
-                location.reload();
+                // Закрываем модальное окно
+                const modal = bootstrap.Modal.getInstance(document.getElementById('paymentBookingModal'));
+                modal.hide();
+
+                // Показываем сообщение об успехе
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Успешно',
+                    text: 'Оплата успешно добавлена'
+                }).then(() => {
+                    // Обновляем страницу для отображения изменений
+                    window.location.reload();
+                });
             } else {
-                alert('Ошибка при внесении оплаты: ' + data.error);
+                throw new Error(data.error || 'Произошла ошибка при сохранении оплаты');
             }
         })
         .catch(error => {
-            alert('Ошибка при выполнении запроса: ' + error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Ошибка',
+                text: error.message || 'Произошла ошибка при сохранении оплаты'
+            });
         });
     }
 </script>
