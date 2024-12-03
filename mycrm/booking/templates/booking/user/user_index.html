@@ -310,15 +310,18 @@
             });
         }
 
-        function createBookingBlock(booking, cellWidth) {            
+        function createBookingBlock(booking, cellWidth) {
             const block = document.createElement('div');
-            block.className = 'booking-block';
-            block.classList.add(`booking-status-${booking.status_id}`);
+            block.className = `booking-block booking-status-${booking.status_id}`;
             block.setAttribute('data-bs-toggle', 'modal');
             block.setAttribute('data-bs-target', '#editBookingModal');
             block.setAttribute('data-booking-id', booking.id);
             block.style.cursor = 'pointer';
-            
+
+            // Создаем слой для фона
+            const backgroundLayer = document.createElement('div');
+            backgroundLayer.className = 'background-layer';
+
             // Получаем цвета специалистов из контекста
             const specialistColors = JSON.parse('{{ specialist_colors|safe }}');
             const specialistId = booking.specialist_id;
@@ -327,26 +330,31 @@
                 secondary: '#90a0f7'
             };
             
-            block.style.background = `linear-gradient(135deg, 
-                ${colors.primary}99 0%,
-                ${colors.primary}99 50%,
-                ${colors.secondary}99 100%
+            backgroundLayer.style.background = `linear-gradient(135deg, 
+                ${colors.primary}55 0%,
+                ${colors.primary}55 50%,
+                ${colors.secondary}55 100%
             )`;
             
             block.style.setProperty('--specialist-primary-color', colors.primary + '80');
             block.style.setProperty('--specialist-secondary-color', colors.secondary + '80');
+
+            const bookingInfo = document.createElement('div');
+            const timeStr = `${booking.start_time} - ${booking.end_time}`;
             
+            bookingInfo.innerHTML = `
+                <div class="booking-content">
+                    <span class="booking-client">${booking.client_name || 'Без имени'}</span>
+                    <span class="booking-separator">·</span>
+                    <span class="booking-time">${timeStr}</span>
+                    ${booking.comment ? `<span class="booking-separator">·</span><span class="booking-comment">${booking.comment}</span>` : ''}
+                </div>`;
+
             const statusIndicator = document.createElement('div');
             statusIndicator.className = 'booking-status-indicator';
-            block.appendChild(statusIndicator);
             
-            const bookingInfo = document.createElement('div');
-            bookingInfo.className = 'booking-info';
-            bookingInfo.innerHTML = `
-                <div class="booking-time">${booking.start_time} - ${booking.end_time}</div>
-                <div class="booking-client">${booking.client_name}</div>
-                ${booking.specialist_name ? `<div class="booking-specialist">${booking.specialist_name}</div>` : ''}
-            `;
+            block.appendChild(backgroundLayer);
+            block.appendChild(statusIndicator);
             block.appendChild(bookingInfo);
             
             block.style.width = (cellWidth - 2) + 'px';

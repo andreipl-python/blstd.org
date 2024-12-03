@@ -84,23 +84,64 @@ body {
     position: absolute;
     top: 5px;
     height: 30px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 9px;
-    transition: all 0.3s ease;
     z-index: 4;
     cursor: pointer;
-    backdrop-filter: blur(4px);
+    padding: 5px 10px;
+    transition: transform 0.3s ease;
+}
+
+.booking-block .booking-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    font-size: 0.9em;
+    position: relative;
+    z-index: 2;
+}
+
+.booking-block .background-layer {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 9px;
+    transition: all 0.3s ease;
+    z-index: 1;
 }
 
 .booking-block:hover {
     transform: scale(1.02) translateY(-2px);
-    filter: brightness(1.2);
     z-index: 100;
+}
+
+.booking-block:hover .background-layer {
+    filter: brightness(1.1);
     box-shadow: 
-        0 0 15px var(--specialist-primary-color),
-        0 0 30px var(--specialist-primary-color),
-        0 0 45px var(--specialist-primary-color),
-        0 4px 15px rgba(0, 0, 0, 0.3);
+        0 0 10px var(--specialist-primary-color),
+        0 0 20px var(--specialist-primary-color),
+        0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.booking-separator {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.booking-client {
+    font-weight: 500;
+}
+
+.booking-time {
+    color: #93c5fd;
+}
+
+.booking-comment {
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
 }
 
 /* Индикаторы статуса бронирования */
