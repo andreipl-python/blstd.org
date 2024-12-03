@@ -89,17 +89,10 @@ body {
     z-index: 4;
     cursor: pointer;
     padding: 5px 10px;
-    transition: transform 0.3s ease;
-}
-
-.booking-block .booking-content {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 0.9em;
-    position: relative;
-    z-index: 2;
 }
 
 .booking-block .background-layer {
@@ -114,6 +107,61 @@ body {
     z-index: 1;
 }
 
+.booking-block .booking-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    font-size: 0.9em;
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 2;
+}
+
+.booking-block .booking-status-indicator {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+.booking-block.needs-expand:hover {
+    width: auto !important;
+    max-width: none !important;
+    z-index: 1000;
+}
+
+.booking-block.needs-expand:hover .background-layer {
+    background: linear-gradient(135deg,
+        var(--specialist-primary-color-solid) 0%,
+        var(--specialist-primary-color-solid) 50%,
+        var(--specialist-secondary-color-solid) 100%
+    ) !important;
+    box-shadow: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+}
+
+.booking-block.needs-expand:hover .background-layer {
+    background: linear-gradient(135deg,
+        var(--specialist-primary-color-solid) 0%,
+        var(--specialist-primary-color-solid) 50%,
+        var(--specialist-secondary-color-solid) 100%
+    ) !important;
+}
+
+.booking-block:not(.needs-expand):hover .background-layer {
+    filter: brightness(1.1);
+    box-shadow: 
+        0 0 10px var(--specialist-primary-color),
+        0 0 20px var(--specialist-primary-color),
+        0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
 .booking-block:hover {
     transform: scale(1.02) translateY(-2px);
     z-index: 100;
@@ -125,6 +173,21 @@ body {
         0 0 10px var(--specialist-primary-color),
         0 0 20px var(--specialist-primary-color),
         0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.booking-block .booking-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    font-size: 0.9em;
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.booking-block:hover .booking-content {
+    overflow: visible;
 }
 
 .booking-separator {
@@ -152,7 +215,7 @@ body {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    z-index: 5;
+    z-index: 2;
 }
 
 /* Неподтвержденная бронь */

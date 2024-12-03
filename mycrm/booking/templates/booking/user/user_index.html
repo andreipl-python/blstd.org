@@ -338,7 +338,9 @@
             
             block.style.setProperty('--specialist-primary-color', colors.primary + '80');
             block.style.setProperty('--specialist-secondary-color', colors.secondary + '80');
-
+            block.style.setProperty('--specialist-primary-color-solid', colors.primary);
+            block.style.setProperty('--specialist-secondary-color-solid', colors.secondary);
+            
             const bookingInfo = document.createElement('div');
             
             // Форматируем время из datetime в формат HH:MM
@@ -393,6 +395,41 @@
 
         updateBookedCells();
         assignParentAttributes();
+    });
+</script>
+
+<script>
+    function checkBlockOverflow(block) {
+        const content = block.querySelector('.booking-content');
+        console.log('Checking block:', block);
+        console.log('Content width:', content?.scrollWidth, 'Block width:', block.offsetWidth);
+        if (content && content.scrollWidth > block.offsetWidth) {
+            block.classList.add('needs-expand');
+            console.log('Added needs-expand class');
+        }
+    }
+
+    // Проверяем существующие блоки
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.booking-block').forEach(checkBlockOverflow);
+    });
+
+    // Следим за изменениями в DOM
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.classList && node.classList.contains('booking-block')) {
+                    // Даем время на рендеринг
+                    setTimeout(() => checkBlockOverflow(node), 100);
+                }
+            });
+        });
+    });
+
+    // Начинаем наблюдение
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
     });
 </script>
 
