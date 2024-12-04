@@ -112,6 +112,13 @@ class Reservation(models.Model):
                               help_text='Статус брони',
                               verbose_name='Статус',
                               null=True)
+    cancellation_reason = models.ForeignKey('CancellationReason', 
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text='Причина отмены брони',
+        verbose_name='Причина отмены'
+    )
     comment = models.TextField(help_text='Комментарий к брони', verbose_name='Комментарий', null=True)
     services = models.ManyToManyField('Service', related_name='reservations',
                                     help_text='Услуги, включенные в бронь',
@@ -380,6 +387,35 @@ class CancellationPolicy(models.Model):
 
     def __str__(self):
         return f'Политика отмены для {self.reservation_type.name}'
+
+
+class CancellationReason(models.Model):
+    """Модель для хранения причин отмены броней"""
+    
+    name = models.CharField(
+        max_length=255,
+        verbose_name='Причина отмены',
+        help_text='Название причины отмены брони'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Активна',
+        help_text='Показывать ли эту причину в списке'
+    )
+    order = models.IntegerField(
+        default=0,
+        verbose_name='Порядок отображения',
+        help_text='Порядок отображения в списке (меньше = выше)'
+    )
+    
+    def __str__(self):
+        return self.name
+    
+    class Meta:
+        db_table = 'cancellation_reasons'
+        verbose_name = 'Причина отмены'
+        verbose_name_plural = 'Причины отмены'
+        ordering = ['order', 'name']
 
 
 class PaymentType(models.Model):

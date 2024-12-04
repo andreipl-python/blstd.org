@@ -1,8 +1,8 @@
 from django.contrib import admin
 from .models import (
-    SpecialistColor, CancellationPolicy, Subscription, ReservationStatusType,
+    SpecialistColor, CancellationPolicy, CancellationReason, Subscription, ReservationStatusType,
     Reservation, ReservationType, TariffUnit, ServiceGroup, Service,
-    Specialist, Client, ClientGroup, ClientRating, Room
+    Specialist, Client, ClientGroup, ClientRating, Room, PaymentType, Payment
 )
 
 @admin.register(SpecialistColor)
@@ -15,6 +15,13 @@ class CancellationPolicyAdmin(admin.ModelAdmin):
     list_display = ('reservation_type', 'hours_before')
     list_filter = ('reservation_type',)
     search_fields = ('reservation_type__name',)
+
+@admin.register(CancellationReason)
+class CancellationReasonAdmin(admin.ModelAdmin):
+    list_display = ('name', 'is_active', 'order')
+    list_editable = ('is_active', 'order')
+    search_fields = ('name',)
+    ordering = ('order', 'name')
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
