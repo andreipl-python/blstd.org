@@ -88,7 +88,6 @@
             <div class="modal-footer">
                 <div class="me-auto">
                     <!-- Левая группа кнопок -->
-                    <button type="button" class="btn btn-danger me-2" id="deleteBookingBtn">Удалить</button>
                     <button type="button" class="btn btn-warning me-2" id="cancelBookingBtn">Отменить</button>
                     <button type="button" class="btn btn-success me-2" id="confirmBookingBtn">Подтвердить</button>
                     <button type="button" 
@@ -117,7 +116,6 @@
         const editBookingModal = document.getElementById('editBookingModal');
         if (!editBookingModal) return;
 
-        const deleteBookingBtn = document.getElementById('deleteBookingBtn');
         const cancelBookingBtn = document.getElementById('cancelBookingBtn');
         const confirmBookingBtn = document.getElementById('confirmBookingBtn');
         const paymentBookingBtn = document.getElementById('openPaymentModalBtn');
@@ -268,36 +266,6 @@
                         location.reload();
                     } else {
                         alert('Ошибка при отмене брони: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    alert('Ошибка при выполнении запроса: ' + error);
-                });
-            });
-        }
-
-        if (deleteBookingBtn) {
-            deleteBookingBtn.addEventListener('click', function() {
-                if (!confirm('Вы уверены, что хотите удалить эту бронь?')) return;
-
-                const bookingId = document.getElementById('modalBookingId').textContent;
-                if (!bookingId) return;
-
-                fetch(`/booking/delete/${bookingId}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const modal = bootstrap.Modal.getInstance(editBookingModal);
-                        if (modal) modal.hide();
-                        location.reload();
-                    } else {
-                        alert('Ошибка при удалении брони: ' + data.error);
                     }
                 })
                 .catch(error => {

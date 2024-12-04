@@ -150,22 +150,6 @@ def edit_booking_view(request, booking_id):
         })
 
 @csrf_exempt
-def delete_booking_view(request, booking_id):
-    """Удаление брони"""
-    if request.method != "POST":
-        return JsonResponse({"success": False, "error": "Неверный метод запроса"})
-
-    try:
-        booking = get_object_or_404(Reservation, id=booking_id)
-        booking.delete()
-        return JsonResponse({"success": True})
-    except Exception as e:
-        return JsonResponse({
-            "success": False,
-            "error": f"Ошибка при удалении брони: {str(e)}"
-        })
-
-@csrf_exempt
 def cancel_booking_view(request, booking_id):
     """Отмена брони"""
     if request.method != "POST":

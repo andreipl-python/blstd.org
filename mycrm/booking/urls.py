@@ -4,7 +4,6 @@ from .views import user_index_view, create_booking_view
 from .views.edit_booking import (
     get_booking_details,
     edit_booking_view,
-    delete_booking_view,
     cancel_booking_view,
     confirm_booking_view,
     process_payment_view
@@ -30,7 +29,6 @@ urlpatterns = [
     # Редактирование брони
     path('booking/get-booking-details/<int:booking_id>/', get_booking_details, name='get_booking_details'),
     path('booking/edit/<int:booking_id>/', edit_booking_view, name='edit_booking'),
-    path('booking/delete/<int:booking_id>/', delete_booking_view, name='delete_booking'),
     path('booking/cancel/<int:booking_id>/', cancel_booking_view, name='cancel_booking'),
     path('booking/confirm/<int:booking_id>/', confirm_booking_view, name='confirm_booking'),
     path('booking/process-payment/<int:booking_id>/', process_payment_view, name='process_payment'),
