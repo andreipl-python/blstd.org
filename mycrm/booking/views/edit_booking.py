@@ -16,12 +16,44 @@ def get_booking_details(request, booking_id):
         # Получаем типы оплаты
         payment_types = PaymentType.objects.all()
         
+        # Форматируем дату и время
+        start_datetime = booking.datetimestart
+        end_datetime = booking.datetimeend
+        
+        # Словарь с русскими названиями дней недели
+        weekdays = {
+            0: 'Понедельник',
+            1: 'Вторник',
+            2: 'Среда',
+            3: 'Четверг',
+            4: 'Пятница',
+            5: 'Суббота',
+            6: 'Воскресенье'
+        }
+        
+        # Форматируем дату с днем недели
+        date_str = f"{start_datetime.strftime('%d-%m-%Y')}, {weekdays[start_datetime.weekday()]}"
+        # Форматируем время
+        time_str = f"{start_datetime.strftime('%H:%M')} - {end_datetime.strftime('%H:%M')}"
+        
+        # Форматируем длительность
+        duration_hours = (booking.datetimeend - booking.datetimestart).seconds // 3600
+        duration_minutes = ((booking.datetimeend - booking.datetimestart).seconds % 3600) // 60
+        
+        duration_str = ""
+        if duration_hours > 0:
+            duration_str += f"{duration_hours} {'час' if duration_hours == 1 else 'часа' if 2 <= duration_hours <= 4 else 'часов'}"
+        if duration_minutes > 0:
+            if duration_hours > 0:
+                duration_str += " "
+            duration_str += f"{duration_minutes} {'минута' if duration_minutes == 1 else 'минуты' if 2 <= duration_minutes <= 4 else 'минут'}"
+        
         # Формируем словарь с данными брони
         booking_data = {
             'id': booking.id,
-            'start_time': booking.datetimestart.strftime('%Y-%m-%d %H:%M'),
-            'end_time': booking.datetimeend.strftime('%Y-%m-%d %H:%M'),
-            'duration': f"{(booking.datetimeend - booking.datetimestart).seconds // 3600}:{((booking.datetimeend - booking.datetimestart).seconds % 3600) // 60:02d}",
+            'date': date_str,
+            'time': time_str,
+            'duration': duration_str,
             'duration_minutes': (booking.datetimeend - booking.datetimestart).seconds // 60,
             'room_id': booking.room.id if booking.room else None,
             'room_name': booking.room.name if booking.room else 'Не указано',

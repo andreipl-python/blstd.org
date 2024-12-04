@@ -22,7 +22,8 @@
                 <div class="booking-info mb-4">
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>Время:</strong> <span id="modalStartTime"></span> - <span id="modalEndTime"></span></p>
+                            <p><strong>Дата:</strong> <span id="modalDate"></span></p>
+                            <p><strong>Время:</strong> <span id="modalTime"></span></p>
                             <p><strong>Длительность:</strong> <span id="modalDuration"></span></p>
                             <p><strong>Помещение:</strong> <span id="modalRoom"></span></p>
                         </div>
@@ -125,8 +126,8 @@
             
             // Обновляем основную информацию
             document.getElementById('modalBookingId').textContent = data.id;
-            document.getElementById('modalStartTime').textContent = data.start_time;
-            document.getElementById('modalEndTime').textContent = data.end_time;
+            document.getElementById('modalDate').textContent = data.date;
+            document.getElementById('modalTime').textContent = data.time;
             document.getElementById('modalDuration').textContent = data.duration;
             document.getElementById('modalRoom').textContent = data.room_name;
             document.getElementById('modalClientInfo').textContent = data.client_name;
@@ -150,7 +151,7 @@
                 paymentBookingBtn.style.display = data.status === 2 ? 'inline-block' : 'none';
             }
             if (cancelBookingBtn) {
-                cancelBookingBtn.style.display = [1, 2].includes(data.status) ? 'inline-block' : 'none';
+                cancelBookingBtn.style.display = [1, 2, 3].includes(data.status) ? 'inline-block' : 'none';
             }
             
             // Обновляем данные для кнопки оплаты
