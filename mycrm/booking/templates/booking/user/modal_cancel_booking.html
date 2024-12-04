@@ -1,0 +1,153 @@
+<!-- Модальное окно отмены брони -->
+<div class="modal fade" id="cancelBookingModal" tabindex="-1" aria-labelledby="cancelBookingModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelBookingModalLabel">Отмена брони #<span id="cancelModalBookingId"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="cancelBookingForm">
+                    <div class="mb-3">
+                        <label for="cancelReason" class="form-label">Причина отмены</label>
+                        <select class="form-select" id="cancelReason" name="cancelReason" required>
+                            <option value="">Выберите причину отмены...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cancelComment" class="form-label">Комментарий</label>
+                        <textarea class="form-control" id="cancelComment" name="cancelComment" rows="3" 
+                                placeholder="Дополнительный комментарий к отмене брони..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="confirmCancelBookingBtn">Отменить бронь</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const cancelBookingModal = document.getElementById('cancelBookingModal');
+        const cancelReasonSelect = document.getElementById('cancelReason');
+        let currentBookingId = null;
+
+        // Загрузка причин отмены при открытии модального окна
+        cancelBookingModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            currentBookingId = button.getAttribute('data-booking-id');
+            document.getElementById('cancelModalBookingId').textContent = currentBookingId;
+
+            // Загружаем список причин отмены
+            fetch('/booking/get-cancellation-reasons/')
+                .then(response => response.json())
+                .then(data => {
+                    // Очищаем текущие опции
+                    cancelReasonSelect.innerHTML = '<option value="">Выберите причину отмены...</option>';
+                    
+                    // Добавляем новые опции
+                    data.reasons.forEach(reason => {
+                        const option = document.createElement('option');
+                        option.value = reason.id;
+                        option.textContent = reason.name;
+                        cancelReasonSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading cancellation reasons:', error);
+                });
+        });
+
+        // При закрытии модального окна отмены показываем обратно окно редактирования
+        cancelBookingModal.addEventListener('hidden.bs.modal', function() {
+            document.getElementById('cancelBookingForm').reset();
+            currentBookingId = null;
+            
+            const editModal = new bootstrap.Modal(document.getElementById('editBookingModal'));
+            editModal.show();
+        });
+
+        // Обработка подтверждения отмены брони
+        document.getElementById('confirmCancelBookingBtn').addEventListener('click', function() {
+            const bookingId = document.getElementById('cancelModalBookingId').textContent;
+            const reason = document.getElementById('cancelReason').value;
+            const comment = document.getElementById('cancelComment').value;
+
+            if (!reason) {
+                Swal.fire({
+                    title: 'Внимание!',
+                    text: 'Пожалуйста, выберите причину отмены',
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            const data = {
+                'cancellation_reason_id': reason,
+                'comment': comment
+            };
+
+            fetch(`/booking/cancel/${bookingId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Закрываем модальное окно отмены
+                const cancelModal = bootstrap.Modal.getInstance(document.getElementById('cancelBookingModal'));
+                if (cancelModal) {
+                    cancelModal.hide();
+                }
+                
+                // Показываем уведомление об успешной отмене
+                Swal.fire({
+                    title: 'Успешно!',
+                    text: 'Бронь успешно отменена',
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.reload();
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    title: 'Ошибка!',
+                    text: 'Ошибка при отмене брони. Пожалуйста, попробуйте позже.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            });
+        });
+
+        // Функция для получения CSRF токена
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>

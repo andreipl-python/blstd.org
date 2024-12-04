@@ -89,7 +89,7 @@
             <div class="modal-footer">
                 <div class="me-auto">
                     <!-- Левая группа кнопок -->
-                    <button type="button" class="btn btn-warning me-2" id="cancelBookingBtn">Отменить</button>
+                    <button type="button" class="btn btn-warning me-2" id="cancelBookingBtn" onclick="openCancelModal()">Отменить</button>
                     <button type="button" class="btn btn-success me-2" id="confirmBookingBtn">Подтвердить</button>
                     <button type="button" 
                             class="btn btn-success" 
@@ -111,6 +111,7 @@
 </div>
 
 {% include 'booking/user/modal_payment_booking.html' with payment_types=payment_types %}
+{% include 'booking/user/modal_cancel_booking.html' %}
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -120,6 +121,14 @@
         const cancelBookingBtn = document.getElementById('cancelBookingBtn');
         const confirmBookingBtn = document.getElementById('confirmBookingBtn');
         const paymentBookingBtn = document.getElementById('openPaymentModalBtn');
+
+        // При закрытии модального окна редактирования удаляем backdrop
+        editBookingModal.addEventListener('hidden.bs.modal', function() {
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+        });
 
         function updateModalWithBookingData(data) {
             if (!data) return;
@@ -151,7 +160,7 @@
                 paymentBookingBtn.style.display = data.status === 2 ? 'inline-block' : 'none';
             }
             if (cancelBookingBtn) {
-                cancelBookingBtn.style.display = [1, 2, 3].includes(data.status) ? 'inline-block' : 'none';
+                cancelBookingBtn.setAttribute('data-booking-id', data.id);
             }
             
             // Обновляем данные для кнопки оплаты
@@ -159,15 +168,6 @@
             if (paymentBtn) {
                 paymentBtn.setAttribute('data-booking-id', data.id);
                 paymentBtn.setAttribute('data-total-cost', data.total_cost);
-                
-                // Добавляем обработчик для корректного переключения между модальными окнами
-                paymentBtn.onclick = function() {
-                    const editModal = document.getElementById('editBookingModal');
-                    if (editModal) {
-                        editModal.classList.remove('show');
-                        editModal.style.display = 'none';
-                    }
-                };
             }
         }
 
@@ -247,32 +247,46 @@
 
         if (cancelBookingBtn) {
             cancelBookingBtn.addEventListener('click', function() {
-                if (!confirm('Вы уверены, что хотите отменить эту бронь?')) return;
-
                 const bookingId = document.getElementById('modalBookingId').textContent;
-                if (!bookingId) return;
+                if (bookingId) {
+                    this.setAttribute('data-booking-id', bookingId);
+                }
+            });
+        }
 
-                fetch(`/booking/cancel/${bookingId}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                        'Content-Type': 'application/json'
-                    }
-                })
+        window.openCancelModal = function() {
+            const bookingId = document.getElementById('modalBookingId').textContent;
+            
+            // Загружаем список причин отмены
+            fetch('/booking/get-cancellation-reasons/')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
-                        const modal = bootstrap.Modal.getInstance(editBookingModal);
-                        if (modal) modal.hide();
-                        location.reload();
-                    } else {
-                        alert('Ошибка при отмене брони: ' + data.error);
+                    const cancelReasonSelect = document.getElementById('cancelReason');
+                    // Очищаем текущие опции
+                    cancelReasonSelect.innerHTML = '<option value="">Выберите причину отмены...</option>';
+                    
+                    // Добавляем новые опции
+                    data.reasons.forEach(reason => {
+                        const option = document.createElement('option');
+                        option.value = reason.id;
+                        option.textContent = reason.name;
+                        cancelReasonSelect.appendChild(option);
+                    });
+                    
+                    // После загрузки данных переключаем модальные окна
+                    const editModal = bootstrap.Modal.getInstance(editBookingModal);
+                    if (editModal) {
+                        editModal.hide();
+                        setTimeout(() => {
+                            const cancelModal = new bootstrap.Modal(document.getElementById('cancelBookingModal'));
+                            document.getElementById('cancelModalBookingId').textContent = bookingId;
+                            cancelModal.show();
+                        }, 150);
                     }
                 })
                 .catch(error => {
-                    alert('Ошибка при выполнении запроса: ' + error);
+                    console.error('Error loading cancellation reasons:', error);
                 });
-            });
         }
     });
 </script>
