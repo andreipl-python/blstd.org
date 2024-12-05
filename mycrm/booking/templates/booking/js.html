@@ -1,0 +1,186 @@
+<script type="text/javascript">
+
+if (document.getElementById('closeError')) {
+  closeError.addEventListener("click", closeErrorWindow);
+}
+
+function closeErrorWindow(){
+  let parent = closeError.closest('.error_message');
+  console.log(parent);
+  parent.remove();
+}
+
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle2="tooltip"]'))
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+  return new bootstrap.Tooltip(tooltipTriggerEl)
+})
+
+
+
+$(document).ready(function(){
+  $('.js-chosen').chosen({
+    width: '100%',
+    no_results_text: 'Совпадений не найдено',
+    placeholder_text_single: 'Нужно что-то выбрать',
+    // display_selected_options: false
+  });
+});
+
+  // Скрипт для увеличения ширины блока брони при наведении
+  document.onmouseover = function(event){
+    let target = event.target;
+    if (target.hasAttribute("idbron")){
+      if (target.tagName == "SPAN") {
+
+        let target_width = +target.getBoundingClientRect().width;
+        let container = target.closest(".bron_block_container");
+        let container_width = +container.getBoundingClientRect().width;
+        let need_width = target_width + 70;
+
+        if (container_width<need_width) {
+          container.style.width = need_width + "px";
+          container.style.zIndex = 20;
+        }
+
+      }else{
+        //если навели на блок а не на спан
+        // let spanElem = container.querySelector('.text_in_bron');
+        // let target_width = +spanElem.getBoundingClientRect().width;
+        // let container = target.closest(".bron_block_container");
+        // let container_width = +container.getBoundingClientRect().width;
+        // let need_width = target_width + 50;
+        // if (container_width<need_width) {
+        //   container.style.width = need_width + "px";
+        //   container.style.zIndex = 20;
+        // }
+      }
+    }
+  }
+
+
+  document.onmouseout = function(event){
+    let target = event.target;
+    if (target.hasAttribute("idbron")){
+      if (target.tagName == "SPAN") {
+        let container = target.closest(".bron_block_container");
+        let containerStartWidth = +container.getAttribute("startWidth");
+        container.style.width = containerStartWidth + "px";
+        container.style.zIndex = 10;
+      }
+    }
+  }
+
+
+
+
+  document.onclick = function(event){
+
+    let target = event.target;
+    if (target.tagName == "DIV"){
+
+        if (target.hasAttribute("slot-time")){
+
+            let time = +target.getAttribute("timebron");
+            let data = target.getAttribute("databron");
+            let room = target.getAttribute("room");
+            let nameroom = target.getAttribute("nameroom");
+            let convertedTime = convertTime(time);
+
+            databron.innerHTML = data;
+            nameroomshow.innerHTML = nameroom;
+            idatabron.value = data;
+
+            timebron.innerHTML = convertedTime;
+            itimebron_new.value = time;
+
+            //console.log(convertedTime);
+            console.log(time);
+
+            idroom.value = room;
+        }
+    }
+
+    if (target.hasAttribute("idbron")){
+        let idbron = +target.getAttribute("idbron");
+        goAjaxModalEdit(idbron);
+      }
+
+    if (target.tagName == "SPAN"){
+       if (target.hasAttribute("idsmena")){
+
+        let idsmena = +target.getAttribute("idsmena");
+        let smenaDate = target.getAttribute("smena_date");
+        let smenaComment = target.getAttribute("smena_comment");
+
+        //show_id.innerHTML = idsmena;
+        id_smena.value = idsmena;
+        comment_smena.value = smenaComment;
+        date_smena.value = smenaDate;
+
+       }
+       if (target.hasAttribute("idsmenam")){
+
+        let idsmena = +target.getAttribute("idsmenam");
+        let smenaDate = target.getAttribute("smena_datem");
+        let smenaComment = target.getAttribute("smena_commentm");
+        let timestart = target.getAttribute("timestart");
+        let timeend = target.getAttribute("timeend");
+
+        id_smenam.value = idsmena;
+        comment_smenam.value = smenaComment;
+        date_smenam.value = smenaDate;
+        timestart_smena.value = timestart;
+        timeend_smena.value = timeend;
+
+
+
+       }
+       if (target.hasAttribute("todaysec")){
+          let todaysec = +target.getAttribute("todaysec");
+          goAjaxSmenaShow(todaysec);
+       }
+    }
+
+}
+
+
+function convertTime(minall){
+  let min = minall%60;
+  let hour = (minall-min)/60;
+
+  if (min<10) {
+    min = "0"+min;
+  }
+
+  let text = hour+":"+min;
+  return text;
+}
+
+//функция на отображения контента в модалке редактирования
+function goAjaxModalEdit(item){
+    $.ajax({
+    url: '../add/handler_modaledit.php',
+    method: 'post',
+    dataType: 'html',
+    data: {id: item},
+  success: function(html){
+      $("#modalEditContent").html(html);
+    }
+    });
+}
+
+
+//функция на отображения контента в модалке смен преподов
+function goAjaxSmenaShow(item){
+    $.ajax({
+    url: '../add/handler_smenaShow.php',
+    method: 'post',
+    dataType: 'html',
+    data: {id: item},
+  success: function(html){
+      $("#modalSmenaContent").html(html);
+    }
+    });
+}
+
+</script>

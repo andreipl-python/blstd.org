@@ -1,0 +1,38 @@
+<div class="menu_cabinet">
+   <nav class="navbar navbar-expand navbar-light">
+    <div class="container-fluid">
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 "></ul>
+
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 " style="margin-bottom: 4px !important;">
+          <li class="nav-item">
+            <a class="nav_btn_menu {% if current_url == '/user/user/' %}nav_btn_menu_hover{% endif %}"
+               aria-current="page" href="{% url 'user_profile' user_id=user.id %}">
+              <img src="{% static 'image/cab.png' %}"> Профиль
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav_btn_menu {% if current_url == '/user/history/' %}nav_btn_menu_hover{% endif %}"
+               aria-current="page" href="{% url 'user_history' user_id=user.id %}">
+              <img src="{% static 'image/stat.png' %}"> История заказов
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav_btn_menu {% if current_url == '/user/balance/' %}nav_btn_menu_hover{% endif %}"
+               aria-current="page" href="{% url 'user_balance' user_id=user.id %}">
+              <img src="{% static 'image/userico.png' %}"> Баланс
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav_btn_menu {% if current_url == '/user/stats/' %}nav_btn_menu_hover{% endif %}"
+               aria-current="page" href="{% url 'user_stats' user_id=user.id %}">
+              <img src="{% static 'image/note.png' %}"> Статистика
+            </a>
+          </li>
+        </ul>
+
+      </div>
+    </div>
+  </nav>
+</div>

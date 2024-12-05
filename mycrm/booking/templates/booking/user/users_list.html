@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+{% load static %}
+{% load custom_filters %}
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM</title>
+    {% include "booking/add/head.html" %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+</head>
+<body>
+
+{% include "booking/add/menu.html" %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 mt-4">
+            <h2>Список пользователей {{ who_show }}</h2>
+            <form method="get">
+                <div class="row">
+                    <div class="col-md-6 mt-2">
+                        <button type="submit" data-filter-type="Показать клиентов" data-filter-value="clients"
+                                class="btn btn-success">Показать клиентов
+                        </button>
+                        <button type="submit" data-filter-type="Показать сотрудников" data-filter-value="workers"
+                                class="btn btn-success">Показать сотрудников
+                        </button>
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <button type="submit" data-filter-type="Школа" data-filter-value="school"
+                                class="btn btn-success">Школа
+                        </button>
+                        <button type="submit" data-filter-type="Студия" data-filter-value="studio"
+                                class="btn btn-success">Студия
+                        </button>
+                        <button type="submit" data-filter-type="Школа + студия" data-filter-value="schoolstudia"
+                                class="btn btn-success">Школа + студия
+                        </button>
+                        <button type="submit" data-filter-type="Все" data-filter-value="all" class="btn btn-success">
+                            Все
+                        </button>
+                        {{ where_oblast_show }}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12 mt-4">
+            <table class="table table-bordered">
+                <tr>
+                    <th>id</th>
+                    <th>имя / контакты</th>
+                    <th>типы броней</th>
+                    <th>абонемент</th>
+                    <th>комментарии</th>
+                </tr>
+
+                {% for user in users %}
+                <tr>
+                    <td><a href="{% url 'user_index' %}">{{ user.id }}</a></td>
+                    <td>{{ user.email }} | {{ user.phone }}</td>
+                    <td>
+                        {% for bron in user_brones|get:user.id %}
+                        <div style="float: left; height: 20px; width: 20px; border-radius: 50%; margin-right: 5px; background: {{ bron.color }};"></div>
+                        {{ bron.name }} {{ bron.comment }} <br>
+                        {% endfor %}
+                    </td>
+                    <td style="white-space: nowrap;">
+                        {% with user_abon|get:user.id as abon %}
+                        {{ abon|safe }}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {{ user.comment }}
+                        {% if user.comment2 %}
+                        <hr>
+                        {{ user.comment2 }}
+                        {% endif %}
+                        {% if user.howknow_show %}
+                        {{ user.howknow_show|safe }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" src="{% static 'js/jquery-3.6.0.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/bootstrap.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/chosen.jquery.js' %}"></script>
+
+<script>
+    document.querySelectorAll('button[data-filter-value]').forEach(button => {
+        button.addEventListener('click', function() {
+            let form = button.closest('form');
+            let input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'filter_type';
+            input.value = button.getAttribute('data-filter-value');
+            form.appendChild(input);
+        });
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+[
+    {
+        "model": "booking.cancellationreason",
+        "pk": 1,
+        "fields": {
+            "name": "По просьбе клиента",
+            "is_active": true,
+            "order": 1
+        }
+    },
+    {
+        "model": "booking.cancellationreason",
+        "pk": 2,
+        "fields": {
+            "name": "Изменение расписания специалиста",
+            "is_active": true,
+            "order": 2
+        }
+    },
+    {
+        "model": "booking.cancellationreason",
+        "pk": 3,
+        "fields": {
+            "name": "Технические причины",
+            "is_active": true,
+            "order": 3
+        }
+    },
+    {
+        "model": "booking.cancellationreason",
+        "pk": 4,
+        "fields": {
+            "name": "Форс-мажор",
+            "is_active": true,
+            "order": 4
+        }
+    },
+    {
+        "model": "booking.cancellationreason",
+        "pk": 5,
+        "fields": {
+            "name": "Другое",
+            "is_active": true,
+            "order": 5
+        }
+    }
+]

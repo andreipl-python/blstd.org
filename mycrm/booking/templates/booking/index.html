@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+<head>
+    <title>CRM Django</title>
+    {% include 'booking/add/head.html' %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/uikit.css' %}">
+</head>
+<body id="body">
+    {% include 'booking/add/menu.html' %}
+
+    <script type="text/javascript" src="{% static 'js/jquery-3.6.0.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/bootstrap.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/uikit.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/uikit-icons.js' %}"></script>
+    {% include 'booking/js.html' %}
+</body>
+</html>

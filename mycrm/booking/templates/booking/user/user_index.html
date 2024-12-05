@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+{% load static %}
+{% load custom_filters %}
+<html lang="ru">
+<head>
+    <title>CRM</title>
+    {% include 'booking/add/head.html' %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/neon-dark-theme.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/status-indicators.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.js"></script>
+
+</head>
+<body>
+
+{% include 'booking/add/menu.html' %}
+{% include 'booking/add/menu2.html' %}
+
+<!--<div class="container">-->
+<!--    <div class="row">-->
+<!--        <div class="col-md-12 mt-4">-->
+<!--            {% include 'booking/add/oblast_change.html' %}-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+
+<p id="bookings_in_range" style="display: none;">{{ bookings_in_range }}</p>
+
+<div class="container-fluid" style="padding-bottom: 20px;">
+    <div class="row mt-4" style="padding: 0; margin: 0;">
+        <div class="col-md-12">
+            <div style="width: 100%; margin: 0 auto;">
+                {% for day in days_of_month %}
+                <div>
+                    <br>
+                    <hr style="width: 100%; background: none; padding-top: 50px;">
+                    <a name="date={{ day.date }}"></a>
+                    <div class="container_block">
+                        <div class="row">
+                            <div class="col-12">
+                                <div>
+                                    <h5 class="p0 date-header" style="white-space: nowrap; margin-bottom: 5px;">
+                                        {{ day.date|date:"d E" }}
+                                    </h5>
+                                    <span class="text_day_button" data-bs-toggle="modal" data-bs-target="#exampleModal3"
+                                          todaysec="{{ day.timestamp }}">
+                                            {{ day.date|date:"l" }}
+                                    </span>
+
+                                    <div class="table-responsive mt-3">
+                                        <table id="table-{{ forloop.counter }}"
+                                               class="table table-bordered text-center"
+                                               style="width: 100%; border-collapse: collapse;">
+                                            <thead>
+                                            <tr>
+                                                <th style="border: none;"></th>
+                                                {% for block in time_blocks %}
+                                                <th colspan="4"
+                                                    style="text-align: left; padding-left: 10px; border: none;">
+                                                    {{ block.time }}
+                                                </th>
+                                                {% endfor %}
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for room in rooms %}
+                                            <tr id="row-{{ forloop.counter }}">
+                                                <td style="border-right: 2px solid #666; border-left: none;
+                                                white-space: nowrap; overflow: hidden; max-width: 150px;
+                                                text-overflow: ellipsis;"
+                                                    title="{{ room.name }}">
+                                                    {{ room.name }}
+                                                </td>
+
+                                                {% for block in time_blocks %}
+                                                {% for i in "1234" %}
+                                                {% with block_time=block.time|time_add:forloop.counter0|str_to_time %}
+                                                {% with full_datetime=day.date|combine_date_time:block_time %}
+
+                                                <td class="highlight-cell available {% if forloop.counter0|add:1 == 4 %}border-right{% endif %}"
+                                                    full_datetime="{{ full_datetime|date:'Y-m-d H:i:s' }}"
+                                                    room_name="{{ room.name }}"
+                                                    room_id="{{ room.id }}"
+                                                    title="{{ block.time|time_add:forloop.counter0 }}"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#createBookingModal"
+                                                    onclick="openModal(
+                                                    `{{ day.date|date:'d E Y' }}`,
+                                                    `{{ block.time|time_add:forloop.counter0 }}`,
+                                                    `{{ room.name }}`,
+                                                    `{{ time_blocks_json|escapejs }}`, `{{ rooms_json|escapejs }}`,
+                                                    `{{ reservation_types_json|escapejs }}`,
+                                                    `{{ specialists_json|escapejs }}`,
+                                                     this
+                                                    )">
+                                                </td>
+                                                {% endwith %}
+                                                {% endwith %}
+                                                {% endfor %}
+                                                {% endfor %}
+                                            </tr>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "booking/user/modal_create_booking.html" %}
+{% include "booking/user/modal_edit_booking.html" %}
+{% include "booking/user/modal_payment_booking.html" %}
+
+{% include 'booking/add/scripts.html' %}
+
+<script>
+    $(document).ready(function() {
+        // Обработка формы создания брони
+        $('#bookingForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            const bookingType = $('#bookingType').val();
+            const client = $('#client').val();
+            const specialist = $('#specialist').val();
+            const duration = $('#bookingDuration').val();
+
+            // Проверяем обязательные поля
+            if (!bookingType || !client || !duration) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Ошибка',
+                    text: 'Заполните все обязательные поля'
+                });
+                return false;
+            }
+
+            // Получаем full_datetime
+            const fullDatetime = $('#fullDatetimeField').val();
+            if (!fullDatetime) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Ошибка',
+                    text: 'Не указано время начала брони'
+                });
+                return false;
+            }
+
+            // Показываем индикатор загрузки
+            Swal.fire({
+                title: 'Создание брони...',
+                text: 'Пожалуйста, подождите',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Собираем данные формы
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+            formData.append('bookingType', bookingType);
+            formData.append('client', client);
+            if (specialist) {
+                formData.append('specialist', specialist);
+            }
+            
+            // Добавляем ID группы, если включено групповое бронирование
+            const selectedClientData = cachedData.clients.find(c => c.id === parseInt(client));
+            const isGroupBooking = $('#groupBookingSwitch').is(':checked');
+            if (isGroupBooking && selectedClientData && selectedClientData.group) {
+                formData.append('client_group', selectedClientData.group.id);
+            }
+            
+            formData.append('bookingDuration', duration);
+            formData.append('full_datetime', fullDatetime);
+            formData.append('room_id', $('#roomIdField').val());
+            formData.append('comment', $('#comment').val());
+
+            // Добавляем стоимость брони
+            const bookingCost = $('#bookingCost').text();
+            if (bookingCost) {
+                formData.append('total_cost', bookingCost);
+            }
+
+            // Добавляем выбранные услуги
+            const selectedServices = $('#serviceType').val();
+            if (selectedServices && selectedServices.length > 0) {
+                selectedServices.forEach(service => {
+                    formData.append('serviceType', service);
+                });
+            }
+
+            // Отправляем запрос
+            $.ajax({
+                url: '{% url "create_booking" %}',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Закрываем модальное окно
+                        $('#createBookingModal').modal('hide');
+                        
+                        // Показываем сообщение об успехе
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Бронь создана успешно!',
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(() => {
+                            // Обновляем страницу для отображения новой брони
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Ошибка',
+                            text: response.error || 'Произошла ошибка при создании брони'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Ошибка',
+                        text: 'Произошла ошибка при отправке запроса'
+                    });
+                    console.error('Error:', error);
+                }
+            });
+
+            return false;
+        });
+
+        // Обновление забронированных ячеек
+        var bookingsInRange = JSON.parse(document.getElementById('bookings_in_range').textContent);
+
+        function updateBookedCells() {
+            var cells = document.querySelectorAll('td[room_name]');
+            var bookingCellsArray = []; // Очищаем массив перед обновлением
+            
+            // Сначала очищаем все ячейки
+            cells.forEach(function(cell) {
+                cell.classList.remove('highlight-cell', 'booked');
+                cell.classList.add('highlight-cell', 'available');
+                // Удаляем старый booking-block если есть
+                const oldBlock = cell.querySelector('.booking-block');
+                if (oldBlock) {
+                    oldBlock.remove();
+                }
+            });
+
+            // Обрабатываем бронирования
+            bookingsInRange.forEach(function(booking) {
+                var startTime = new Date(booking.blocks_datetime_range[0]);
+                var endTime = new Date(booking.blocks_datetime_range[booking.blocks_datetime_range.length - 1]);
+                
+                // Находим все ячейки для текущего бронирования
+                var bookingCells = [];
+                var firstCell = null;
+                var width = 0;
+                
+                cells.forEach(function(cell) {
+                    if (cell.getAttribute('room_name') === booking.room_name) {
+                        var cellTime = new Date(cell.getAttribute('full_datetime'));
+                        
+                        if (cellTime >= startTime && cellTime < endTime) {
+                            cell.classList.remove('available');
+                            cell.classList.add('booked');
+                            
+                            // Убираем атрибуты модального окна с ячейки
+                            cell.removeAttribute('data-bs-target');
+                            cell.removeAttribute('data-bs-toggle');
+                            cell.removeAttribute('data-booking-id');
+                            
+
+                            if (!firstCell) {
+                                firstCell = cell;
+                            }
+                            width += cell.offsetWidth;
+                            bookingCells.push(cell);
+                        }
+                    }
+                });
+                
+                // Если нашли ячейки для бронирования
+                if (firstCell && bookingCells.length > 0) {
+                    // Создаем один общий блок бронирования
+                    const bookingBlock = createBookingBlock(booking, width);
+                    
+                    // Делаем первую ячейку relative для правильного позиционирования
+                    firstCell.style.position = 'relative';
+                    
+                    // Добавляем блок в первую ячейку
+                    firstCell.appendChild(bookingBlock);
+                    
+                    // Делаем остальные ячейки прозрачными
+                    for (let i = 1; i < bookingCells.length; i++) {
+                        bookingCells[i].style.background = 'none';
+                        bookingCells[i].style.border = 'none';
+                    }
+                }
+            });
+        }
+
+        function createBookingBlock(booking, cellWidth) {
+            const block = document.createElement('div');
+            block.className = `booking-block booking-status-${booking.status_id}`;
+            block.setAttribute('data-bs-toggle', 'modal');
+            block.setAttribute('data-bs-target', '#editBookingModal');
+            block.setAttribute('data-booking-id', booking.id);
+            block.style.cursor = 'pointer';
+
+            // Создаем слой для фона
+            const backgroundLayer = document.createElement('div');
+            backgroundLayer.className = 'background-layer';
+
+            // Получаем цвета специалистов из контекста
+            const specialistColors = JSON.parse('{{ specialist_colors|safe }}');
+            const specialistId = booking.specialist_id;
+            const colors = specialistColors[specialistId] || {
+                primary: '#a960ee',
+                secondary: '#90a0f7'
+            };
+            
+            backgroundLayer.style.background = `linear-gradient(135deg, 
+                ${colors.primary}55 0%,
+                ${colors.primary}55 50%,
+                ${colors.secondary}55 100%
+            )`;
+            
+            block.style.setProperty('--specialist-primary-color', colors.primary + '80');
+            block.style.setProperty('--specialist-secondary-color', colors.secondary + '80');
+            block.style.setProperty('--specialist-primary-color-solid', colors.primary);
+            block.style.setProperty('--specialist-secondary-color-solid', colors.secondary);
+            
+            const bookingInfo = document.createElement('div');
+            
+            // Форматируем время из datetime в формат HH:MM
+            const formatTime = (dateStr) => {
+                const date = new Date(dateStr);
+                return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            };
+
+            const startTime = formatTime(booking.blocks_datetime_range[0]);
+            const endTime = formatTime(booking.blocks_datetime_range[booking.blocks_datetime_range.length - 1]);
+            const timeStr = `${startTime} - ${endTime}`;
+            
+            // Проверяем наличие комментария в разных полях
+            const commentText = booking.comment || booking.notes || '';
+            
+            bookingInfo.innerHTML = `
+                <div class="booking-content">
+                    <span class="booking-client">${booking.client_name || 'Без имени'}</span>
+                    <span class="booking-separator">·</span>
+                    <span class="booking-time">${timeStr}</span>
+                    ${commentText ? `<span class="booking-separator">·</span><span class="booking-comment">${commentText}</span>` : ''}
+                </div>`;
+
+            const statusIndicator = document.createElement('div');
+            statusIndicator.className = 'booking-status-indicator';
+            
+            block.appendChild(backgroundLayer);
+            block.appendChild(statusIndicator);
+            block.appendChild(bookingInfo);
+            
+            block.style.width = (cellWidth - 2) + 'px';
+            return block;
+        }
+
+        function assignParentAttributes() {
+            var tables = document.querySelectorAll('table');
+            tables.forEach(function(table) {
+                var tableId = table.id;
+                var rows = table.querySelectorAll('tr');
+                rows.forEach(function(row) {
+                    row.setAttribute('parent_table_id', tableId);
+                    var cells = row.querySelectorAll('td');
+                    cells.forEach(function(cell) {
+                        cell.setAttribute('parent_table_id', tableId);
+                        cell.setAttribute('parent_row_id', row.id);
+                        var tableRowSelectors = `#${tableId} #${row.id} td`;
+                        cell.setAttribute('table_row_selectors', tableRowSelectors);
+                    });
+                });
+            });
+        }
+
+        updateBookedCells();
+        assignParentAttributes();
+    });
+</script>
+
+<script>
+    function checkBlockOverflow(block) {
+        const content = block.querySelector('.booking-content');
+        if (content && content.scrollWidth > block.offsetWidth) {
+            block.classList.add('needs-expand');
+        }
+    }
+
+    // Проверяем существующие блоки
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.booking-block').forEach(checkBlockOverflow);
+    });
+
+    // Следим за изменениями в DOM
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.classList && node.classList.contains('booking-block')) {
+                    // Даем время на рендеринг
+                    setTimeout(() => checkBlockOverflow(node), 100);
+                }
+            });
+        });
+    });
+
+    // Начинаем наблюдение
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+</script>
+
+</body>
+</html>
