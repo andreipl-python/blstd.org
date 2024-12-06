@@ -37,18 +37,17 @@ def generate_days_of_month(request_range: str = None) -> list[dict[str, datetime
 
 def generate_time_blocks(starttime: str, hours_interval: int, num_blocks: int) -> list[dict]:
     """Функция возвращает временной диапазон"""
-    naive_start_time = datetime.strptime(starttime, "%H:%M")  # Время, с которого начинается отсчёт
+    naive_start_time = datetime.strptime(starttime, "%H:%M")  
     start_time = timezone.make_aware(
         timezone.datetime.combine(timezone.now().date(), naive_start_time.time())
     )
-    interval = timedelta(hours=hours_interval)  # Интервал между временными блоками (1 час)
-    num_blocks = num_blocks  # Количество блоков
+    interval = timedelta(hours=hours_interval) 
+    num_blocks = num_blocks 
     time_blocks = []
 
     for i in range(num_blocks):
-        # Добавляем блоки по 1 часу
         time_blocks.append({
-            "time": (start_time + i * interval).strftime("%H:%M")  # Основное время, например, 9:00, 10:00 и т.д.
+            "time": (start_time + i * interval).strftime("%H:%M")
         })
 
     return time_blocks
@@ -56,29 +55,28 @@ def generate_time_blocks(starttime: str, hours_interval: int, num_blocks: int) -
 
 def add_blocks_datetime_range_and_room_name(reservation_objects: QuerySet, default_block_length_minutes: int) \
         -> list[dict[str, Any]]:
+    reservation_objects = reservation_objects.select_related('room', 'client', 'status')
+    
     result = []
     for reservation in reservation_objects:
-        # Создаем массив с метками времени на каждый 15-минутный блок
         datetime_str_list = [
             str(reservation.datetimestart + timedelta(minutes=i))[:-6]
             for i in range(0, int((reservation.datetimeend - reservation.datetimestart).total_seconds() // 60) + 1,
                            default_block_length_minutes)
         ]
-        room = Room.objects.get(id=reservation.room_id)
-        client = Client.objects.get(id=reservation.client_id)
 
         result.append({
             'id': reservation.id,
-            'room_name': room.name,
+            'room_name': reservation.room.name,
             'idroom': reservation.room_id,
             'blocks_datetime_range': datetime_str_list,
             'client_id': reservation.client_id,
-            'client_name': client.name,
-            'client_comment': client.comment,
-            'client_phone': client.phone,
+            'client_name': reservation.client.name,
+            'client_comment': reservation.client.comment,
+            'client_phone': reservation.client.phone,
             'specialist_id': reservation.specialist_id,
             'status_id': reservation.status.id if reservation.status else 1,
-            'comment': reservation.comment  # Добавляем комментарий к брони
+            'comment': reservation.comment
         })
 
     return result
@@ -98,6 +96,7 @@ def user_index_view(request):
 
     start_date = days_of_month[0]['date']
     end_date = days_of_month[-1]['date']
+    
     bookings_in_range = Reservation.objects.filter(
         Q(datetimestart__gte=start_date),
         Q(datetimeend__lte=end_date)
@@ -105,27 +104,21 @@ def user_index_view(request):
     bookings_in_range = add_blocks_datetime_range_and_room_name(bookings_in_range, 15)
     bookings_in_range_json = json.dumps(bookings_in_range)
 
-    # Получаем всех клиентов с их балансами
     clients = Client.objects.prefetch_related(
         'subscription_set__reservation_type',
         'clientrating_set',
         'group__client_set'
     ).select_related('group').all()
     
-    # Подготавливаем данные о балансах для каждого клиента
     clients_with_balances = []
     for client in clients:
-        subscriptions = client.subscription_set.all()
+        subscriptions = client.subscription_set.all()  
         
         balances = {
             subscription.reservation_type_id: subscription.balance
             for subscription in subscriptions
         }
         
-        # Получаем количество оценок
-        rating_count = client.clientrating_set.count()
-        
-        # Подготавливаем данные о группе
         group_data = None
         if client.group:
             group_data = {
@@ -140,15 +133,18 @@ def user_index_view(request):
             'comment': client.comment,
             'phone': client.phone,
             'rating': client.rating,
-            'rating_count': rating_count,
+            'rating_count': client.clientrating_set.count(),
             'balances': balances,
             'group': group_data
         })
     
     clients_json = json.dumps(clients_with_balances)
 
-    # Сортировка услуг: сначала "Аренда оборудования", затем "Прочее"
-    services = Service.objects.select_related('group').prefetch_related('reservation_type').annotate(
+    services = Service.objects.select_related(
+        'group'
+    ).prefetch_related(
+        'reservation_type'
+    ).annotate(
         group_order=Case(
             When(group__name='Аренда оборудования', then=Value(1)),
             default=Value(2),
@@ -156,20 +152,13 @@ def user_index_view(request):
         )
     ).order_by('group_order', 'group__name', 'name')
 
-    # Сериализуем услуги вместе с их типами бронирования и группами
     services_json = serialize('json', services, use_natural_foreign_keys=True, use_natural_primary_keys=True)
 
     specialists = Specialist.objects.prefetch_related('reservation_type').all()
     specialists_json = serialize('json', specialists, use_natural_primary_keys=True)
 
-    reservation_types = ReservationType.objects.all()
-    reservation_types_json = serialize('json', reservation_types, use_natural_primary_keys=True)
-
     rooms = Room.objects.prefetch_related('reservation_type').all()
     rooms_json = serialize('json', rooms, use_natural_primary_keys=True)
-
-    tariff_units = TariffUnit.objects.all()
-    tariff_units_json = serialize('json', tariff_units, use_natural_primary_keys=True)
 
     specialist_colors = {
         color.specialist_id: {
@@ -179,8 +168,6 @@ def user_index_view(request):
         for color in SpecialistColor.objects.all()
     }
 
-    
-    # Добавляем цвета по умолчанию для специалистов без настроенных цветов
     for specialist in specialists:
         if specialist.id not in specialist_colors:
             specialist_colors[specialist.id] = {
@@ -190,7 +177,12 @@ def user_index_view(request):
     
     specialist_colors_json = json.dumps(specialist_colors)
 
-    # Получаем типы платежей
+    reservation_types = ReservationType.objects.all()
+    reservation_types_json = serialize('json', reservation_types, use_natural_primary_keys=True)
+
+    tariff_units = TariffUnit.objects.all()
+    tariff_units_json = serialize('json', tariff_units, use_natural_primary_keys=True)
+
     payment_types = PaymentType.objects.all()
 
     context = {
@@ -208,7 +200,7 @@ def user_index_view(request):
         'bookings_in_range': bookings_in_range_json,
         'reservation_types_json': reservation_types_json,
         'tariff_units_json': tariff_units_json,
-        'clients': clients,  # Добавляем клиентов в контекст
+        'clients': clients,
         'clients_json': clients_json,
         'specialist_colors': specialist_colors_json,
         'payment_types': payment_types,

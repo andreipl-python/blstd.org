@@ -50,7 +50,6 @@
             const bookingId = button.getAttribute('data-booking-id');
             const totalCost = button.getAttribute('data-total-cost');
             
-            // Устанавливаем ID брони
             document.getElementById('paymentBookingId').textContent = bookingId;
             
             // Устанавливаем сумму к оплате
@@ -58,7 +57,7 @@
             const bookingTotalCost = document.getElementById('bookingTotalCost');
             if (totalCost) {
                 paymentAmount.value = totalCost;
-                bookingTotalCost.textContent = totalCost + ' ₽';
+                bookingTotalCost.textContent = totalCost + ' руб.';
             }
 
             // Получаем данные о брони для заполнения типов платежей
@@ -67,9 +66,8 @@
                 .then(data => {
                     if (data.success && data.booking.payment_types) {
                         const paymentTypeSelect = document.getElementById('paymentType');
-                        paymentTypeSelect.innerHTML = ''; // Очищаем текущие опции
+                        paymentTypeSelect.innerHTML = ''; 
                         
-                        // Добавляем новые опции из полученных данных
                         data.booking.payment_types.forEach(type => {
                             const option = document.createElement('option');
                             option.value = type.id;
@@ -83,7 +81,6 @@
 
         // При закрытии модального окна оплаты
         paymentBookingModal.addEventListener('hidden.bs.modal', function(event) {
-            // Убираем затемнение и восстанавливаем возможность прокрутки
             const modalBackdrops = document.getElementsByClassName('modal-backdrop');
             while (modalBackdrops.length > 0) {
                 modalBackdrops[0].parentNode.removeChild(modalBackdrops[0]);
@@ -108,7 +105,6 @@
         const amount = document.getElementById('paymentAmount').value;
         const comment = document.getElementById('paymentComment').value;
 
-        // Проверяем обязательные поля
         if (!bookingId || !paymentType || !amount) {
             Swal.fire({
                 icon: 'error',
@@ -118,7 +114,6 @@
             return;
         }
 
-        // Отправляем данные на сервер
         fetch(`/booking/process-payment/${bookingId}/`, {
             method: 'POST',
             headers: {
@@ -134,17 +129,14 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Закрываем модальное окно
                 const modal = bootstrap.Modal.getInstance(document.getElementById('paymentBookingModal'));
                 modal.hide();
 
-                // Показываем сообщение об успехе
                 Swal.fire({
                     icon: 'success',
                     title: 'Успешно',
                     text: 'Оплата успешно добавлена'
                 }).then(() => {
-                    // Обновляем страницу для отображения изменений
                     window.location.reload();
                 });
             } else {

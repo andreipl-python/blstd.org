@@ -40,14 +40,11 @@
             currentBookingId = button.getAttribute('data-booking-id');
             document.getElementById('cancelModalBookingId').textContent = currentBookingId;
 
-            // Загружаем список причин отмены
             fetch('/booking/get-cancellation-reasons/')
                 .then(response => response.json())
                 .then(data => {
-                    // Очищаем текущие опции
                     cancelReasonSelect.innerHTML = '<option value="">Выберите причину отмены...</option>';
                     
-                    // Добавляем новые опции
                     data.reasons.forEach(reason => {
                         const option = document.createElement('option');
                         option.value = reason.id;

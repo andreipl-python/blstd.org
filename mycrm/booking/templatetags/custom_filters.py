@@ -33,8 +33,6 @@ def str_to_time(value):
 
 @register.filter
 def combine_date_time(date_obj, time_obj):
-    # print(f'Тип: {type(date_obj)}, объект: {date_obj}')
-    # print(f'Тип: {type(time_obj)}, объект: {time_obj}')
     return datetime.combine(date_obj.date(), time_obj)
 
 
@@ -53,7 +51,6 @@ def to_int(value):
 
 @register.filter(name='parse_json')
 def parse_json(value):
-    """Парсит JSON строку в Python объект"""
     try:
         return json.loads(value)
     except (ValueError, TypeError):

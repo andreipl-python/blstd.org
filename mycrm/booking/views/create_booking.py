@@ -22,33 +22,26 @@ def parse_datetime(date: str, time: str) -> datetime:
 
 def check_room_availability(room: Room, start_datetime: datetime, end_datetime: datetime) -> bool:
     """Проверка доступности помещения"""
-    # Проверяем рабочее время
     start_time = start_datetime.time()
     end_time = end_datetime.time()
     
-    # Преобразуем строки времени в объекты time
     room_start = datetime.strptime(str(room.hourstart), '%H:%M:%S').time()
     room_end = datetime.strptime(str(room.hourend), '%H:%M:%S').time()
     
     if start_time < room_start or end_time > room_end:
         raise ValidationError("Время бронирования выходит за рамки рабочего времени помещения")
 
-    # Получаем все брони для проверки, исключая отмененные
     existing_bookings = Reservation.objects.filter(
         room=room,
     ).exclude(status_id=4)
     
-    # Проверяем пересечения вручную
     for booking in existing_bookings:
-        # Приводим время существующей брони к naive datetime
         booking_start = booking.datetimestart.replace(tzinfo=None)
         booking_end = booking.datetimeend.replace(tzinfo=None)
         
-        # Пропускаем бронь, если она заканчивается точно тогда, когда начинается новая
         if booking_end == start_datetime:
             continue
             
-        # Проверяем пересечение
         if (booking_start < end_datetime and booking_end > start_datetime):
             print(f"Конфликт с бронью: {booking.id}")
             print(f"Существующая бронь: {booking_start} - {booking_end}")
@@ -60,7 +53,6 @@ def check_room_availability(room: Room, start_datetime: datetime, end_datetime: 
 
 def check_specialist_availability(specialist: Specialist, start_datetime: datetime, end_datetime: datetime) -> bool:
     """Проверка доступности специалиста"""
-    # Получаем все брони специалиста, исключая отмененные
     existing_bookings = Reservation.objects.filter(
         specialist=specialist,
     ).exclude(status_id=4)
@@ -81,7 +73,6 @@ def create_booking_view(request):
 
     try:
         print("Request POST data:", request.POST)
-        # Получаем и валидируем данные
         service_types = request.POST.getlist('serviceType')
         booking_type = int(request.POST.get('bookingType'))
         specialist_id = request.POST.get('specialist')
@@ -101,11 +92,9 @@ def create_booking_view(request):
         if not full_datetime:
             return JsonResponse({"success": False, "error": "Не указано время начала брони"})
 
-        # Проверяем обязательные поля
         if not all([booking_type, client_id, booking_duration, room_id]):
             return JsonResponse({"success": False, "error": "Не все обязательные поля заполнены"})
 
-        # Получаем объекты из базы
         try:
             room = Room.objects.get(id=room_id)
             specialist = Specialist.objects.get(id=specialist_id) if specialist_id else None
@@ -117,14 +106,11 @@ def create_booking_view(request):
         except ClientGroup.DoesNotExist:
             return JsonResponse({"success": False, "error": "Группа не найдена"})
 
-        # Вычисляем время начала и конца брони
         start_datetime = datetime.strptime(full_datetime, '%Y-%m-%d %H:%M:%S')
-        # Добавляем 3 часа к времени перед сохранением
         start_datetime = start_datetime
         duration_hours, duration_minutes = map(int, booking_duration.split(':'))
         end_datetime = start_datetime + timedelta(hours=duration_hours, minutes=duration_minutes)
 
-        print(f"Start time: {start_datetime}, End time: {end_datetime}")  # Для отладки
 
         # Проверяем доступность
         try:
@@ -134,12 +120,9 @@ def create_booking_view(request):
         except ValidationError as e:
             return JsonResponse({"success": False, "error": str(e)})
 
-        # Создаем бронь в транзакции
         with transaction.atomic():
-            # Получаем статус "Не подтверждена"
             pending_status = ReservationStatusType.objects.get(name='Не подтверждена')
             
-            # Создаем запись о брони
             reservation = Reservation.objects.create(
                 datetimestart=start_datetime,
                 datetimeend=end_datetime,
@@ -153,7 +136,6 @@ def create_booking_view(request):
                 total_cost=total_cost
             )
 
-            # Добавляем услуги
             if service_types:
                 services = Service.objects.filter(id__in=service_types)
                 reservation.services.add(*services)

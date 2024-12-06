@@ -132,7 +132,6 @@
             const specialist = $('#specialist').val();
             const duration = $('#bookingDuration').val();
 
-            // Проверяем обязательные поля
             if (!bookingType || !client || !duration) {
                 Swal.fire({
                     icon: 'error',
@@ -142,7 +141,6 @@
                 return false;
             }
 
-            // Получаем full_datetime
             const fullDatetime = $('#fullDatetimeField').val();
             if (!fullDatetime) {
                 Swal.fire({
@@ -153,7 +151,6 @@
                 return false;
             }
 
-            // Показываем индикатор загрузки
             Swal.fire({
                 title: 'Создание брони...',
                 text: 'Пожалуйста, подождите',
@@ -251,13 +248,13 @@
 
         function updateBookedCells() {
             var cells = document.querySelectorAll('td[room_name]');
-            var bookingCellsArray = []; // Очищаем массив перед обновлением
+            var bookingCellsArray = []; 
             
             // Сначала очищаем все ячейки
             cells.forEach(function(cell) {
                 cell.classList.remove('highlight-cell', 'booked');
                 cell.classList.add('highlight-cell', 'available');
-                // Удаляем старый booking-block если есть
+                // Удаляем старые booking-block если есть
                 const oldBlock = cell.querySelector('.booking-block');
                 if (oldBlock) {
                     oldBlock.remove();
@@ -301,8 +298,6 @@
                 if (firstCell && bookingCells.length > 0) {
                     // Создаем один общий блок бронирования
                     const bookingBlock = createBookingBlock(booking, width);
-                    
-                    // Делаем первую ячейку relative для правильного позиционирования
                     firstCell.style.position = 'relative';
                     
                     // Добавляем блок в первую ячейку
@@ -325,11 +320,9 @@
             block.setAttribute('data-booking-id', booking.id);
             block.style.cursor = 'pointer';
 
-            // Создаем слой для фона
             const backgroundLayer = document.createElement('div');
             backgroundLayer.className = 'background-layer';
 
-            // Получаем цвета специалистов из контекста
             const specialistColors = JSON.parse('{{ specialist_colors|safe }}');
             const specialistId = booking.specialist_id;
             const colors = specialistColors[specialistId] || {
@@ -350,7 +343,6 @@
             
             const bookingInfo = document.createElement('div');
             
-            // Форматируем время из datetime в формат HH:MM
             const formatTime = (dateStr) => {
                 const date = new Date(dateStr);
                 return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -360,8 +352,7 @@
             const endTime = formatTime(booking.blocks_datetime_range[booking.blocks_datetime_range.length - 1]);
             const timeStr = `${startTime} - ${endTime}`;
             
-            // Проверяем наличие комментария в разных полях
-            const commentText = booking.comment || booking.notes || '';
+            const commentText = booking.comment || '';
             
             bookingInfo.innerHTML = `
                 <div class="booking-content">
@@ -430,7 +421,6 @@
         });
     });
 
-    // Начинаем наблюдение
     observer.observe(document.body, {
         childList: true,
         subtree: true

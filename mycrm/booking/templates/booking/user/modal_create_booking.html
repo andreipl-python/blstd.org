@@ -31,7 +31,6 @@
             <div class="modal-body">
                 <form id="bookingForm" action="javascript:void(0);" method="POST">
                     {% csrf_token %}
-                    <!-- Время начала брони и скрытые поля -->
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <label class="form-label" id="fromtimeBookingLabel">Бронь с</label>
@@ -53,7 +52,6 @@
                         <input type="hidden" id="roomIdField" name="room_id">
                     </div>
 
-                    <!-- Выпадающие списки "Тип брони" и "Продолжительность бронирования" -->
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="bookingType" class="form-label">Тип брони</label>
@@ -69,9 +67,7 @@
                         </div>
                     </div>
 
-                    <!-- Выпадающие списки "Выберите клиента и Выберите специалиста" -->
                     <div class="row mb-3" id="client-specialist-row" style="display: none;">
-                        <!-- Выпадающий список "Клиент" -->
                         <div class="col-md-6">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label for="client" class="form-label d-flex align-items-center mb-0">
@@ -111,7 +107,6 @@
                             </div>
                         </div>
 
-                        <!-- Выпадающий список "Специалист" -->
                         <div class="col-md-6" id="specialist-container" style="display: none;">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label for="specialist" class="form-label mb-0">Специалист</label>
@@ -121,7 +116,6 @@
                         </div>
                     </div>
 
-                    <!-- Выпадающий список "Укажите услуги" -->
                     <div class="row mb-3" id="serviceTypeContainer">
                         <div class="col">
                             <label for="serviceType" class="form-label"></label>
@@ -190,16 +184,6 @@
         return cost;
     }
 
-    /**
-     * Обновляет отображение стоимости бронирования.
-     *
-     * Получает стоимость бронирования, используя calculateBookingCost,
-     * и обновляет отображение стоимости на странице.
-     *
-     * @param {string} selectedTypeId - ID типа брони, выбранного пользователем
-     * @param {string} duration - выбранная длительность бронирования
-     * @return {void}
-     */
     function updateBookingCost() {
         const selectedTypeId = $('#bookingType').val();
         const duration = $('#bookingDuration').val();
@@ -215,7 +199,7 @@
         
         if (cost !== null) {
             costElement.text(cost);
-            costContainer.show();  // Показываем контейнер как только стоимость рассчитана
+            costContainer.show();
         } else {
             costContainer.hide();
         }
@@ -223,13 +207,11 @@
 
     // Инициализация Chosen при загрузке страницы
     document.addEventListener('DOMContentLoaded', function() {
-        // Инициализация Chosen для клиента
         $("#client").chosen({
             width: "100%",
             no_results_text: "Ничего не найдено"
         });
 
-        // Инициализация Chosen для услуг
         $("#serviceType").chosen({
             width: "100%",
             no_results_text: "Ничего не найдено"
@@ -248,7 +230,6 @@
             const $commentDiv = $('#clientComment');
             const selectedTypeId = $('#bookingType').val();
             
-            // Если клиент не выбран, скрываем всю информацию
             if (!selectedClient) {
                 $balanceDot.hide();
                 $balanceContainer.removeAttr('data-tooltip');
@@ -274,7 +255,6 @@
             if (rating) {
                 const ratingNum = parseFloat(rating.toString().replace(',', '.'));
                 
-                // Меняем иконку и цвет в зависимости от рейтинга
                 if (ratingNum >= 4) {
                     $ratingIcon.removeClass('fa-star-half-alt text-danger text-muted').addClass('fa-star text-warning');
                 } else if (ratingNum >= 3) {
@@ -285,7 +265,6 @@
                 
                 $ratingText.text(rating).show();
                 
-                // Проверяем количество оценок и формируем тултип
                 const tooltipText = ratingCount > 0 
                     ? `На основе ${ratingCount} ${ratingCount === 1 ? 'оценки' : 'оценок'}`
                     : 'Нет оценок';
@@ -297,11 +276,9 @@
                     .tooltip();
                 
             } else {
-                // Если рейтинг не найден - серая звездочка без текста
                 $ratingIcon.removeClass('fa-star-half-alt text-danger text-warning').addClass('fa-star text-muted');
                 $ratingText.hide();
                 $ratingIcon.attr('data-bs-original-title', 'Нет оценок');
-                // Инициализируем тултип
                 $ratingIcon.tooltip('dispose').tooltip();
             }
             
@@ -309,12 +286,10 @@
             const phone = selectedOption.data('phone');
             if (phone) {
                 const $phoneIcon = $phoneContainer.find('i');
-                // Уничтожаем старый тултип
                 const tooltipInstance = bootstrap.Tooltip.getInstance($phoneIcon[0]);
                 if (tooltipInstance) {
                     tooltipInstance.dispose();
                 }
-                // Создаем новый тултип с номером телефона
                 $phoneIcon.attr('data-bs-original-title', phone);
                 new bootstrap.Tooltip($phoneIcon[0], {
                     placement: 'top'
@@ -347,7 +322,7 @@
             }
         });
 
-        // Функция проверки обязательных полей
+        // Функция проверки обязательных полей и активации кнопки
         function checkRequiredFields() {
             const bookingType = $('#bookingType').val();
             const bookingDuration = $('#bookingDuration').val();
@@ -369,8 +344,6 @@
         $('#bookingDuration').on('change', function() {
             const startTime = document.getElementById('timeField').value;
             updateBookingLabel(startTime);
-            
-            // Обновляем индикатор баланса и стоимость
             const selectedClient = $('#client').val();
             const selectedTypeId = $('#bookingType').val();
             updateBalanceIndicator(selectedClient, selectedTypeId);
@@ -380,12 +353,10 @@
 
     function openModal(date, time, room_name, timeblocksjson, rooms_json_str, reservation_types_json_str,
                       specialists_json_str, cell) {
-        // Кэшируем JSON данные при открытии модального окна
         try {
             cachedData.rooms = JSON.parse(rooms_json_str);
             cachedData.specialists = JSON.parse(specialists_json_str);
             cachedData.reservationTypes = JSON.parse(reservation_types_json_str);
-            // Не парсим services сразу, сделаем это при необходимости
         } catch (error) {
             return;
         }
@@ -653,28 +624,24 @@
 
         const balance = client.balances[selectedTypeId];
         
-        // Если баланс = undefined или не определен - серая точка
         if (typeof balance === 'undefined' || balance === null) {
             $balanceDot.removeClass('green-dot red-dot yellow-dot').addClass('gray-dot').show();
             $balanceContainer.attr('data-tooltip', 'Нет информации о балансе');
             return;
         }
         
-        // Если баланс = 0 - красная точка
         if (balance == 0) {
             $balanceDot.removeClass('green-dot gray-dot yellow-dot').addClass('red-dot').show();
             $balanceContainer.attr('data-tooltip', 'Баланс: 0 единиц');
             return;
         }
         
-        // Если баланса недостаточно - желтая точка
         if (balance < requiredUnits) {
             $balanceDot.removeClass('green-dot gray-dot red-dot').addClass('yellow-dot').show();
             $balanceContainer.attr('data-tooltip', `Баланс: ${balance} единиц (требуется ${requiredUnits})`);
             return;
         }
         
-        // Если баланс достаточный - зеленая точка
         $balanceDot.removeClass('red-dot gray-dot yellow-dot').addClass('green-dot blink').show();
         $balanceContainer.attr('data-tooltip', `Баланс: ${balance} единиц`);
     }
@@ -728,7 +695,6 @@
             return groups;
         }, {});
 
-        // Формирование HTML опций
         const optionsHtml = ['<option value="" disabled selected>Укажите услугу</option>'];
         
         // Сначала добавим группу "Аренда оборудования", затем остальные
@@ -750,7 +716,6 @@
 
         serviceSelect.html(optionsHtml.join('')).trigger('chosen:updated');
         
-        // Показываем контейнер услуг
         $('#serviceTypeContainer').show();
     }
 
@@ -758,14 +723,11 @@
     $('#bookingType').on('change', function() {
         const selectedTypeId = $(this).val();
         
-        // Скрываем контейнер услуг, если тип не выбран
         if (!selectedTypeId) {
-            // Скрываем все контейнеры и очищаем значения
             $('#serviceTypeContainer').hide();
             return;
         }
 
-        // Показываем контейнер услуг
         $('#serviceTypeContainer').show();
         
         // Обновляем список услуг
@@ -776,7 +738,6 @@
         const maxEndTime = document.getElementById('maxEndTime').value;
         updateBookingDurationOptions(selectedTime, maxEndTime, selectedTypeId);
         
-        // Показываем строку с клиентом и специалистом
         $('#client-specialist-row').show();
     });
 
@@ -798,7 +759,7 @@
         const reservationType = cachedData.reservationTypes.find(type => type.pk === parseInt(selectedTypeId));
 
         // Ищем тарифную единицу
-        let unitDuration = 15; 
+        let unitDuration = 0;
         if (cachedData.tariffUnits) {
             const tariffUnit = cachedData.tariffUnits.find(unit => 
                 unit.fields.reservation_type === parseInt(selectedTypeId)
@@ -819,7 +780,6 @@
         if (maxMinutesTotal <= startMinutesTotal) {
             durationSelect.innerHTML = '<option value="">Нет доступного времени</option>';
             durationSelect.disabled = true;
-            // Принудительно показываем контейнер
             durationContainer.style.cssText = "display: block !important";
             return;
         }
@@ -830,7 +790,6 @@
         if (availableMinutes < unitDuration) {
             durationSelect.innerHTML = '<option value="">Нет доступного времени</option>';
             durationSelect.disabled = true;
-            // Принудительно показываем контейнер
             durationContainer.style.cssText = "display: block !important";
             return;
         }
@@ -873,7 +832,6 @@
                 updateBookingCost();
             });
 
-            // Вызываем обработчик сразу после установки начального значения
             $(durationSelect).trigger('change');
 
             // Если есть только один вариант продолжительности и тип брони выбран

@@ -3,46 +3,6 @@ from django.db.models import PROTECT, CASCADE
 from enum import IntEnum
 
 
-class MetaHelp:
-    """
-        Модель для хранения информации о продукте.
-
-CharField – строка фиксированной длины.
-TextField – текст переменной длины.
-IntegerField – целое число.
-DecimalField – число с фиксированной точностью.
-FloatField – число с плавающей точкой.
-BooleanField – булево значение (True/False).
-DateField – дата (год, месяц, день).
-DateTimeField – дата и время.
-TimeField – только время (часы, минуты, секунды).
-EmailField – строка для хранения email.
-URLField – строка для хранения URL.
-FileField – файл.
-ImageField – изображение.
-ManyToManyField – связь "многие ко многим".
-ForeignKey – связь "один ко многим".
-OneToOneField – связь "один к одному".
-SlugField – строка для хранения "слагов" (обычно используется в URL).
-UUIDField – уникальный идентификатор (UUID).
-GenericIPAddressField – для хранения IP-адресов (v4 или v6).
-PositiveIntegerField – положительное целое число."""
-
-    db_table = 'table_name'  # Имя таблицы в БД
-    ordering = ['field1', '-field2']  # Сортировка по умолчанию
-    verbose_name = "Имя модели"  # Название модели (ед. число)
-    verbose_name_plural = "Имена моделей"  # Название модели (мн. число)
-    unique_together = [('field1', 'field2')]  # Уникальная комбинация полей
-    constraints = [  # Ограничения
-        models.CheckConstraint(check=models.Q(field__gte=0), name='constraint_name')
-    ]
-    abstract = True  # Абстрактная модель (без таблицы)
-    index_together = [('field1', 'field2')]  # Индексы для группы полей
-    permissions = [  # Пользовательские права
-        ('permission_code', 'Описание права')
-    ]
-
-
 class Subscription(models.Model):
     """Модель для хранения информации об абонементах"""
     id = models.AutoField(primary_key=True)

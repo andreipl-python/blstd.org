@@ -15,14 +15,11 @@ def get_booking_details(request, booking_id):
     try:
         booking = get_object_or_404(Reservation, id=booking_id)
         
-        # Получаем типы оплаты
         payment_types = PaymentType.objects.all()
         
-        # Форматируем дату и время
         start_datetime = booking.datetimestart
         end_datetime = booking.datetimeend
         
-        # Словарь с русскими названиями дней недели
         weekdays = {
             0: 'Понедельник',
             1: 'Вторник',
@@ -33,12 +30,9 @@ def get_booking_details(request, booking_id):
             6: 'Воскресенье'
         }
         
-        # Форматируем дату с днем недели
         date_str = f"{start_datetime.strftime('%d-%m-%Y')}, {weekdays[start_datetime.weekday()]}"
-        # Форматируем время
         time_str = f"{start_datetime.strftime('%H:%M')} - {end_datetime.strftime('%H:%M')}"
         
-        # Форматируем длительность
         duration_hours = (booking.datetimeend - booking.datetimestart).seconds // 3600
         duration_minutes = ((booking.datetimeend - booking.datetimestart).seconds % 3600) // 60
         
@@ -50,7 +44,6 @@ def get_booking_details(request, booking_id):
                 duration_str += " "
             duration_str += f"{duration_minutes} {'минута' if duration_minutes == 1 else 'минуты' if 2 <= duration_minutes <= 4 else 'минут'}"
         
-        # Формируем словарь с данными брони
         booking_data = {
             'id': booking.id,
             'date': date_str,
@@ -89,10 +82,8 @@ def edit_booking_view(request, booking_id):
         return JsonResponse({"success": False, "error": "Неверный метод запроса"})
 
     try:
-        # Получаем бронь
         booking = get_object_or_404(Reservation, id=booking_id)
         
-        # Получаем и валидируем данные
         service_types = request.POST.getlist('serviceType')
         booking_type = int(request.POST.get('bookingType', booking.reservation_type.id))
         specialist_id = request.POST.get('specialist')
@@ -110,7 +101,6 @@ def edit_booking_view(request, booking_id):
         if not start_time:
             return JsonResponse({"success": False, "error": "Не указано время начала брони"})
 
-        # Получаем объекты из базы
         try:
             room = Room.objects.get(id=room_id)
             specialist = Specialist.objects.get(id=specialist_id) if specialist_id else None
@@ -118,15 +108,12 @@ def edit_booking_view(request, booking_id):
         except (Room.DoesNotExist, Specialist.DoesNotExist, ClientGroup.DoesNotExist) as e:
             return JsonResponse({"success": False, "error": str(e)})
 
-        # Вычисляем время начала и конца брони
         start_datetime = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
         duration_hours, duration_minutes = map(int, booking_duration.split(':'))
         end_datetime = start_datetime + timedelta(hours=duration_hours, minutes=duration_minutes)
 
-        # Проверяем доступность (исключая текущую бронь)
         def check_booking_conflicts(booking_id, room, specialist, start_datetime, end_datetime):
             """Проверка конфликтов при редактировании брони"""
-            # Проверяем пересечения с другими бронями для помещения
             room_conflicts = Reservation.objects.filter(
                 room=room,
                 datetimestart__lt=end_datetime,
@@ -153,7 +140,6 @@ def edit_booking_view(request, booking_id):
         except ValidationError as e:
             return JsonResponse({"success": False, "error": str(e)})
 
-        # Обновляем бронь в транзакции
         with transaction.atomic():
             booking.datetimestart = start_datetime
             booking.datetimeend = end_datetime
@@ -166,7 +152,6 @@ def edit_booking_view(request, booking_id):
             booking.total_cost = total_cost
             booking.save()
 
-            # Обновляем услуги
             if service_types:
                 booking.services.clear()
                 services = Service.objects.filter(id__in=service_types)
@@ -193,7 +178,6 @@ def cancel_booking_view(request, booking_id):
         data = json.loads(request.body)
         booking = get_object_or_404(Reservation, id=booking_id)
         
-        # Получаем причину отмены
         cancellation_reason_id = data.get('cancellation_reason_id')
         if not cancellation_reason_id:
             return JsonResponse({
@@ -204,12 +188,10 @@ def cancel_booking_view(request, booking_id):
         cancellation_reason = get_object_or_404(CancellationReason, id=cancellation_reason_id)
         
         with transaction.atomic():
-            # Устанавливаем статус "Отменено" (id=4)
             cancelled_status = ReservationStatusType.objects.get(id=4)
             booking.status = cancelled_status
             booking.cancellation_reason = cancellation_reason
             
-            # Обновляем комментарий, если он предоставлен
             if comment := data.get('comment'):
                 if booking.comment:
                     booking.comment += f"\n\nПричина отмены: {comment}"
@@ -260,25 +242,21 @@ def process_payment_view(request, booking_id):
         return JsonResponse({'success': False, 'error': 'Метод не поддерживается'})
     
     try:
-        # Получаем данные из запроса
         data = json.loads(request.body)
         payment_type_id = data.get('payment_type')
         amount = data.get('amount')
         comment = data.get('comment', '')
 
-        # Проверяем обязательные поля
         if not payment_type_id or not amount:
             return JsonResponse({
                 'success': False,
                 'error': 'Не указан тип оплаты или сумма'
             })
 
-        # Получаем объекты из базы данных
         booking = get_object_or_404(Reservation, id=booking_id)
         payment_type = get_object_or_404(PaymentType, id=payment_type_id)
 
         with transaction.atomic():
-            # Создаем запись об оплате
             payment = Payment.objects.create(
                 reservation=booking,
                 payment_type=payment_type,
@@ -286,7 +264,6 @@ def process_payment_view(request, booking_id):
                 comment=comment
             )
 
-            # Обновляем статус брони на "Оплачено"
             paid_status = ReservationStatusType.objects.get(id=3)  # ID 3 = Оплачено
             booking.status = paid_status
             booking.save()

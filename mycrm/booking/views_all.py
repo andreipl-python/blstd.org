@@ -11,10 +11,6 @@ class CustomLogoutView(LogoutView):
         return self.post(request, *args, **kwargs)
 
 
-def index(request):
-    return render(request, 'booking/index.html')
-
-
 def auth_view(request):
     if request.method == 'POST':
         username = request.POST['login']
@@ -25,7 +21,6 @@ def auth_view(request):
             login(request, user)
             return redirect('index')
         else:
-            # Здесь можно добавить сообщение об ошибке
             pass
 
     return render(request, 'booking/user/auth.html')
@@ -51,15 +46,6 @@ def menu_view(request):
     }
 
     return render(request, 'booking/add/menu.html', context)
-
-
-def user_menu_view(request, user_id):
-    current_url = request.path
-    context = {
-        'user': request.user,  # если используется система авторизации, иначе заменить user на объект клиента
-        'current_url': current_url
-    }
-    return render(request, 'booking/add/menu_cabinet.html', context)
 
 
 @login_required(login_url='login')
@@ -152,47 +138,3 @@ def users_list_view(request):
             "Школа" if oblast_type == "showusers_school" else "Студия" if oblast_type == "showusers_studia" else "Школа + студия" if oblast_type == "showusers_schoolstudia" else ""),
     })
 
-
-@login_required(login_url='login')
-def smena_view(request):
-    return render(request, 'booking/user/smena.html')
-
-
-@login_required(login_url='login')
-def smena_new_view(request):
-    return render(request, 'booking/user/smena_new.html')
-
-
-@login_required(login_url='login')
-def admin_index_view(request):
-    return render(request, 'booking/admin/index.html')
-
-
-@login_required(login_url='login')
-def user_payment_view(request):
-    return render(request, 'booking/user/payment.html')
-
-
-@login_required(login_url='login')
-def user_paytable_view(request):
-    return render(request, 'booking/user/paytable.html')
-
-
-@login_required(login_url='login')
-def user_stats_school_view(request):
-    return render(request, 'booking/user/stats_school.html')
-
-
-@login_required(login_url='login')
-def user_stats_average_view(request):
-    return render(request, 'booking/user/stats_average.html')
-
-
-@login_required(login_url='login')
-def user_stats_profit_view(request):
-    return render(request, 'booking/user/stats_profit.html')
-
-
-@login_required(login_url='login')
-def user_stats_all_view(request):
-    return render(request, 'booking/user/stats_all.html')
