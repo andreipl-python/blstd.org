@@ -93,4 +93,3 @@ class RoomAdmin(admin.ModelAdmin):
     search_fields = ('name',)
     filter_horizontal = ('reservation_type', 'service')
 
-# Register your models here.
