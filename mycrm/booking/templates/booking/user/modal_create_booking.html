@@ -707,8 +707,9 @@
         sortedGroups.forEach(groupName => {
             optionsHtml.push(`<optgroup label="${groupName}">`);
             servicesByGroup[groupName].forEach(service => {
+                const costDisplay = service.fields.cost ? ` (${service.fields.cost} BYN)` : '';
                 optionsHtml.push(
-                    `<option value="${service.pk}">${service.fields.name}</option>`
+                    `<option value="${service.pk}">${service.fields.name}${costDisplay}</option>`
                 );
             });
             optionsHtml.push('</optgroup>');

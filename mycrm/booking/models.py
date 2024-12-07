@@ -181,10 +181,18 @@ class Service(models.Model):
                               verbose_name='Группа услуг',
                               null=True,
                               blank=True)
+    cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Стоимость услуги',
+        verbose_name='Стоимость',
+        null=True,
+        blank=True
+    )
     reservation_type = models.ManyToManyField('ReservationType',
-                                          help_text='Типы бронирования для услуги',
-                                          verbose_name='Типы бронирования',
-                                          related_name='services')
+                                              related_name='services',
+                                              help_text='Типы бронирования доступные для услуги',
+                                              verbose_name='Типы бронирования')
 
     class Meta:
         db_table = 'services'
@@ -193,6 +201,9 @@ class Service(models.Model):
 
     def __str__(self):
         return self.name
+
+    def natural_key(self):
+        return (self.name,)
 
 
 class Specialist(models.Model):
