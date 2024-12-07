@@ -10,12 +10,12 @@
                     {% csrf_token %}
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <button type="submit" name="day7" class="nav_btn_flat" value="Сегодня">
-                                <i class="fas fa-calendar-day"></i> Сегодня
+                            <button type="submit" name="day7" class="nav_btn_flat" value="Неделя">
+                                <i class="fas fa-calendar-day"></i> Неделя
                             </button>
                         </li>
                         <li class="nav-item">
-                            <button type="submit" name="allday" class="nav_btn_flat" value="Месяц">
+                            <button type="submit" name="month" class="nav_btn_flat" value="Месяц">
                                 <i class="fas fa-calendar-alt"></i> Месяц
                             </button>
                         </li>
@@ -29,7 +29,7 @@
                             <input type="date" name="to_date" class="form-control" value="{{ show_dateto }}">
                         </li>
                         <li class="nav-item">
-                            <button type="submit" name="repiod" class="nav_btn_flat" value="За период">
+                            <button type="submit" name="period" class="nav_btn_flat" value="За период">
                                 <i class="fas fa-calendar-week"></i> За период
                             </button>
                         </li>

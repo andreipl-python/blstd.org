@@ -13,16 +13,35 @@ from booking.models import Client, Room, Service, Reservation, ReservationType, 
 from .menu2 import menu2_view
 
 
-def generate_days_of_month(request_range: str = None) -> list[dict[str, datetime | str | int]]:
+def generate_days_of_month(request_range: str = 'day7', start_date_str: str = None, end_date_str: str = None) -> list[dict[str, datetime | str | int]]:
     """Функция определяет текущий месяц и возврашает список дней месяца, начальную и конечную даты"""
     days_of_month = []
     today = timezone.now()
-    if request_range == 'day7':
-        start_date = today
-        number_of_days = 8
-    else:
+    
+    if request_range == 'period' and start_date_str and end_date_str:
+        # Для периода используем переданные даты
+        start_date = timezone.datetime.strptime(start_date_str, "%Y-%m-%d")
+        end_date = timezone.datetime.strptime(end_date_str, "%Y-%m-%d")
+        # Устанавливаем время начала и конца дня
+        start_date = timezone.make_aware(
+            timezone.datetime.combine(start_date.date(), timezone.datetime.min.time())
+        )
+        end_date = timezone.make_aware(
+            timezone.datetime.combine(end_date.date(), timezone.datetime.max.time())
+        )
+        # Если даты одинаковые, используем 1 день
+        if start_date.date() == end_date.date():
+            number_of_days = 1
+        else:
+            number_of_days = (end_date.date() - start_date.date()).days + 1
+    elif request_range == 'month':
+        # Для месяца берем первый день
         start_date = timezone.datetime(today.year, today.month, 1, tzinfo=today.tzinfo)
         _, number_of_days = monthrange(today.year, today.month)
+    else:  # по умолчанию показываем неделю
+        # Для недели берем начало текущего дня
+        start_date = timezone.datetime(today.year, today.month, today.day, 0, 0, 0, tzinfo=today.tzinfo)
+        number_of_days = 8
 
     for day in range(number_of_days):
         current_date = start_date + timedelta(days=day)
@@ -84,23 +103,46 @@ def add_blocks_datetime_range_and_room_name(reservation_objects: QuerySet, defau
 
 @login_required(login_url='login')
 def user_index_view(request):
-    days_of_month = generate_days_of_month()
-
+    request_range = 'day7'  # по умолчанию неделя
+    start_date_str = None
+    end_date_str = None
+    
     if request.method == 'POST':
-        if 'day7' in request.POST:
-            days_of_month = generate_days_of_month(request_range='day7')
-
+        if 'month' in request.POST:
+            request_range = 'month'
+        elif 'period' in request.POST:  # исправлено с 'repiod' на 'period'
+            from_date = request.POST.get('from_date')
+            to_date = request.POST.get('to_date')
+            if from_date and to_date:
+                request_range = 'period'
+                start_date_str = from_date
+                end_date_str = to_date
+    
+    days_of_month = generate_days_of_month(request_range, start_date_str, end_date_str)
     menu2_context = menu2_view(request)
     time_blocks = generate_time_blocks("09:00", 1, 14)
     time_blocks_json = json.dumps(time_blocks)
 
-    start_date = days_of_month[0]['date']
-    end_date = days_of_month[-1]['date']
+    start_date = timezone.datetime.combine(days_of_month[0]['date'].date(), timezone.datetime.min.time())
+    start_date = timezone.make_aware(start_date)
+    end_date = timezone.datetime.combine(days_of_month[-1]['date'].date(), timezone.datetime.max.time())
+    end_date = timezone.make_aware(end_date)
     
+    print(f"DEBUG: Filtering reservations with start_date={start_date}, end_date={end_date}")
+    print(f"DEBUG: start_date type={type(start_date)}, end_date type={type(end_date)}")
+    
+    # Получаем все брони без фильтрации по датам для проверки
+    all_bookings = Reservation.objects.exclude(status_id=4)
+    print(f"DEBUG: Total bookings without date filter: {all_bookings.count()}")
+    
+    # Применяем фильтр
     bookings_in_range = Reservation.objects.filter(
-        Q(datetimestart__gte=start_date),
-        Q(datetimeend__lte=end_date)
+        Q(datetimestart__lte=end_date) & Q(datetimeend__gte=start_date)
     ).exclude(status_id=4)
+    
+    print(f"DEBUG: Filtered bookings count: {bookings_in_range.count()}")
+    print(f"DEBUG: SQL Query: {bookings_in_range.query}")
+    
     bookings_in_range = add_blocks_datetime_range_and_room_name(bookings_in_range, 15)
     bookings_in_range_json = json.dumps(bookings_in_range)
 
