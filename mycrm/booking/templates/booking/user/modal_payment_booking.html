@@ -1,5 +1,20 @@
 {% load custom_filters %}
 {% load static %}
+
+<style>
+    /* Скрываем стрелки для Chrome, Safari, Edge, Opera */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    /* Скрываем стрелки для Firefox */
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
+</style>
+
 <div class="modal fade" id="paymentBookingModal" tabindex="-1" aria-labelledby="paymentBookingModalLabel"
      aria-hidden="true">
     <div class="modal-dialog">
@@ -12,6 +27,19 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted">Оплачено:</span>
+                            <span class="badge bg-primary fs-6" id="paidAmount"></span>
+                        </div>
+                        <div>
+                            <span class=
+                            "text-muted">Осталось оплатить:</span>
+                            <span class="badge bg-warning fs-6" id="remainingAmount"></span>
+                        </div>
+                    </div>
+                </div>
                 <form id="paymentBookingForm">
                     {% csrf_token %}
                     <div class="mb-3">
@@ -24,7 +52,9 @@
                     </div>
                     <div class="mb-3">
                         <label for="paymentAmount" class="form-label">Сумма</label>
-                        <input type="number" class="form-control" id="paymentAmount" name="amount" step="0.01" required readonly>
+                        <input type="number" class="form-control" id="paymentAmount" name="amount" required 
+                               min="0" step="0.01" oninput="validatePaymentAmount(this)">
+                        <div class="invalid-feedback" id="paymentAmountError"></div>
                     </div>
                     <div class="mb-3">
                         <label for="paymentComment" class="form-label">Комментарий</label>
@@ -56,24 +86,36 @@
             const paymentAmount = document.getElementById('paymentAmount');
             const bookingTotalCost = document.getElementById('bookingTotalCost');
             if (totalCost) {
-                paymentAmount.value = totalCost;
                 bookingTotalCost.textContent = totalCost + ' руб.';
             }
 
             // Получаем данные о брони для заполнения типов платежей
-            fetch(`/booking/get_booking_details/${bookingId}/`)
+            fetch(`/booking/get-booking-details/${bookingId}/`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success && data.booking.payment_types) {
+                    if (data.success && data.booking) {
                         const paymentTypeSelect = document.getElementById('paymentType');
                         paymentTypeSelect.innerHTML = ''; 
                         
-                        data.booking.payment_types.forEach(type => {
-                            const option = document.createElement('option');
-                            option.value = type.id;
-                            option.textContent = type.name;
-                            paymentTypeSelect.appendChild(option);
-                        });
+                        if (data.booking.payment_types) {
+                            data.booking.payment_types.forEach(type => {
+                                const option = document.createElement('option');
+                                option.value = type.id;
+                                option.textContent = type.name;
+                                paymentTypeSelect.appendChild(option);
+                            });
+                        }
+
+                        // Обновляем информацию о платежах
+                        const paidAmount = document.getElementById('paidAmount');
+                        const remainingAmount = document.getElementById('remainingAmount');
+                        
+                        paidAmount.textContent = data.booking.paid_amount + ' руб.';
+                        remainingAmount.textContent = data.booking.remaining_amount + ' руб.';
+                        
+                        // Устанавливаем оставшуюся сумму в поле ввода
+                        paymentAmount.value = data.booking.remaining_amount;
+                        paymentAmount.setAttribute('max', data.booking.remaining_amount);
                     }
                 })
                 .catch(error => console.error('Error:', error));
@@ -94,9 +136,31 @@
             if (editBookingModal) {
                 editBookingModal.classList.add('show');
                 editBookingModal.style.display = 'block';
+                document.body.classList.add('modal-open');
             }
         });
     });
+
+    function validatePaymentAmount(input) {
+        const max = parseFloat(input.getAttribute('max'));
+        const value = parseFloat(input.value);
+        const errorDiv = document.getElementById('paymentAmountError');
+        const submitButton = document.querySelector('button[onclick="submitPayment()"]');
+        
+        if (value > max) {
+            input.classList.add('is-invalid');
+            errorDiv.textContent = `Максимальная сумма к оплате: ${max} руб.`;
+            submitButton.disabled = true;
+        } else if (value <= 0) {
+            input.classList.add('is-invalid');
+            errorDiv.textContent = 'Сумма должна быть больше 0';
+            submitButton.disabled = true;
+        } else {
+            input.classList.remove('is-invalid');
+            errorDiv.textContent = '';
+            submitButton.disabled = false;
+        }
+    }
 
     // Функция отправки формы оплаты
     function submitPayment() {

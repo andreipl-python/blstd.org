@@ -128,20 +128,15 @@ def user_index_view(request):
     end_date = timezone.datetime.combine(days_of_month[-1]['date'].date(), timezone.datetime.max.time())
     end_date = timezone.make_aware(end_date)
     
-    print(f"DEBUG: Filtering reservations with start_date={start_date}, end_date={end_date}")
-    print(f"DEBUG: start_date type={type(start_date)}, end_date type={type(end_date)}")
-    
+
     # Получаем все брони без фильтрации по датам для проверки
     all_bookings = Reservation.objects.exclude(status_id=4)
-    print(f"DEBUG: Total bookings without date filter: {all_bookings.count()}")
     
     # Применяем фильтр
     bookings_in_range = Reservation.objects.filter(
         Q(datetimestart__lte=end_date) & Q(datetimeend__gte=start_date)
     ).exclude(status_id=4)
     
-    print(f"DEBUG: Filtered bookings count: {bookings_in_range.count()}")
-    print(f"DEBUG: SQL Query: {bookings_in_range.query}")
     
     bookings_in_range = add_blocks_datetime_range_and_room_name(bookings_in_range, 15)
     bookings_in_range_json = json.dumps(bookings_in_range)
@@ -194,7 +189,7 @@ def user_index_view(request):
         )
     ).order_by('group_order', 'group__name', 'name')
 
-    services_json = serialize('json', services, use_natural_foreign_keys=True, use_natural_primary_keys=True)
+    services_json = serialize('json', services, use_natural_foreign_keys=True)
 
     specialists = Specialist.objects.prefetch_related('reservation_type').all()
     specialists_json = serialize('json', specialists, use_natural_primary_keys=True)

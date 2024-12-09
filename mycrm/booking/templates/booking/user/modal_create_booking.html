@@ -154,34 +154,49 @@
     };
 
     function calculateBookingCost(selectedTypeId, duration) {
-        if (!selectedTypeId || !duration) {
-            return 0;
+        let totalCost = 0;
+        
+        if (selectedTypeId && duration) {
+            // Находим тарифную единицу для выбранного типа бронирования
+            const tariffUnit = cachedData.tariffUnits.find(unit => 
+                unit.fields.reservation_type === parseInt(selectedTypeId)
+            );
+            
+            if (tariffUnit) {
+                // Получаем минимальное время бронирования и стоимость единицы
+                const [minHours, minMinutes] = tariffUnit.fields.min_reservation_time.split(':').map(Number);
+                const minDuration = minHours * 60 + minMinutes;
+                const unitCost = parseFloat(tariffUnit.fields.tariff_unit_cost);
+                
+                // Получаем выбранную длительность в минутах
+                const [durationHours, durationMinutes] = duration.split(':').map(Number);
+                const totalDurationMinutes = durationHours * 60 + durationMinutes;
+                
+                // Вычисляем количество тарифных единиц (округляем вверх)
+                const units = Math.ceil(totalDurationMinutes / minDuration);
+                
+                // Добавляем стоимость бронирования
+                totalCost += units * unitCost;
+            }
         }
         
-        // Находим тарифную единицу для выбранного типа бронирования
-        const tariffUnit = cachedData.tariffUnits.find(unit => 
-            unit.fields.reservation_type === parseInt(selectedTypeId)
-        );
+        // Добавляем стоимость выбранных услуг
+        const $serviceType = $('#serviceType');
+        const selectedServices = $serviceType.find('option:selected').map(function() {
+            return $(this).val();
+        }).get();
         
-        if (!tariffUnit) {
-            return 0;
-        }
         
-        // Получаем минимальное время бронирования и стоимость единицы
-        const [minHours, minMinutes] = tariffUnit.fields.min_reservation_time.split(':').map(Number);
-        const minDuration = minHours * 60 + minMinutes;
-        const unitCost = parseFloat(tariffUnit.fields.tariff_unit_cost);
+        selectedServices.forEach(serviceId => {
+            if (!serviceId) return; // Пропускаем пустые значения
+            const service = cachedData.services.find(s => s.pk === parseInt(serviceId));
+            if (service && service.fields.cost) {
+                const serviceCost = parseFloat(service.fields.cost);
+                totalCost += serviceCost;
+            }
+        });
         
-        // Получаем выбранную длительность в минутах
-        const [durationHours, durationMinutes] = duration.split(':').map(Number);
-        const totalDurationMinutes = durationHours * 60 + durationMinutes;
-        
-        // Вычисляем количество тарифных единиц (округляем вверх)
-        const units = Math.ceil(totalDurationMinutes / minDuration);
-        
-        // Вычисляем общую стоимость
-        const cost = (units * unitCost).toFixed(2);
-        return cost;
+        return totalCost.toFixed(2);
     }
 
     function updateBookingCost() {
@@ -198,8 +213,8 @@
         const cost = calculateBookingCost(selectedTypeId, duration);
         
         if (cost !== null) {
-            costElement.text(cost);
-            costContainer.show();
+        costElement.text(cost);
+        costContainer.show();
         } else {
             costContainer.hide();
         }
@@ -212,9 +227,16 @@
             no_results_text: "Ничего не найдено"
         });
 
-        $("#serviceType").chosen({
+        // Инициализируем Chosen для услуг
+        const $serviceType = $("#serviceType");
+        $serviceType.chosen({
             width: "100%",
             no_results_text: "Ничего не найдено"
+        });
+
+        // Добавляем обработчик на изменение значения
+        $serviceType.on('change', function(evt, params) {
+            updateBookingCost();
         });
 
         // Обработчик выбора клиента
@@ -349,6 +371,10 @@
             updateBalanceIndicator(selectedClient, selectedTypeId);
             updateBookingCost();
         });
+
+        $('#serviceType').on('change', function() {
+            updateBookingCost();
+        });
     });
 
     function openModal(date, time, room_name, timeblocksjson, rooms_json_str, reservation_types_json_str,
@@ -376,7 +402,7 @@
         $('#clientBalanceDot').hide();
         $('#clientBalanceContainer').removeAttr('data-tooltip');
         
-        // Сброс и скрытие элементов группового бронирования
+        // Сбрасываем и скрываем элементы группового бронирования
         $('#groupBookingSwitch').prop('checked', false);
         $('#groupBookingSwitch').closest('.form-check').hide();
         const groupInfoIcon = $('.group-info-icon');
@@ -468,6 +494,19 @@
     }
 
     function initializeModal(specialists_json_str, availableTypes, maxEndTime) {
+        // Очищаем форму
+        $('#bookingForm')[0].reset();
+        
+        // Сбрасываем и скрываем поле длительности
+        $('#durationContainer').attr('style', 'display: none !important');
+        $('#bookingDuration').val('');
+
+        // Если есть только один тип брони, выбираем его и показываем нужные элементы
+        if (availableTypes.length === 1) {
+            const selectedTypeId = availableTypes[0].id;
+            $('#bookingType').val(selectedTypeId).trigger('change');
+        }
+        
         const bookingTypeSelect = document.getElementById('bookingType');
         const clientSpecialistRow = document.getElementById('client-specialist-row');
         const clientSelect = $('#client');
@@ -578,6 +617,10 @@
                 }, 100);
             }
         }
+
+        $('#serviceType').on('change', function() {
+            updateBookingCost();
+        });
     }
 
     // Функция обновления индикатора баланса
@@ -676,6 +719,7 @@
         }
 
         const serviceSelect = $('#serviceType');
+
         const filteredServices = cachedData.services.filter(service => {
             return service.fields.reservation_type.includes(parseInt(selectedTypeId));
         });
@@ -708,8 +752,9 @@
             optionsHtml.push(`<optgroup label="${groupName}">`);
             servicesByGroup[groupName].forEach(service => {
                 const costDisplay = service.fields.cost ? ` (${service.fields.cost} BYN)` : '';
+                const servicePk = service.pk ? service.pk : 'undefined'; // Проверка на undefined
                 optionsHtml.push(
-                    `<option value="${service.pk}">${service.fields.name}${costDisplay}</option>`
+                    `<option value="${servicePk}">${service.fields.name}${costDisplay}</option>`
                 );
             });
             optionsHtml.push('</optgroup>');
@@ -719,6 +764,11 @@
         
         $('#serviceTypeContainer').show();
     }
+
+    // Обновляем стоимость при изменении выбранных услуг
+    $('#serviceType').on('change', function() {
+        updateBookingCost();
+    });
 
     // Обработчик изменения типа бронирования
     $('#bookingType').on('change', function() {

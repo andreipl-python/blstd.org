@@ -2,6 +2,7 @@ import dateparser
 from datetime import datetime, timedelta
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Sum
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404, render
@@ -43,6 +44,14 @@ def get_booking_details(request, booking_id):
             if duration_hours > 0:
                 duration_str += " "
             duration_str += f"{duration_minutes} {'минута' if duration_minutes == 1 else 'минуты' if 2 <= duration_minutes <= 4 else 'минут'}"
+
+        # Получаем сумму всех платежей для данной брони
+        total_payments = Payment.objects.filter(
+            reservation=booking
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        # Вычисляем оставшуюся сумму
+        remaining_amount = booking.total_cost - total_payments if booking.total_cost else 0
         
         booking_data = {
             'id': booking.id,
@@ -57,7 +66,11 @@ def get_booking_details(request, booking_id):
             'specialist_id': booking.specialist.id if booking.specialist else None,
             'specialist_name': str(booking.specialist) if booking.specialist else None,
             'service_name': ', '.join([str(service) for service in booking.services.all()]) if booking.services.exists() else None,
+            'service_costs': str(sum(service.cost for service in booking.services.all())),
             'total_cost': str(booking.total_cost) if booking.total_cost else '0',
+            'paid_amount': str(total_payments),
+            'remaining_amount': str(remaining_amount),
+            'reservation_cost': str(booking.total_cost - sum(service.cost for service in booking.services.all())),
             'status': booking.status.id if booking.status else None,
             'status_name': booking.status.name if booking.status else 'Не указан',
             'comment': booking.comment,
@@ -256,7 +269,20 @@ def process_payment_view(request, booking_id):
         booking = get_object_or_404(Reservation, id=booking_id)
         payment_type = get_object_or_404(PaymentType, id=payment_type_id)
 
+        # Получаем текущую сумму платежей
+        current_payments = Payment.objects.filter(
+            reservation=booking
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        # Проверяем, не превысит ли новый платеж общую стоимость
+        if current_payments + float(amount) > booking.total_cost:
+            return JsonResponse({
+                'success': False,
+                'error': f'Сумма платежа превышает оставшуюся сумму к оплате. Максимальная сумма: {booking.total_cost - current_payments} руб.'
+            })
+
         with transaction.atomic():
+            # Создаем новый платеж
             payment = Payment.objects.create(
                 reservation=booking,
                 payment_type=payment_type,
@@ -264,9 +290,17 @@ def process_payment_view(request, booking_id):
                 comment=comment
             )
 
-            paid_status = ReservationStatusType.objects.get(id=3)  # ID 3 = Оплачено
-            booking.status = paid_status
-            booking.save()
+            # Получаем сумму всех платежей для данной брони
+            total_payments = Payment.objects.filter(
+                reservation=booking
+            ).aggregate(total=Sum('amount'))['total'] or 0
+
+            # Если сумма всех платежей равна общей стоимости брони,
+            # меняем статус на "Оплачено"
+            if total_payments >= booking.total_cost:
+                paid_status = ReservationStatusType.objects.get(id=3)  # ID 3 = Оплачено
+                booking.status = paid_status
+                booking.save()
 
         return JsonResponse({
             'success': True,
