@@ -12,6 +12,7 @@
     /* Скрываем стрелки для Firefox */
     input[type=number] {
         -moz-appearance: textfield;
+        appearance: textfield;
     }
 </style>
 
@@ -20,11 +21,31 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="d-flex align-items-center">
-                    <h5 class="modal-title me-3" id="paymentBookingModalLabel">Оплата брони #<span id="paymentBookingId"></span></h5>
-                    <span class="badge bg-success fs-6" id="bookingTotalCost"></span>
+                <div class="d-flex flex-column w-100">
+                    <div class="d-flex align-items-center mb-2">
+                        <h5 class="modal-title me-3 mb-0" id="paymentBookingModalLabel">Оплата брони #<span id="paymentBookingId"></span></h5>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-secondary position-relative" title="Стоимость аренды">
+                                <i class="fas fa-home me-1"></i>
+                                <span id="reservationCost"></span>
+                                <div class="dot-container-payment" title="">
+                                    <div id="balanceDot" class="balance-dot"></div>
+                                </div>
+                            </span>
+                            <span class="badge bg-primary" title="Стоимость услуг">
+                                <i class="fas fa-concierge-bell me-1"></i>
+                                <span id="serviceCost"></span>
+                            </span>
+                            <span class="badge bg-success" title="Общая стоимость">
+                                <i class="fas fa-equals me-1"></i>
+                                <span id="bookingTotalCost"></span>
+                            </span>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
@@ -34,9 +55,8 @@
                             <span class="badge bg-primary fs-6" id="paidAmount"></span>
                         </div>
                         <div>
-                            <span class=
-                            "text-muted">Осталось оплатить:</span>
-                            <span class="badge bg-warning fs-6" id="remainingAmount"></span>
+                            <span class="text-muted">Осталось оплатить:</span>
+                            <span class="badge bg-warning text-dark fs-6" id="remainingAmount"></span>
                         </div>
                     </div>
                 </div>
@@ -74,20 +94,34 @@
         const paymentBookingModal = document.getElementById('paymentBookingModal');
         if (!paymentBookingModal) return;
 
+        function updateBalanceIndicator(balance, requiredUnits) {
+            const dot = document.getElementById('balanceDot');
+            const container = dot.parentElement;
+            
+            if (balance === null || balance === undefined) {
+                dot.className = 'balance-dot grey';
+                container.title = 'Нет данных о балансе';
+                return;
+            }
+
+            if (balance === 0) {
+                dot.className = 'balance-dot red-dot';
+                container.title = 'Баланс: 0 единиц';
+            } else if (balance < requiredUnits) {
+                dot.className = 'balance-dot yellow-dot';
+                container.title = `Баланс: ${balance} единиц (требуется ${requiredUnits})`;
+            } else {
+                dot.className = 'balance-dot green-dot blink';
+                container.title = `Баланс: ${balance} единиц`;
+            }
+        }
+
         // При открытии модального окна оплаты
         paymentBookingModal.addEventListener('show.bs.modal', function(event) {
             const button = event.relatedTarget;
             const bookingId = button.getAttribute('data-booking-id');
-            const totalCost = button.getAttribute('data-total-cost');
             
             document.getElementById('paymentBookingId').textContent = bookingId;
-            
-            // Устанавливаем сумму к оплате
-            const paymentAmount = document.getElementById('paymentAmount');
-            const bookingTotalCost = document.getElementById('bookingTotalCost');
-            if (totalCost) {
-                bookingTotalCost.textContent = totalCost + ' руб.';
-            }
 
             // Получаем данные о брони для заполнения типов платежей
             fetch(`/booking/get-booking-details/${bookingId}/`)
@@ -109,11 +143,25 @@
                         // Обновляем информацию о платежах
                         const paidAmount = document.getElementById('paidAmount');
                         const remainingAmount = document.getElementById('remainingAmount');
+                        const reservationCost = document.getElementById('reservationCost');
+                        const serviceCost = document.getElementById('serviceCost');
+                        const bookingTotalCost = document.getElementById('bookingTotalCost');
                         
-                        paidAmount.textContent = data.booking.paid_amount + ' руб.';
-                        remainingAmount.textContent = data.booking.remaining_amount + ' руб.';
+                        // Обновляем суммы
+                        paidAmount.textContent = data.booking.paid_amount + ' BYN';
+                        remainingAmount.textContent = data.booking.remaining_amount + ' BYN';
+                        reservationCost.textContent = data.booking.reservation_cost + ' BYN';
+                        serviceCost.textContent = data.booking.service_costs + ' BYN';
+                        bookingTotalCost.textContent = data.booking.total_cost + ' BYN';
+
+                        // Обновляем индикатор баланса
+                        updateBalanceIndicator(
+                            data.booking.client_balance,
+                            data.booking.required_units
+                        );
                         
                         // Устанавливаем оставшуюся сумму в поле ввода
+                        const paymentAmount = document.getElementById('paymentAmount');
                         paymentAmount.value = data.booking.remaining_amount;
                         paymentAmount.setAttribute('max', data.booking.remaining_amount);
                     }
@@ -147,11 +195,20 @@
         const errorDiv = document.getElementById('paymentAmountError');
         const submitButton = document.querySelector('button[onclick="submitPayment()"]');
         
+        // Проверяем количество знаков после запятой
+        const decimalPlaces = (input.value.split('.')[1] || '').length;
+        if (decimalPlaces > 2) {
+            input.classList.add('is-invalid');
+            errorDiv.textContent = 'Допускается не более 2 знаков после запятой';
+            submitButton.disabled = true;
+            return;
+        }
+        
         if (value > max) {
             input.classList.add('is-invalid');
-            errorDiv.textContent = `Максимальная сумма к оплате: ${max} руб.`;
+            errorDiv.textContent = `Максимальная сумма к оплате: ${max} BYN`;
             submitButton.disabled = true;
-        } else if (value <= 0) {
+        } else if (value <= 0 || input.value.trim() === '') {
             input.classList.add('is-invalid');
             errorDiv.textContent = 'Сумма должна быть больше 0';
             submitButton.disabled = true;

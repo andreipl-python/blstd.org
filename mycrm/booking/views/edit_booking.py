@@ -1,13 +1,14 @@
 import dateparser
 from datetime import datetime, timedelta
+from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404, render
+from django.views.decorators.csrf import csrf_exempt
 from ..models import (
-    Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup, PaymentType, Payment, CancellationReason
+    Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup, PaymentType, Payment, CancellationReason, Subscription, TariffUnit
 )
 import json
 
@@ -53,12 +54,26 @@ def get_booking_details(request, booking_id):
         # Вычисляем оставшуюся сумму
         remaining_amount = booking.total_cost - total_payments if booking.total_cost else 0
         
+        # Получаем подписку клиента для данного типа брони
+        subscription = Subscription.objects.filter(
+            client=booking.client,
+            reservation_type=booking.reservation_type
+        ).first() if booking.client and booking.reservation_type else None
+
+        # Получаем тарифную единицу для типа брони
+        tariff_unit = TariffUnit.objects.filter(
+            reservation_type=booking.reservation_type
+        ).first() if booking.reservation_type else None
+
+        # Вычисляем продолжительность брони в минутах
+        duration_minutes = (booking.datetimeend - booking.datetimestart).seconds // 60
+
         booking_data = {
             'id': booking.id,
             'date': date_str,
             'time': time_str,
             'duration': duration_str,
-            'duration_minutes': (booking.datetimeend - booking.datetimestart).seconds // 60,
+            'duration_minutes': duration_minutes,
             'room_id': booking.room.id if booking.room else None,
             'room_name': booking.room.name if booking.room else 'Не указано',
             'client_id': booking.client.id if booking.client else None,
@@ -74,7 +89,9 @@ def get_booking_details(request, booking_id):
             'status': booking.status.id if booking.status else None,
             'status_name': booking.status.name if booking.status else 'Не указан',
             'comment': booking.comment,
-            'payment_types': [{'id': pt.id, 'name': pt.name} for pt in payment_types]
+            'payment_types': [{'id': pt.id, 'name': pt.name} for pt in payment_types],
+            'client_balance': subscription.balance if subscription else None,
+            'required_units': duration_minutes // (tariff_unit.min_reservation_time.hour * 60 + tariff_unit.min_reservation_time.minute) if tariff_unit else None
         }
         
         return JsonResponse({
@@ -275,10 +292,10 @@ def process_payment_view(request, booking_id):
         ).aggregate(total=Sum('amount'))['total'] or 0
 
         # Проверяем, не превысит ли новый платеж общую стоимость
-        if current_payments + float(amount) > booking.total_cost:
+        if current_payments + Decimal(amount) > booking.total_cost:
             return JsonResponse({
                 'success': False,
-                'error': f'Сумма платежа превышает оставшуюся сумму к оплате. Максимальная сумма: {booking.total_cost - current_payments} руб.'
+                'error': f'Сумма платежа превышает оставшуюся сумму к оплате. Максимальная сумма: {booking.total_cost - current_payments} BYN'
             })
 
         with transaction.atomic():
