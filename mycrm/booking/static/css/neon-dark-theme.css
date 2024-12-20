@@ -1394,3 +1394,16 @@ body {
     border-color: #334155;
     opacity: 0.5;
 }
+
+/* Неоновый бейдж для общей стоимости */
+.neon-badge {
+    background: rgba(57, 255, 20, 0.1);
+    border: 1px solid #39ff14;
+    color: #39ff14;
+    text-shadow: 0 0 5px #39ff14;
+    padding: 0.35em 0.65em;
+    font-size: 0.9em;
+    font-weight: 700;
+    border-radius: 0.25rem;
+    margin-left: auto;
+}

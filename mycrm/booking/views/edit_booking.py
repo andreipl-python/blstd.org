@@ -148,6 +148,7 @@ def get_booking_details(request, booking_id):
             'available_units': available_units,
             'required_units': required_units,
             'client_balance': client_balance,
+            'reservation_type': booking.reservation_type.name if booking.reservation_type else 'Не указан',
         }
         
         return JsonResponse({
