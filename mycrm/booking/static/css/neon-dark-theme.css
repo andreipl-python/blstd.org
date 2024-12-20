@@ -1326,3 +1326,71 @@ body {
     height: 28px !important;
     line-height: 28px !important;
 }
+
+/* Информационный блок в неоновом стиле */
+.neon-info-block {
+    background: #1e293b;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+    padding: 1rem;
+}
+
+.neon-info-block .neon-title {
+    color: #93c5fd;
+    text-shadow: 0 0 10px rgba(147, 197, 253, 0.3);
+}
+
+.neon-info-block .neon-icon {
+    color: #93c5fd;
+    text-shadow: 0 0 10px rgba(147, 197, 253, 0.3);
+}
+
+.neon-info-block .neon-contact {
+    color: #60a5fa;
+    text-shadow: 0 0 10px rgba(96, 165, 250, 0.2);
+}
+
+.neon-info-block .neon-contact-icon {
+    color: #60a5fa;
+}
+
+.neon-info-block .neon-text {
+    color: #e2e8f0;
+}
+
+/* Стили для цен в неоновом стиле */
+.neon-price {
+    color: #34d399;
+    text-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
+    font-weight: 600;
+    font-size: 1.1em;
+}
+
+.neon-service-type {
+    color: #93c5fd;
+    font-size: 0.9em;
+    margin-bottom: 0.5rem;
+}
+
+.neon-service-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+}
+
+.neon-service-name {
+    color: #e2e8f0;
+}
+
+.neon-service-cost {
+    color: #34d399;
+    text-shadow: 0 0 5px rgba(52, 211, 153, 0.2);
+}
+
+.neon-info-block hr {
+    border-color: #334155;
+    opacity: 0.5;
+}

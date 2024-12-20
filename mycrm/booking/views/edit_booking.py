@@ -17,7 +17,7 @@ def get_booking_details(request, booking_id):
     try:
         booking = get_object_or_404(Reservation, id=booking_id)
         
-        payment_types = PaymentType.objects.all()
+        payment_types = PaymentType.objects.exclude(name='Тарифные единицы')
         
         start_datetime = booking.datetimestart
         end_datetime = booking.datetimeend
@@ -46,6 +46,19 @@ def get_booking_details(request, booking_id):
                 duration_str += " "
             duration_str += f"{duration_minutes} {'минута' if duration_minutes == 1 else 'минуты' if 2 <= duration_minutes <= 4 else 'минут'}"
 
+        # Вычисляем стоимость аренды и услуг
+        service_cost = sum(service.cost for service in booking.services.all())
+        total_rental_cost = booking.total_cost - service_cost
+
+        # Получаем сумму платежей тарифными единицами
+        rental_payments = Payment.objects.filter(
+            reservation=booking,
+            payment_type__name='Тарифные единицы'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        # Вычисляем оставшуюся стоимость аренды
+        remaining_rental_cost = total_rental_cost - rental_payments
+
         # Получаем сумму всех платежей для данной брони
         total_payments = Payment.objects.filter(
             reservation=booking
@@ -55,43 +68,86 @@ def get_booking_details(request, booking_id):
         remaining_amount = booking.total_cost - total_payments if booking.total_cost else 0
         
         # Получаем подписку клиента для данного типа брони
-        subscription = Subscription.objects.filter(
-            client=booking.client,
-            reservation_type=booking.reservation_type
-        ).first() if booking.client and booking.reservation_type else None
+        subscription = None
+        available_units = 0
+        required_units = 0
+        can_use_units = False
+        client_balance = None
+        max_units_allowed = 0
 
-        # Получаем тарифную единицу для типа брони
-        tariff_unit = TariffUnit.objects.filter(
-            reservation_type=booking.reservation_type
-        ).first() if booking.reservation_type else None
+        if booking.client and booking.reservation_type:
+            subscription = Subscription.objects.filter(
+                client=booking.client,
+                reservation_type=booking.reservation_type
+            ).first()
 
-        # Вычисляем продолжительность брони в минутах
-        duration_minutes = (booking.datetimeend - booking.datetimestart).seconds // 60
+            if subscription:
+                available_units = subscription.balance
+                client_balance = subscription.balance
+
+                # Получаем тарифную единицу для типа брони
+                tariff_unit = TariffUnit.objects.filter(
+                    reservation_type=booking.reservation_type
+                ).first()
+
+                if tariff_unit:
+                    # Вычисляем продолжительность брони в минутах
+                    duration_minutes = (booking.datetimeend - booking.datetimestart).seconds // 60
+                    required_units = duration_minutes // (tariff_unit.min_reservation_time.hour * 60 + tariff_unit.min_reservation_time.minute)
+                    can_use_units = available_units >= required_units
+
+                    # Вычисляем максимальное количество доступных единиц
+                    if tariff_unit.tariff_unit_cost > 0:
+                        max_units_allowed = min(
+                            int(remaining_rental_cost / tariff_unit.tariff_unit_cost),
+                            available_units
+                        )
+
+        # Группируем услуги по группам
+        services_by_group = {}
+        total_services_cost = Decimal('0')
+        
+        for service in booking.services.all():
+            group_name = service.group.name if service.group else 'Другое'
+            if group_name not in services_by_group:
+                services_by_group[group_name] = []
+            services_by_group[group_name].append({
+                'id': service.id,
+                'name': str(service),
+                'cost': str(service.cost if service.cost else '0')
+            })
+            if service.cost:
+                total_services_cost += service.cost
 
         booking_data = {
             'id': booking.id,
             'date': date_str,
             'time': time_str,
             'duration': duration_str,
-            'duration_minutes': duration_minutes,
             'room_id': booking.room.id if booking.room else None,
             'room_name': booking.room.name if booking.room else 'Не указано',
             'client_id': booking.client.id if booking.client else None,
             'client_name': str(booking.client) if booking.client else 'Не указан',
+            'client_phone': booking.client.phone if booking.client and booking.client.phone else None,
+            'client_email': booking.client.email if booking.client and booking.client.email else None,
             'specialist_id': booking.specialist.id if booking.specialist else None,
             'specialist_name': str(booking.specialist) if booking.specialist else None,
-            'service_name': ', '.join([str(service) for service in booking.services.all()]) if booking.services.exists() else None,
-            'service_costs': str(sum(service.cost for service in booking.services.all())),
+            'services_by_group': services_by_group,
+            'total_services_cost': str(total_services_cost),
             'total_cost': str(booking.total_cost) if booking.total_cost else '0',
             'paid_amount': str(total_payments),
             'remaining_amount': str(remaining_amount),
-            'reservation_cost': str(booking.total_cost - sum(service.cost for service in booking.services.all())),
+            'reservation_cost': str(total_rental_cost),
+            'remaining_rental_cost': str(remaining_rental_cost),
+            'max_units_allowed': max_units_allowed,
             'status': booking.status.id if booking.status else None,
             'status_name': booking.status.name if booking.status else 'Не указан',
             'comment': booking.comment,
             'payment_types': [{'id': pt.id, 'name': pt.name} for pt in payment_types],
-            'client_balance': subscription.balance if subscription else None,
-            'required_units': duration_minutes // (tariff_unit.min_reservation_time.hour * 60 + tariff_unit.min_reservation_time.minute) if tariff_unit else None
+            'can_use_units': can_use_units,
+            'available_units': available_units,
+            'required_units': required_units,
+            'client_balance': client_balance,
         }
         
         return JsonResponse({
@@ -268,64 +324,142 @@ def confirm_booking_view(request, booking_id):
 @csrf_exempt
 def process_payment_view(request, booking_id):
     """Обработка платежа для брони"""
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Метод не поддерживается'})
-    
     try:
-        data = json.loads(request.body)
-        payment_type_id = data.get('payment_type')
-        amount = data.get('amount')
-        comment = data.get('comment', '')
-
-        if not payment_type_id or not amount:
-            return JsonResponse({
-                'success': False,
-                'error': 'Не указан тип оплаты или сумма'
-            })
-
         booking = get_object_or_404(Reservation, id=booking_id)
-        payment_type = get_object_or_404(PaymentType, id=payment_type_id)
-
-        # Получаем текущую сумму платежей
-        current_payments = Payment.objects.filter(
-            reservation=booking
-        ).aggregate(total=Sum('amount'))['total'] or 0
-
-        # Проверяем, не превысит ли новый платеж общую стоимость
-        if current_payments + Decimal(amount) > booking.total_cost:
-            return JsonResponse({
-                'success': False,
-                'error': f'Сумма платежа превышает оставшуюся сумму к оплате. Максимальная сумма: {booking.total_cost - current_payments} BYN'
-            })
-
-        with transaction.atomic():
-            # Создаем новый платеж
+        data = json.loads(request.body)
+        
+        payment_method = data.get('payment_method')
+        
+        if payment_method == 'units':
+            units_amount = int(data.get('units_amount', 0))
+            
+            # Получаем тарифную единицу для типа брони
+            tariff_unit = TariffUnit.objects.filter(
+                reservation_type=booking.reservation_type
+            ).first()
+            
+            if not tariff_unit:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Тарифные единицы недоступны для данного типа брони'
+                })
+            
+            # Получаем подписку клиента
+            subscription = Subscription.objects.filter(
+                client=booking.client,
+                reservation_type=booking.reservation_type
+            ).first()
+            
+            if not subscription:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'У клиента нет активной подписки'
+                })
+            
+            if subscription.balance < units_amount:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Недостаточно единиц. Доступно: {subscription.balance}'
+                })
+            
+            # Вычисляем стоимость аренды и услуг
+            service_cost = sum(service.cost for service in booking.services.all())
+            total_rental_cost = booking.total_cost - service_cost
+            
+            # Получаем сумму платежей тарифными единицами
+            rental_payments = Payment.objects.filter(
+                reservation=booking,
+                payment_type__name='Тарифные единицы'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            # Вычисляем оставшуюся стоимость аренды
+            remaining_rental_cost = total_rental_cost - rental_payments
+            
+            # Вычисляем максимальное количество доступных единиц
+            max_units_allowed = min(
+                int(remaining_rental_cost / tariff_unit.tariff_unit_cost),
+                subscription.balance
+            )
+            
+            if units_amount > max_units_allowed:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Превышено максимальное количество единиц ({max_units_allowed})'
+                })
+            
+            # Вычисляем сумму платежа
+            payment_amount = units_amount * tariff_unit.tariff_unit_cost
+            
+            # Создаем платеж
+            payment_type = PaymentType.objects.get(name='Тарифные единицы')
+            payment = Payment.objects.create(
+                reservation=booking,
+                payment_type=payment_type,
+                amount=payment_amount,
+                comment=data.get('comment', '')
+            )
+            
+            # Списываем единицы с подписки
+            subscription.balance -= units_amount
+            subscription.save()
+            
+        else:  # regular payment
+            payment_type_id = data.get('payment_type')
+            amount = data.get('amount')
+            
+            if not payment_type_id or not amount:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Не указан тип платежа или сумма'
+                })
+            
+            try:
+                payment_type = PaymentType.objects.get(id=payment_type_id)
+            except PaymentType.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Неверный тип платежа'
+                })
+            
+            # Проверяем, не превышает ли сумма платежа оставшуюся сумму
+            total_payments = Payment.objects.filter(
+                reservation=booking
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            remaining_amount = booking.total_cost - total_payments
+            
+            if float(amount) > remaining_amount:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Сумма платежа превышает оставшуюся сумму ({remaining_amount} BYN)'
+                })
+            
+            # Создаем платеж
             payment = Payment.objects.create(
                 reservation=booking,
                 payment_type=payment_type,
                 amount=amount,
-                comment=comment
+                comment=data.get('comment', '')
             )
-
-            # Получаем сумму всех платежей для данной брони
-            total_payments = Payment.objects.filter(
-                reservation=booking
-            ).aggregate(total=Sum('amount'))['total'] or 0
-
-            # Если сумма всех платежей равна общей стоимости брони,
-            # меняем статус на "Оплачено"
-            if total_payments >= booking.total_cost:
-                paid_status = ReservationStatusType.objects.get(id=3)  # ID 3 = Оплачено
-                booking.status = paid_status
-                booking.save()
-
+        
+        # Проверяем, полностью ли оплачена бронь
+        total_payments = Payment.objects.filter(
+            reservation=booking
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        if total_payments >= booking.total_cost:
+            # Если бронь полностью оплачена, меняем статус на "Подтверждена"
+            confirmed_status = ReservationStatusType.objects.get(name='Подтверждена и оплачена')
+            booking.status = confirmed_status
+            booking.save()
+        
         return JsonResponse({
             'success': True,
-            'message': 'Оплата успешно добавлена'
+            'payment_id': payment.id
         })
-
+        
     except Exception as e:
         return JsonResponse({
             'success': False,
             'error': str(e)
-        })
+        }, status=400)

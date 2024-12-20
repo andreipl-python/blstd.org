@@ -238,6 +238,8 @@ class Client(models.Model):
                                blank=True)
     phone = models.CharField(max_length=150, help_text='Телефон клиента', verbose_name='Телефон клиента', null=True,
                              blank=True)
+    email = models.EmailField(max_length=150, help_text='Email клиента', verbose_name='Email клиента', null=True,
+                             blank=True)
     group = models.ForeignKey('ClientGroup', on_delete=models.PROTECT, help_text='ID группы клиента', verbose_name='ID группы клиента',
                              null=True)
 
