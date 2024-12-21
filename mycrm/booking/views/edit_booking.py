@@ -1,4 +1,3 @@
-import dateparser
 from datetime import datetime, timedelta
 from decimal import Decimal
 from django.core.exceptions import ValidationError
@@ -119,6 +118,16 @@ def get_booking_details(request, booking_id):
             if service.cost:
                 total_services_cost += service.cost
 
+        # Получаем все платежи для данной брони
+        payments = Payment.objects.filter(reservation=booking).select_related('payment_type').order_by('-created_at')
+        payments_history = []
+        for payment in payments:
+            payments_history.append({
+                'date': payment.created_at.strftime('%d.%m.%Y %H:%M'),
+                'type': payment.payment_type.name,
+                'amount': str(payment.amount)
+            })
+
         booking_data = {
             'id': booking.id,
             'date': date_str,
@@ -149,8 +158,9 @@ def get_booking_details(request, booking_id):
             'required_units': required_units,
             'client_balance': client_balance,
             'reservation_type': booking.reservation_type.name if booking.reservation_type else 'Не указан',
+            'payments_history': payments_history,
         }
-        
+
         return JsonResponse({
             'success': True, 
             'booking': booking_data

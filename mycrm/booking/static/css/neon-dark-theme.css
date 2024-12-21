@@ -1407,3 +1407,96 @@ body {
     border-radius: 0.25rem;
     margin-left: auto;
 }
+
+/* Стили для блока истории платежей */
+.payment-history-block {
+    z-index: 1060;
+    background: var(--dark-bg);
+    border-radius: 8px;
+}
+
+.payment-history-block .neon-info-block {
+    margin: 0;
+    border-radius: 8px;
+    background: var(--dark-bg);
+    border: 1px solid var(--primary-neon);
+    box-shadow: 0 0 10px rgba(var(--primary-neon-rgb), 0.2);
+}
+
+.payment-history-block .neon-title {
+    color: var(--text-color);
+    font-size: 1rem;
+    margin: 0;
+}
+
+.payment-history-block .neon-icon {
+    color: var(--primary-neon);
+    text-shadow: 0 0 5px rgba(var(--primary-neon-rgb), 0.5);
+}
+
+.payment-history-block .neon-text {
+    color: var(--text-color);
+}
+
+.payment-history-block .small.text-muted {
+    color: var(--text-muted) !important;
+    font-size: 0.85em;
+}
+
+.payment-history-block .neon-price {
+    color: #34d399;
+    text-shadow: 0 0 5px rgba(52, 211, 153, 0.2);
+}
+
+/* Анимация для блока истории платежей */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.payment-history-block {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Позиционирование модального окна */
+.modal-dialog {
+    position: relative;
+}
+
+#paymentsHistoryBlock {
+    z-index: 1060;
+}
+
+#paymentsHistoryBlock .modal-header {
+    border-bottom: none;
+}
+
+#paymentsHistoryBlock .modal-title {
+    color: #93c5fd;
+    text-shadow: 0 0 5px rgba(147, 197, 253, 0.3);
+}
+
+#paymentsHistoryBlock .bi {
+    color: #93c5fd;
+    text-shadow: 0 0 5px rgba(147, 197, 253, 0.3);
+}
+
+#paymentsHistoryBlock .neon-text {
+    color: #e2e8f0;
+}
+
+#paymentsHistoryBlock .neon-text.small {
+    color: #94a3b8;
+    font-size: 0.85em;
+}
+
+#paymentsHistoryBlock .neon-price {
+    color: #34d399;
+    text-shadow: 0 0 5px rgba(52, 211, 153, 0.2);
+}

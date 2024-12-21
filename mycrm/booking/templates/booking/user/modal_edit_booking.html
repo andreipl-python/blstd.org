@@ -11,6 +11,27 @@
 <div class="modal fade" id="editBookingModal" tabindex="-1" aria-labelledby="editBookingModalLabel"
      aria-hidden="true">
     <div class="modal-dialog modal-lg">
+        <!-- Блок истории платежей -->
+        <div id="paymentsHistoryBlock" class="modal-content" style="position: absolute; left: -320px; top: 0; width: 300px; display: none;">
+            <div class="modal-header border-bottom-0 pb-0">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-clock-history me-2 neon-icon"></i>
+                    <h5 class="modal-title mb-0" id="editBookingModalLabel">
+                        История платежей
+                    </h5>
+                </div>
+            </div>
+            <div class="modal-body pt-2">
+                <div id="paymentsHistoryList">
+                    <!-- Здесь будет список платежей -->
+                </div>
+                <hr class="border-secondary my-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="neon-title">Оплачено:</span>
+                    <span id="totalPaymentsAmount" class="neon-price">0 руб.</span>
+                </div>
+            </div>
+        </div>
         <div class="modal-content">
             <div class="modal-header">
                 <div class="d-flex align-items-center justify-content-between w-100">
@@ -260,6 +281,33 @@
             document.getElementById('modalClientEmail').textContent = emailText;
             emailBlock.style.display = emailText ? 'block' : 'none';
 
+            // Отображение истории платежей
+            const paymentsHistoryBlock = document.getElementById('paymentsHistoryBlock');
+            const paymentsHistoryList = document.getElementById('paymentsHistoryList');
+            
+            if (data.payments_history && data.payments_history.length > 0) {
+                paymentsHistoryList.innerHTML = data.payments_history.map(payment => `
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <div class="text-muted small">${payment.date}</div>
+                            <div class="neon-text">${payment.type}</div>
+                        </div>
+                        <span class="neon-price">${payment.amount} руб.</span>
+                    </div>
+                `).join('');
+                
+                // Принудительно показываем блок
+                paymentsHistoryBlock.style.removeProperty('display');
+                paymentsHistoryBlock.style.display = 'block';
+                
+                // Обновляем общую сумму платежей
+                const totalPaymentsAmount = data.payments_history.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+                document.getElementById('totalPaymentsAmount').textContent = `${totalPaymentsAmount.toFixed(2)} руб.`;
+            } else {
+                paymentsHistoryBlock.style.display = 'none';
+            }
+
+            // Обновляем специалиста
             document.getElementById('modalSpecialistInfo').textContent = data.specialist_name || 'Не указан';
             document.getElementById('modalReservationCost').textContent = data.reservation_cost || '0';
 
