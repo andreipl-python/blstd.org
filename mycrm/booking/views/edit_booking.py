@@ -285,6 +285,55 @@ def cancel_booking_view(request, booking_id):
         cancellation_reason = get_object_or_404(CancellationReason, id=cancellation_reason_id)
         
         with transaction.atomic():
+            # Находим платежи тарифными единицами для этой брони
+            tariff_units_payments = Payment.objects.filter(
+                reservation=booking,
+                payment_type__name='Тарифные единицы'
+            ).select_related('payment_type')
+
+            # Если есть платежи тарифными единицами
+            if tariff_units_payments.exists():
+                # Получаем тарифную единицу для данного типа брони
+                tariff_unit = TariffUnit.objects.get(
+                    reservation_type=booking.reservation_type
+                )
+                
+                # Получаем абонемент клиента для данного типа брони
+                subscription = Subscription.objects.get(
+                    client=booking.client,
+                    reservation_type=booking.reservation_type
+                )
+                
+                total_amount = Decimal('0')
+                total_units = 0
+                
+                # Для каждого платежа тарифными единицами
+                for payment in tariff_units_payments:
+                    amount = Decimal(str(payment.amount))
+                    units = int(amount / tariff_unit.tariff_unit_cost)
+                    total_amount += amount
+                    total_units += units
+                
+                # Возвращаем единицы на баланс абонемента
+                subscription.balance += total_units
+                subscription.save()
+                
+                # Создаем запись о возврате в payments
+                Payment.objects.create(
+                    reservation=booking,
+                    payment_type=tariff_units_payments.first().payment_type,
+                    amount=-total_amount,
+                    comment=f'Возврат при отмене брони ({total_units} тарифных единиц)'
+                )
+                
+                # Добавляем информацию о возврате в комментарий
+                refund_comment = f"\n\nВозвращено тарифных единиц: {total_units} (сумма: {total_amount} руб.)"
+                if booking.comment:
+                    booking.comment += refund_comment
+                else:
+                    booking.comment = f"Возвращено тарифных единиц: {total_units} (сумма: {total_amount} руб.)"
+
+            # Отмена брони
             cancelled_status = ReservationStatusType.objects.get(id=4)
             booking.status = cancelled_status
             booking.cancellation_reason = cancellation_reason
@@ -302,19 +351,16 @@ def cancel_booking_view(request, booking_id):
             'message': 'Бронь успешно отменена'
         })
         
+    except (Subscription.DoesNotExist, TariffUnit.DoesNotExist):
+        return JsonResponse({
+            'success': False,
+            'error': 'Не найден абонемент клиента или тарифная единица для возврата'
+        })
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': f'Произошла ошибка при отмене брони: {str(e)}'
         })
-
-def get_cancellation_reasons(request):
-    """Получение списка активных причин отмены"""
-    reasons = CancellationReason.objects.filter(is_active=True).order_by('order', 'name')
-    return JsonResponse({
-        'success': True,
-        'reasons': [{'id': reason.id, 'name': reason.name} for reason in reasons]
-    })
 
 @csrf_exempt
 def confirm_booking_view(request, booking_id):
@@ -474,3 +520,11 @@ def process_payment_view(request, booking_id):
             'success': False,
             'error': str(e)
         }, status=400)
+
+def get_cancellation_reasons(request):
+    """Получение списка активных причин отмены"""
+    reasons = CancellationReason.objects.filter(is_active=True).order_by('order', 'name')
+    return JsonResponse({
+        'success': True,
+        'reasons': [{'id': reason.id, 'name': reason.name} for reason in reasons]
+    })
