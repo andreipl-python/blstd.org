@@ -8,6 +8,7 @@ from .views.edit_booking import (
     confirm_booking_view,
     process_payment_view,
     get_cancellation_reasons,
+    get_available_specialists,
 )
 
 urlpatterns = [
@@ -34,4 +35,5 @@ urlpatterns = [
     path('booking/confirm/<int:booking_id>/', confirm_booking_view, name='confirm_booking'),
     path('booking/process-payment/<int:booking_id>/', process_payment_view, name='process_payment'),
     path('booking/get-cancellation-reasons/', get_cancellation_reasons, name='get_cancellation_reasons'),
+    path('booking/get-available-specialists/<int:booking_id>/', get_available_specialists, name='get_available_specialists'),
 ]

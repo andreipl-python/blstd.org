@@ -174,96 +174,67 @@ def get_booking_details(request, booking_id):
 
 @csrf_exempt
 def edit_booking_view(request, booking_id):
-    """Редактирование существующей брони"""
-    if request.method != "POST":
-        return JsonResponse({"success": False, "error": "Неверный метод запроса"})
-
+    """Редактирование брони"""
     try:
+        if request.method != 'POST':
+            return JsonResponse({'success': False, 'error': 'Метод не поддерживается'}, status=405)
+            
+        # Получаем данные из запроса
+        data = json.loads(request.body)
+        specialist_id = data.get('specialist_id')
+        
+        # Получаем бронь
         booking = get_object_or_404(Reservation, id=booking_id)
         
-        service_types = request.POST.getlist('serviceType')
-        booking_type = int(request.POST.get('bookingType', booking.reservation_type.id))
-        specialist_id = request.POST.get('specialist')
-        specialist_id = int(specialist_id) if specialist_id else None
-        client_id = int(request.POST.get('client', booking.client.id))
-        client_group_id = request.POST.get('client_group')
-        client_group_id = int(client_group_id) if client_group_id else None
-        booking_duration = request.POST.get('bookingDuration')
-        comment = request.POST.get('comment', '')
-        total_cost = request.POST.get('total_cost')
-        total_cost = float(total_cost) if total_cost else None
-        room_id = int(request.POST.get('room_id', booking.room.id))
-        start_time = request.POST.get('start_time')
-
-        if not start_time:
-            return JsonResponse({"success": False, "error": "Не указано время начала брони"})
-
-        try:
-            room = Room.objects.get(id=room_id)
-            specialist = Specialist.objects.get(id=specialist_id) if specialist_id else None
-            client_group = ClientGroup.objects.get(id=client_group_id) if client_group_id else None
-        except (Room.DoesNotExist, Specialist.DoesNotExist, ClientGroup.DoesNotExist) as e:
-            return JsonResponse({"success": False, "error": str(e)})
-
-        start_datetime = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
-        duration_hours, duration_minutes = map(int, booking_duration.split(':'))
-        end_datetime = start_datetime + timedelta(hours=duration_hours, minutes=duration_minutes)
-
-        def check_booking_conflicts(booking_id, room, specialist, start_datetime, end_datetime):
-            """Проверка конфликтов при редактировании брони"""
-            room_conflicts = Reservation.objects.filter(
-                room=room,
-                datetimestart__lt=end_datetime,
-                datetimeend__gt=start_datetime
-            ).exclude(id=booking_id).exclude(status_id=4)
-
-            if room_conflicts.exists():
-                raise ValidationError("Выбранное время пересекается с другими бронями помещения")
-
-            # Проверяем пересечения с другими бронями для специалиста
-            specialist_conflicts = Reservation.objects.filter(
+        if specialist_id:
+            # Проверяем существование специалиста
+            specialist = get_object_or_404(Specialist, id=specialist_id)
+            
+            # Проверяем, активен ли специалист
+            if not specialist.active:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Выбранный специалист неактивен'
+                }, status=400)
+            
+            # Проверяем, может ли специалист работать с данным типом брони
+            if not specialist.reservation_type.filter(id=booking.reservation_type.id).exists():
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Специалист не может работать с данным типом брони'
+                }, status=400)
+            
+            # Проверяем, не занят ли специалист в это время
+            conflicting_bookings = Reservation.objects.filter(
                 specialist=specialist,
-                datetimestart__lt=end_datetime,
-                datetimeend__gt=start_datetime
-            ).exclude(id=booking_id).exclude(status_id=4)
-
-            if specialist_conflicts.exists():
-                raise ValidationError("Выбранное время пересекается с другими бронями специалиста")
-
-            return True
-
-        try:
-            check_booking_conflicts(booking_id, room, specialist, start_datetime, end_datetime)
-        except ValidationError as e:
-            return JsonResponse({"success": False, "error": str(e)})
-
-        with transaction.atomic():
-            booking.datetimestart = start_datetime
-            booking.datetimeend = end_datetime
+                datetimestart__lt=booking.datetimeend,
+                datetimeend__gt=booking.datetimestart
+            ).exclude(id=booking_id)
+            
+            if conflicting_bookings.exists():
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Специалист занят в выбранное время'
+                }, status=400)
+            
+            # Обновляем специалиста
             booking.specialist = specialist
-            booking.client_id = client_id
-            booking.client_group = client_group
-            booking.room = room
-            booking.reservation_type_id = booking_type
-            booking.comment = comment
-            booking.total_cost = total_cost
-            booking.save()
-
-            if service_types:
-                booking.services.clear()
-                services = Service.objects.filter(id__in=service_types)
-                booking.services.add(*services)
-
+        else:
+            # Если specialist_id не указан, убираем специалиста
+            booking.specialist = None
+            
+        booking.save()
+        
         return JsonResponse({
-            "success": True,
-            "booking_id": booking.id
+            'success': True,
+            'specialist_name': booking.specialist.name if booking.specialist else None
         })
-
+            
     except Exception as e:
         return JsonResponse({
-            "success": False,
-            "error": f"Произошла ошибка при обновлении брони: {str(e)}"
-        })
+            'success': False,
+            'error': str(e)
+        }, status=400)
 
 @csrf_exempt
 def cancel_booking_view(request, booking_id):
@@ -513,6 +484,48 @@ def process_payment_view(request, booking_id):
         return JsonResponse({
             'success': True,
             'payment_id': payment.id
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+@csrf_exempt
+def get_available_specialists(request, booking_id):
+    """Получение списка доступных специалистов для брони"""
+    try:
+        # Получаем бронь
+        booking = get_object_or_404(Reservation, id=booking_id)
+        
+        # Получаем всех активных специалистов, которые могут работать с данным типом брони
+        specialists = Specialist.objects.filter(
+            active=True,
+            reservation_type__id=booking.reservation_type.id
+        )
+        
+        # Исключаем специалистов, у которых есть пересекающиеся брони
+        busy_specialists = Reservation.objects.filter(
+            specialist__isnull=False,
+            datetimestart__lt=booking.datetimeend,
+            datetimeend__gt=booking.datetimestart
+        ).exclude(id=booking_id).values_list('specialist_id', flat=True)
+        
+        specialists = specialists.exclude(id__in=busy_specialists)
+        
+        # Формируем список специалистов
+        specialists_data = []
+        for specialist in specialists:
+            specialists_data.append({
+                'id': specialist.id,
+                'name': specialist.name,
+                'current': specialist.id == booking.specialist_id if booking.specialist else False
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'specialists': specialists_data
         })
         
     except Exception as e:

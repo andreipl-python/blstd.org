@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <div class="modal fade" id="editBookingModal" tabindex="-1" aria-labelledby="editBookingModalLabel"
      aria-hidden="true">
@@ -72,8 +73,16 @@
                                 <span class="neon-text"><strong>Тип брони:</strong> <span id="modalBookingType"></span></span>
                             </div>
                             <div class="d-flex align-items-center mb-2">
-                                <i class="bi bi-person-badge me-2 neon-contact-icon"></i>
-                                <span class="neon-text"><strong>Специалист:</strong> <span id="modalSpecialistInfo"></span></span>
+                                <i class="bi bi-person me-2 neon-contact-icon"></i>
+                                <div class="w-100">
+                                    <span class="neon-text"><strong>Специалист:</strong></span>
+                                    <!-- Блок для отображения текущего специалиста -->
+                                    <span id="modalSpecialistInfo" class="neon-text"></span>
+                                    <!-- Выпадающий список для выбора специалиста (скрыт по умолчанию) -->
+                                    <select id="specialistSelect" class="form-select mt-2" style="display: none;">
+                                        <option value="">Без специалиста</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-currency-dollar me-2 neon-contact-icon"></i>
@@ -173,7 +182,9 @@
             <div class="modal-footer">
                 <div class="me-auto">
                     <!-- Левая группа кнопок -->
-                    <button type="button" class="btn btn-warning me-2" id="cancelBookingBtn" onclick="openCancelModal()">Отменить</button>
+                    <button type="button" class="btn btn-warning me-2" id="cancelBookingBtn" onclick="openCancelModal()">
+                        <i class="bi bi-x-circle"></i> Отменить
+                    </button>
                     <button type="button" class="btn btn-success me-2" id="confirmBookingBtn">Подтвердить</button>
                     <button type="button" 
                             class="btn btn-success" 
@@ -187,7 +198,8 @@
                 </div>
                 <div>
                     <!-- Правая группа кнопок -->
-                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                    <button type="button" class="btn btn-primary" id="editBookingBtn">Редактировать</button>
+                    <button type="button" class="btn btn-success" id="saveBookingBtn" style="display: none;">Сохранить</button>
                 </div>
             </div>
         </div>
@@ -198,26 +210,91 @@
 {% include 'booking/user/modal_cancel_booking.html' %}
 
 <script>
+    // Определяем функцию глобально
+    function openCancelModal() {
+        const bookingId = document.getElementById('modalBookingId').textContent;
+        
+        // Загружаем список причин отмены
+        fetch('/booking/get-cancellation-reasons/')
+            .then(response => response.json())
+            .then(data => {
+                const cancelReasonSelect = document.getElementById('cancelReason');
+                cancelReasonSelect.innerHTML = '<option value="">Выберите причину отмены...</option>';
+                
+                data.reasons.forEach(reason => {
+                    const option = document.createElement('option');
+                    option.value = reason.id;
+                    option.textContent = reason.name;
+                    cancelReasonSelect.appendChild(option);
+                });
+                
+                // После загрузки данных переключаем модальные окна
+                const editModal = bootstrap.Modal.getInstance(editBookingModal);
+                if (editModal) {
+                    editModal.hide();
+                }
+
+                // Устанавливаем ID брони в модальном окне отмены
+                document.getElementById('cancelModalBookingId').textContent = bookingId;
+
+                // Открываем модальное окно отмены через setTimeout
+                setTimeout(() => {
+                    const cancelModalElement = document.getElementById('cancelBookingModal');
+                    if (cancelModalElement) {
+                        const cancelModal = new bootstrap.Modal(cancelModalElement);
+                        cancelModal.show();
+                    }
+                }, 150);
+            })
+            .catch(error => {
+                console.error('Error loading cancellation reasons:', error);
+            });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         const editBookingModal = document.getElementById('editBookingModal');
+        const confirmBookingBtn = document.getElementById('confirmBookingBtn');
+        const cancelBookingBtn = document.getElementById('cancelBookingBtn');
+        const paymentBookingBtn = document.getElementById('openPaymentModalBtn');
         
         // Функция очистки модального окна
         function cleanupModal() {
-            // Даем Bootstrap завершить анимацию
-            setTimeout(() => {
-                document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-                    backdrop.remove();
-                });
-                document.body.classList.remove('modal-open');
-                document.body.style.overflow = '';
-                document.body.style.paddingRight = '';
-                
-                // Сбрасываем состояние модального окна
-                const bsModal = bootstrap.Modal.getInstance(editBookingModal);
-                if (bsModal) {
-                    bsModal.dispose();
+            // Очищаем все поля, если они существуют
+            const fields = [
+                'modalBookingId',
+                'modalClientInfo',
+                'modalSpecialistInfo',
+                'modalDateInfo',
+                'modalTimeInfo',
+                'modalStatusInfo',
+                'modalServicesInfo',
+                'modalPaymentInfo',
+                'modalCommentInfo'
+            ];
+            
+            fields.forEach(fieldId => {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                    if (fieldId === 'modalServicesInfo') {
+                        element.innerHTML = '';
+                    } else {
+                        element.textContent = '';
+                    }
                 }
-            }, 150);
+            });
+            
+            // Сбрасываем select специалиста
+            const specialistSelect = document.getElementById('specialistSelect');
+            if (specialistSelect) {
+                specialistSelect.style.display = 'none';
+                specialistSelect.innerHTML = '<option value="">Без специалиста</option>';
+            }
+            
+            // Возвращаем кнопки в исходное состояние
+            const editBookingBtn = document.getElementById('editBookingBtn');
+            const saveBookingBtn = document.getElementById('saveBookingBtn');
+            if (editBookingBtn) editBookingBtn.style.display = 'inline-block';
+            if (saveBookingBtn) saveBookingBtn.style.display = 'none';
         }
         
         // Обработчик закрытия модального окна редактирования
@@ -228,7 +305,8 @@
         // Обработчик открытия модального окна
         editBookingModal.addEventListener('show.bs.modal', function(event) {
             const button = event.relatedTarget;
-            if (!button) return;
+            // Проверяем, что это кнопка редактирования брони
+            if (!button || !button.hasAttribute('data-booking-id')) return;
             
             const bookingId = button.getAttribute('data-booking-id');
             if (!bookingId) return;
@@ -258,12 +336,11 @@
                 });
         });
 
-        const cancelBookingBtn = document.getElementById('cancelBookingBtn');
-        const confirmBookingBtn = document.getElementById('confirmBookingBtn');
-        const paymentBookingBtn = document.getElementById('openPaymentModalBtn');
-
         function updateModalWithBookingData(data) {
             if (!data) return;
+            
+            // Сохраняем ID брони для использования в других функциях
+            window.currentBookingId = data.id;
             
             // Обновляем основную информацию
             document.getElementById('modalBookingId').textContent = data.id;
@@ -272,6 +349,7 @@
             document.getElementById('modalDuration').textContent = data.duration;
             document.getElementById('modalRoomName').textContent = data.room_name;
             document.getElementById('modalBookingType').textContent = data.reservation_type;
+            document.getElementById('modalSpecialistInfo').textContent = data.specialist_name || 'Не назначен';
             document.getElementById('modalClientInfo').textContent = data.client_name || 'Не указан';
             document.getElementById('modalClientPhone').textContent = data.client_phone || 'Не указан';
             
@@ -307,8 +385,6 @@
                 paymentsHistoryBlock.style.display = 'none';
             }
 
-            // Обновляем специалиста
-            document.getElementById('modalSpecialistInfo').textContent = data.specialist_name || 'Не указан';
             document.getElementById('modalReservationCost').textContent = data.reservation_cost || '0';
 
             // Отображение комментария только если он есть
@@ -392,8 +468,122 @@
             };
             return statusColors[status] || 'bg-secondary';
         }
-
+        
+        // Загрузка списка специалистов
+        async function loadSpecialists() {
+            try {
+                const bookingId = window.currentBookingId;
+                if (!bookingId) return;
+                
+                const response = await fetch(`/booking/get-available-specialists/${bookingId}/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const specialistSelect = document.getElementById('specialistSelect');
+                    specialistSelect.innerHTML = '<option value="">Без специалиста</option>';
+                    
+                    data.specialists.forEach(specialist => {
+                        const option = document.createElement('option');
+                        option.value = specialist.id;
+                        option.textContent = specialist.name;
+                        if (specialist.current) {
+                            option.selected = true;
+                        }
+                        specialistSelect.appendChild(option);
+                    });
+                } else {
+                    throw new Error(data.error || 'Ошибка загрузки специалистов');
+                }
+            } catch (error) {
+                console.error('Ошибка при загрузке специалистов:', error);
+                alert('Не удалось загрузить список специалистов. Пожалуйста, попробуйте позже.');
+            }
+        }
+        
         // Обработчики кнопок действий
+        const editBookingBtn = document.getElementById('editBookingBtn');
+        const saveBookingBtn = document.getElementById('saveBookingBtn');
+        
+        // Обработчик кнопки редактирования
+        editBookingBtn.addEventListener('click', function() {
+            // Показываем кнопку сохранения и скрываем кнопку редактирования
+            this.style.display = 'none';
+            saveBookingBtn.style.display = 'inline-block';
+            
+            // Показываем select для выбора специалиста и загружаем список специалистов
+            const specialistSelect = document.getElementById('specialistSelect');
+            specialistSelect.style.display = 'block';
+            loadSpecialists();
+        });
+        
+        // Обработчик кнопки сохранения
+        saveBookingBtn.addEventListener('click', async function() {
+            const bookingId = window.currentBookingId;
+            const specialistSelect = document.getElementById('specialistSelect');
+            const specialistId = specialistSelect.value;
+            const currentSpecialistName = document.getElementById('modalSpecialistInfo').textContent;
+            const newSpecialistName = specialistId ? specialistSelect.options[specialistSelect.selectedIndex].text : 'Без специалиста';
+            
+            // Показываем подтверждение с информацией об изменениях
+            const result = await Swal.fire({
+                title: 'Подтверждение изменений',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-2">
+                            <strong>Специалист:</strong> 
+                            <span class="text-muted">${currentSpecialistName}</span>
+                            <i class="bi bi-arrow-right mx-2"></i>
+                            <span class="text-success">${newSpecialistName}</span>
+                        </p>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Сохранить',
+                cancelButtonText: 'Отмена',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`/booking/edit/${bookingId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: JSON.stringify({
+                            specialist_id: specialistId || null
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Обновляем информацию о специалисте
+                        document.getElementById('modalSpecialistInfo').textContent = data.specialist_name || 'Не назначен';
+                        
+                        // Возвращаем кнопки в исходное состояние
+                        editBookingBtn.style.display = 'inline-block';
+                        saveBookingBtn.style.display = 'none';
+                        
+                        // Скрываем select
+                        specialistSelect.style.display = 'none';
+                    } else {
+                        throw new Error(data.error || 'Ошибка при сохранении изменений');
+                    }
+                } catch (error) {
+                    console.error('Ошибка при сохранении изменений:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Ошибка',
+                        text: error.message || 'Не удалось сохранить изменения. Пожалуйста, попробуйте позже.'
+                    });
+                }
+            }
+        });
+        
         if (confirmBookingBtn) {
             confirmBookingBtn.addEventListener('click', function() {
                 const bookingId = document.getElementById('modalBookingId').textContent;
@@ -423,45 +613,7 @@
         }
 
         if (cancelBookingBtn) {
-            cancelBookingBtn.addEventListener('click', function() {
-                const bookingId = document.getElementById('modalBookingId').textContent;
-                if (bookingId) {
-                    this.setAttribute('data-booking-id', bookingId);
-                }
-            });
-        }
-
-        window.openCancelModal = function() {
-            const bookingId = document.getElementById('modalBookingId').textContent;
-            
-            // Загружаем список причин отмены
-            fetch('/booking/get-cancellation-reasons/')
-                .then(response => response.json())
-                .then(data => {
-                    const cancelReasonSelect = document.getElementById('cancelReason');
-                    cancelReasonSelect.innerHTML = '<option value="">Выберите причину отмены...</option>';
-                    
-                    data.reasons.forEach(reason => {
-                        const option = document.createElement('option');
-                        option.value = reason.id;
-                        option.textContent = reason.name;
-                        cancelReasonSelect.appendChild(option);
-                    });
-                    
-                    // После загрузки данных переключаем модальные окна
-                    const editModal = bootstrap.Modal.getInstance(editBookingModal);
-                    if (editModal) {
-                        editModal.hide();
-                        setTimeout(() => {
-                            const cancelModal = new bootstrap.Modal(document.getElementById('cancelBookingModal'));
-                            document.getElementById('cancelModalBookingId').textContent = bookingId;
-                            cancelModal.show();
-                        }, 150);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading cancellation reasons:', error);
-                });
+            cancelBookingBtn.addEventListener('click', openCancelModal);
         }
     });
 </script>
