@@ -130,9 +130,12 @@
 </div>
 
 <script>
-    // Используем window для глобальной переменной
+    // Используем window для глобальных переменных
     if (typeof window.bookingData === 'undefined') {
         window.bookingData = null;
+    }
+    if (typeof window.currentBookingId === 'undefined') {
+        window.currentBookingId = null;
     }
     
     // Функция очистки модального окна
@@ -173,7 +176,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        
         const modal = document.getElementById('paymentBookingModal');
         
         if (modal) {
@@ -188,15 +190,17 @@
             });
 
             modal.addEventListener('show.bs.modal', function (e) {
-                const bookingId = e.relatedTarget.dataset.bookingId;
+                // Получаем ID брони из окна редактирования
+                window.currentBookingId = document.getElementById('modalBookingId').textContent;
+                if (!window.currentBookingId) return;
                 
-                fetch(`/booking/get-booking-details/${bookingId}/`)
+                fetch(`/booking/get-booking-details/${window.currentBookingId}/`)
                     .then(response => response.json())
                     .then(response => {
                         if (response.success) {
                             window.bookingData = response.booking;
                             
-                            document.getElementById('paymentBookingId').textContent = bookingId;
+                            document.getElementById('paymentBookingId').textContent = window.currentBookingId;
 
                             // Получаем данные о брони для заполнения типов платежей
                             const paymentTypeSelect = document.getElementById('paymentType');
