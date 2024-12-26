@@ -181,6 +181,7 @@
         if (modal) {
             // Обработчик закрытия модального окна оплаты
             modal.addEventListener('hidden.bs.modal', function (e) {
+                cleanupModal();
                 // Открываем окно редактирования только если не было успешной оплаты
                 const editModal = document.getElementById('editBookingModal');
                 if (editModal && window.bookingData) {

@@ -34,6 +34,18 @@
         const cancelReasonSelect = document.getElementById('cancelReason');
         let currentBookingId = null;
 
+        // Функция очистки модального окна
+        function cleanupModal() {
+            setTimeout(() => {
+                document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+                    backdrop.remove();
+                });
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }, 150);
+        }
+
         // Загрузка причин отмены при открытии модального окна
         cancelBookingModal.addEventListener('show.bs.modal', function(event) {
             const button = event.relatedTarget;
@@ -61,9 +73,12 @@
         cancelBookingModal.addEventListener('hidden.bs.modal', function() {
             document.getElementById('cancelBookingForm').reset();
             currentBookingId = null;
+            cleanupModal();
             
-            const editModal = new bootstrap.Modal(document.getElementById('editBookingModal'));
-            editModal.show();
+            setTimeout(() => {
+                const editModal = new bootstrap.Modal(document.getElementById('editBookingModal'));
+                editModal.show();
+            }, 200);
         });
 
         // Обработка подтверждения отмены брони
