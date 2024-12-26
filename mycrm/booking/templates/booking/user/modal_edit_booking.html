@@ -130,11 +130,13 @@
                     <!-- Правая колонка: Услуги -->
                     <div class="col-md-6">
                         <div class="services-info neon-info-block">
-                            <h6 class="mb-3">
-                                <i class="bi bi-bag-check me-2 neon-icon"></i>
-                                <span class="neon-title">Услуги</span>
-                                <i class="bi bi-pencil-fill neon-icon edit-service-icon ms-2" style="cursor: pointer; font-size: 0.9em;" id="editServicesBtn"></i>
-                            </h6>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-bag-check me-2 neon-icon"></i>
+                                    <span class="neon-title">Услуги</span>
+                                    <i class="bi bi-plus-circle ms-2 cursor-pointer text-success" id="editServicesBtn" style="font-size: 0.9em; cursor: pointer;"></i>
+                                </h6>
+                            </div>
                             <!-- Выпадающий список для выбора услуг (скрыт по умолчанию) -->
                             <select id="servicesSelect" class="form-select mt-2" style="display: none;">
                                 <option value="">Выберите услугу</option>
@@ -454,17 +456,20 @@
                 
                 services.forEach(service => {
                     const serviceDiv = document.createElement('div');
-                    serviceDiv.classList.add('d-flex', 'justify-content-between', 'mb-1');
+                    serviceDiv.classList.add('d-flex', 'justify-content-between', 'mb-1', 'flex-wrap');
                     
                     const nameSpan = document.createElement('span');
                     nameSpan.classList.add('neon-service-name');
+                    nameSpan.style.wordBreak = 'break-word';
+                    nameSpan.style.maxWidth = '70%';
                     nameSpan.textContent = service.name;
                     
                     const rightDiv = document.createElement('div');
-                    rightDiv.classList.add('d-flex', 'align-items-center');
+                    rightDiv.classList.add('d-flex', 'align-items-center', 'ms-auto');
                     
                     const costSpan = document.createElement('span');
                     costSpan.classList.add('neon-service-cost', 'me-2');
+                    costSpan.style.whiteSpace = 'nowrap';
                     costSpan.textContent = `${service.cost} руб.`;
                     
                     const deleteBtn = document.createElement('i');
@@ -957,17 +962,20 @@
                                         
                                         services.forEach(service => {
                                             const serviceDiv = document.createElement('div');
-                                            serviceDiv.classList.add('d-flex', 'justify-content-between', 'mb-1');
+                                            serviceDiv.classList.add('d-flex', 'justify-content-between', 'mb-1', 'flex-wrap');
                                             
                                             const nameSpan = document.createElement('span');
                                             nameSpan.classList.add('neon-service-name');
+                                            nameSpan.style.wordBreak = 'break-word';
+                                            nameSpan.style.maxWidth = '70%';
                                             nameSpan.textContent = service.name;
                                             
                                             const rightDiv = document.createElement('div');
-                                            rightDiv.classList.add('d-flex', 'align-items-center');
+                                            rightDiv.classList.add('d-flex', 'align-items-center', 'ms-auto');
                                             
                                             const costSpan = document.createElement('span');
                                             costSpan.classList.add('neon-service-cost', 'me-2');
+                                            costSpan.style.whiteSpace = 'nowrap';
                                             costSpan.textContent = `${service.cost} руб.`;
                                             
                                             const deleteBtn = document.createElement('i');
@@ -1094,17 +1102,20 @@
                                         
                                         services.forEach(service => {
                                             const serviceDiv = document.createElement('div');
-                                            serviceDiv.classList.add('d-flex', 'justify-content-between', 'mb-1');
+                                            serviceDiv.classList.add('d-flex', 'justify-content-between', 'mb-1', 'flex-wrap');
                                             
                                             const nameSpan = document.createElement('span');
                                             nameSpan.classList.add('neon-service-name');
+                                            nameSpan.style.wordBreak = 'break-word';
+                                            nameSpan.style.maxWidth = '70%';
                                             nameSpan.textContent = service.name;
                                             
                                             const rightDiv = document.createElement('div');
-                                            rightDiv.classList.add('d-flex', 'align-items-center');
+                                            rightDiv.classList.add('d-flex', 'align-items-center', 'ms-auto');
                                             
                                             const costSpan = document.createElement('span');
                                             costSpan.classList.add('neon-service-cost', 'me-2');
+                                            costSpan.style.whiteSpace = 'nowrap';
                                             costSpan.textContent = `${service.cost} руб.`;
                                             
                                             const deleteBtn = document.createElement('i');
