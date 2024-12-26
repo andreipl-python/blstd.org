@@ -106,13 +106,13 @@ def get_booking_details(request, booking_id):
         services_by_group = {}
         total_services_cost = Decimal('0')
         
-        for service in booking.services.all():
+        for service in booking.services.select_related('group').all():
             group_name = service.group.name if service.group else 'Другое'
             if group_name not in services_by_group:
                 services_by_group[group_name] = []
             services_by_group[group_name].append({
                 'id': service.id,
-                'name': str(service),
+                'name': service.name,
                 'cost': str(service.cost if service.cost else '0')
             })
             if service.cost:
@@ -576,6 +576,78 @@ def update_booking_client(request, booking_id):
             'client_name': booking.client.name if booking.client else None,
             'client_phone': booking.client.phone if booking.client else None,
             'client_email': booking.client.email if booking.client else None
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+def get_services(request):
+    """Получение списка услуг"""
+    try:
+        booking_id = request.GET.get('booking_id')
+        current_services = []
+        
+        if booking_id:
+            booking = get_object_or_404(Reservation, id=booking_id)
+            current_services = list(booking.services.values_list('id', flat=True))
+        
+        services = Service.objects.filter(active=True).select_related('group').order_by('group__name', 'name')
+        services_data = []
+        
+        for service in services:
+            services_data.append({
+                'id': service.id,
+                'name': service.name,
+                'cost': float(service.cost),
+                'group': service.group.name if service.group else 'Без группы'
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'services': services_data,
+            'current_services': current_services
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+@csrf_exempt
+def update_booking_services(request, booking_id):
+    """Добавление услуги в бронь"""
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Метод не поддерживается'
+        })
+    
+    try:
+        data = json.loads(request.body)
+        service_ids = data.get('service_ids', [])
+        
+        if not service_ids or len(service_ids) != 1:
+            return JsonResponse({
+                'success': False,
+                'error': 'Требуется один ID услуги'
+            })
+            
+        service_id = service_ids[0]
+        booking = get_object_or_404(Reservation, id=booking_id)
+        service = get_object_or_404(Service, id=service_id)
+        
+        # Добавляем услугу к брони
+        booking.services.add(service)
+        
+        # Увеличиваем общую стоимость на стоимость услуги
+        if service.cost:
+            booking.total_cost = booking.total_cost + service.cost
+            booking.save()
+        
+        return JsonResponse({
+            'success': True
         })
     except Exception as e:
         return JsonResponse({

@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <div class="modal fade" id="editBookingModal" tabindex="-1" aria-labelledby="editBookingModalLabel"
-     aria-hidden="true">
+     aria-hidden="true" data-booking-id="">
     <div class="modal-dialog modal-lg">
         <!-- Блок истории платежей -->
         <div id="paymentsHistoryBlock" class="modal-content" style="position: absolute; left: -320px; top: 0; width: 300px; display: none;">
@@ -133,8 +133,15 @@
                             <h6 class="mb-3">
                                 <i class="bi bi-bag-check me-2 neon-icon"></i>
                                 <span class="neon-title">Услуги</span>
+                                <i class="bi bi-pencil-fill neon-icon edit-service-icon ms-2" style="cursor: pointer; font-size: 0.9em;" id="editServicesBtn"></i>
                             </h6>
-                            <div id="modalServicesByType"></div>
+                            <!-- Выпадающий список для выбора услуг (скрыт по умолчанию) -->
+                            <select id="servicesSelect" class="form-select mt-2" style="display: none;">
+                                <option value="">Выберите услугу</option>
+                            </select>
+                            <div id="modalServicesByTypeContainer">
+                                <div id="modalServicesByType"></div>
+                            </div>
                             <hr class="border-secondary my-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="neon-title">Общая стоимость услуг:</span>
@@ -389,8 +396,8 @@
             document.getElementById('modalRoomName').textContent = data.room_name;
             document.getElementById('modalBookingType').textContent = data.reservation_type;
             document.getElementById('modalSpecialistInfo').textContent = data.specialist_name || 'Не назначен';
-            document.getElementById('modalClientInfo').textContent = data.client_name || '';
-            document.getElementById('modalClientPhone').textContent = data.client_phone || '';
+            document.getElementById('modalClientInfo').textContent = data.client_name || 'Не указан';
+            document.getElementById('modalClientPhone').textContent = data.client_phone || 'Не указан';
             
             // Отображение email только если он есть
             const emailBlock = document.getElementById('emailBlock');
@@ -433,7 +440,7 @@
             commentBlock.style.display = commentText ? 'block' : 'none';
 
             // Отображение услуг по группам
-            const servicesContainer = document.getElementById('modalServicesByType');
+            const servicesContainer = document.getElementById('modalServicesByTypeContainer');
             servicesContainer.innerHTML = '';
             
             for (const [groupName, services] of Object.entries(data.services_by_group)) {
@@ -465,7 +472,7 @@
                 servicesContainer.appendChild(typeDiv);
             }
 
-            // Отображение общей стоимости услуг
+            // Обновляем общую стоимость услуг
             document.getElementById('modalTotalServicesPrice').textContent = `${data.total_services_cost} руб.`;
 
             // Обновляем статус и его цвет
@@ -777,5 +784,219 @@
         if (cancelBookingBtn) {
             cancelBookingBtn.addEventListener('click', openCancelModal);
         }
+
+        // Функция загрузки списка услуг
+        async function loadServices() {
+            try {
+                const bookingId = window.currentBookingId;
+                const response = await fetch(`/booking/get-services/?booking_id=${bookingId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const servicesSelect = document.getElementById('servicesSelect');
+                    servicesSelect.innerHTML = '';
+                    
+                    data.services.forEach(service => {
+                        const option = document.createElement('option');
+                        option.value = service.id;
+                        option.textContent = `${service.name} (${service.cost} руб.)`;
+                        option.dataset.cost = service.cost;
+                        servicesSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading services:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Ошибка',
+                    text: 'Не удалось загрузить список услуг'
+                });
+            }
+        }
+        
+        // Обработчик кнопки редактирования услуг
+        const editServicesBtn = document.getElementById('editServicesBtn');
+        const servicesSelect = document.getElementById('servicesSelect');
+        
+        editServicesBtn.addEventListener('click', function() {
+            const servicesSelect = document.getElementById('servicesSelect');
+            servicesSelect.style.display = servicesSelect.style.display === 'none' ? 'block' : 'none';
+
+            // Если список открывается, загружаем доступные услуги
+            if (servicesSelect.style.display === 'block') {
+                // Получаем ID брони из data-атрибута
+                const bookingId = document.getElementById('editBookingModal').dataset.bookingId;
+                
+                // Очищаем список
+                servicesSelect.innerHTML = '<option value="">Выберите услугу</option>';
+                
+                // Получаем текущие услуги брони
+                const currentServices = Array.from(document.querySelectorAll('.neon-service-name')).map(el => el.textContent);
+                
+                // Загружаем список услуг
+                fetch(`/booking/get-services/?booking_id=${bookingId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Группируем услуги по типам
+                            const servicesByGroup = {};
+                            data.services.forEach(service => {
+                                if (!currentServices.includes(service.name)) { // Пропускаем уже добавленные услуги
+                                    if (!servicesByGroup[service.group]) {
+                                        servicesByGroup[service.group] = [];
+                                    }
+                                    servicesByGroup[service.group].push(service);
+                                }
+                            });
+                            
+                            // Создаем optgroup для каждой группы
+                            for (const [groupName, services] of Object.entries(servicesByGroup)) {
+                                if (services.length > 0) { // Добавляем группу только если в ней есть услуги
+                                    const group = document.createElement('optgroup');
+                                    group.label = groupName;
+                                    
+                                    services.forEach(service => {
+                                        const option = document.createElement('option');
+                                        option.value = service.id;
+                                        option.textContent = `${service.name} (${service.cost} руб.)`;
+                                        group.appendChild(option);
+                                    });
+                                    
+                                    servicesSelect.appendChild(group);
+                                }
+                            }
+                        }
+                    });
+            }
+        });
+        
+        // Обработчик изменения выбранных услуг
+        servicesSelect.addEventListener('change', async function() {
+            const bookingId = window.currentBookingId;
+            const selectedService = {
+                id: this.value,
+                name: this.options[this.selectedIndex].text,
+                cost: this.options[this.selectedIndex].dataset.cost
+            };
+            
+            if (!selectedService.id) {
+                this.style.display = 'none';
+                return;
+            }
+            
+            // Формируем HTML для отображения изменений
+            const changesHtml = `
+                <div class="text-start">
+                    <p class="mb-2"><strong>Добавить услугу:</strong></p>
+                    <div class="mb-1">
+                        <span class="text-success">• ${selectedService.name}</span>
+                    </div>
+                </div>
+            `;
+            
+            // Показываем подтверждение
+            const result = await Swal.fire({
+                title: 'Добавление услуги',
+                html: changesHtml,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Добавить',
+                cancelButtonText: 'Отмена',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33'
+            });
+            
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`/booking/update-services/${bookingId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: JSON.stringify({
+                            service_ids: [selectedService.id]
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        // После успешного добавления услуги обновляем данные через get-booking-details
+                        fetch(`/booking/get-booking-details/${bookingId}/`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Обновляем список услуг
+                                    const servicesContainer = document.getElementById('modalServicesByTypeContainer');
+                                    servicesContainer.innerHTML = '';
+                                    
+                                    // Получаем услуги из ответа
+                                    const servicesByGroup = data.booking.services_by_group;
+                                    
+                                    // Создаем элементы для каждой группы услуг
+                                    for (const [groupName, services] of Object.entries(servicesByGroup)) {
+                                        const typeDiv = document.createElement('div');
+                                        typeDiv.classList.add('mb-2');
+                                        
+                                        const typeHeader = document.createElement('div');
+                                        typeHeader.classList.add('fw-bold', 'mb-1');
+                                        typeHeader.textContent = groupName;
+                                        typeDiv.appendChild(typeHeader);
+                                        
+                                        services.forEach(service => {
+                                            const serviceDiv = document.createElement('div');
+                                            serviceDiv.classList.add('d-flex', 'justify-content-between', 'mb-1');
+                                            
+                                            const nameSpan = document.createElement('span');
+                                            nameSpan.classList.add('neon-service-name');
+                                            nameSpan.textContent = service.name;
+                                            
+                                            const costSpan = document.createElement('span');
+                                            costSpan.classList.add('neon-service-cost');
+                                            costSpan.textContent = `${service.cost} руб.`;
+                                            
+                                            serviceDiv.appendChild(nameSpan);
+                                            serviceDiv.appendChild(costSpan);
+                                            typeDiv.appendChild(serviceDiv);
+                                        });
+                                        
+                                        servicesContainer.appendChild(typeDiv);
+                                    }
+                                    
+                                    // Обновляем стоимости
+                                    document.getElementById('modalTotalServicesPrice').textContent = `${data.booking.total_services_cost} руб.`;
+                                    document.getElementById('modalReservationCost').textContent = data.booking.reservation_cost;
+                                    document.getElementById('modalTotalCost').textContent = `${data.booking.total_cost} руб.`;
+                                }
+                            })
+                            .catch(error => console.error('Error:', error));
+                        
+                        // Скрываем выпадающий список
+                        this.style.display = 'none';
+                        
+                        // Показываем уведомление об успехе
+                        Swal.fire({
+                            title: 'Успешно',
+                            text: 'Услуга успешно добавлена',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        throw new Error(data.error || 'Ошибка при обновлении услуг');
+                    }
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                    Swal.fire({
+                        title: 'Ошибка',
+                        text: error.message || 'Произошла ошибка при обновлении услуг',
+                        icon: 'error'
+                    });
+                }
+            } else {
+                // Возвращаем предыдущее значение
+                this.style.display = 'none';
+            }
+        });        
     });
 </script>

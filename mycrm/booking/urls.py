@@ -11,6 +11,8 @@ from .views.edit_booking import (
     get_available_specialists,
     get_clients,
     update_booking_client,
+    get_services,
+    update_booking_services,
 )
 
 urlpatterns = [
@@ -40,4 +42,6 @@ urlpatterns = [
     path('booking/get-available-specialists/<int:booking_id>/', get_available_specialists, name='get_available_specialists'),
     path('booking/get-clients/', get_clients, name='get_clients'),
     path('booking/update-client/<int:booking_id>/', update_booking_client, name='update_booking_client'),
+    path('booking/get-services/', get_services, name='get_services'),
+    path('booking/update-services/<int:booking_id>/', update_booking_services, name='update_booking_services'),
 ]
