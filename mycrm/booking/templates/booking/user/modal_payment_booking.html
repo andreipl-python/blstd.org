@@ -187,6 +187,77 @@
                 if (editModal && window.bookingData) {
                     const bsModal = new bootstrap.Modal(editModal);
                     bsModal.show();
+                    
+                    // Восстанавливаем данные брони
+                    document.getElementById('modalBookingId').textContent = window.bookingData.id;
+                    document.getElementById('modalDate').textContent = window.bookingData.date;
+                    document.getElementById('modalTime').textContent = window.bookingData.time;
+                    document.getElementById('modalDuration').textContent = window.bookingData.duration;
+                    document.getElementById('modalRoomName').textContent = window.bookingData.room_name;
+                    document.getElementById('modalBookingType').textContent = window.bookingData.reservation_type;
+                    document.getElementById('modalSpecialistInfo').textContent = window.bookingData.specialist_name || 'Не назначен';
+                    document.getElementById('modalClientInfo').textContent = window.bookingData.client_name || 'Не указан';
+                    document.getElementById('modalClientPhone').textContent = window.bookingData.client_phone || 'Не указан';
+                    
+                    // Отображаем email только если он есть
+                    const emailBlock = document.getElementById('emailBlock');
+                    if (emailBlock) {
+                        const emailText = window.bookingData.client_email || '';
+                        document.getElementById('modalClientEmail').textContent = emailText;
+                        emailBlock.style.display = emailText ? 'block' : 'none';
+                    }
+
+                    // Отображаем комментарий только если он есть
+                    const commentBlock = document.getElementById('commentBlock');
+                    if (commentBlock) {
+                        const commentText = window.bookingData.comment || '';
+                        document.getElementById('modalComment').textContent = commentText;
+                        commentBlock.style.display = commentText ? 'block' : 'none';
+                    }
+
+                    // Восстанавливаем список услуг
+                    const servicesContainer = document.getElementById('modalServicesByType');
+                    if (servicesContainer && window.bookingData.services_by_group) {
+                        servicesContainer.innerHTML = '';
+                        for (const [groupName, services] of Object.entries(window.bookingData.services_by_group)) {
+                            const typeDiv = document.createElement('div');
+                            typeDiv.classList.add('mb-3');
+                            
+                            const typeHeader = document.createElement('div');
+                            typeHeader.classList.add('neon-service-type');
+                            typeHeader.textContent = groupName;
+                            typeDiv.appendChild(typeHeader);
+                            
+                            services.forEach(service => {
+                                const serviceDiv = document.createElement('div');
+                                serviceDiv.classList.add('neon-service-item');
+                                
+                                const nameSpan = document.createElement('span');
+                                nameSpan.classList.add('neon-service-name');
+                                nameSpan.textContent = service.name;
+                                
+                                const costSpan = document.createElement('span');
+                                costSpan.classList.add('neon-service-cost');
+                                costSpan.textContent = `${service.cost} руб.`;
+                                
+                                serviceDiv.appendChild(nameSpan);
+                                serviceDiv.appendChild(costSpan);
+                                typeDiv.appendChild(serviceDiv);
+                            });
+                            
+                            servicesContainer.appendChild(typeDiv);
+                        }
+                    }
+
+                    // Обновляем статус и его цвет
+                    const statusBadge = document.getElementById('modalBookingStatus');
+                    if (statusBadge) {
+                        statusBadge.textContent = window.bookingData.status_name;
+                        statusBadge.className = 'badge ' + getStatusColor(window.bookingData.status);
+                    }
+
+                    // Обновляем общую стоимость
+                    document.getElementById('modalTotalCost').textContent = `${window.bookingData.total_cost} руб.`;
                 }
             });
 
