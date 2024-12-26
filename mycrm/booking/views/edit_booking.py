@@ -654,3 +654,42 @@ def update_booking_services(request, booking_id):
             'success': False,
             'error': str(e)
         })
+
+@csrf_exempt
+def delete_booking_service(request, booking_id):
+    """Удаление услуги из брони"""
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Метод не поддерживается'
+        })
+    
+    try:
+        data = json.loads(request.body)
+        service_id = data.get('service_id')
+        
+        if not service_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Требуется ID услуги'
+            })
+            
+        booking = get_object_or_404(Reservation, id=booking_id)
+        service = get_object_or_404(Service, id=service_id)
+        
+        # Удаляем услугу из брони
+        booking.services.remove(service)
+        
+        # Уменьшаем общую стоимость на стоимость услуги
+        if service.cost:
+            booking.total_cost = booking.total_cost - service.cost
+            booking.save()
+        
+        return JsonResponse({
+            'success': True
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })

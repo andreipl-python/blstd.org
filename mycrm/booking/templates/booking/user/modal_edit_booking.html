@@ -397,7 +397,7 @@
             document.getElementById('modalBookingType').textContent = data.reservation_type;
             document.getElementById('modalSpecialistInfo').textContent = data.specialist_name || 'Не назначен';
             document.getElementById('modalClientInfo').textContent = data.client_name || 'Не указан';
-            document.getElementById('modalClientPhone').textContent = data.client_phone || 'Не указан';
+            document.getElementById('modalClientPhone').textContent = data.client_phone || '';
             
             // Отображение email только если он есть
             const emailBlock = document.getElementById('emailBlock');
@@ -454,18 +454,30 @@
                 
                 services.forEach(service => {
                     const serviceDiv = document.createElement('div');
-                    serviceDiv.classList.add('neon-service-item');
+                    serviceDiv.classList.add('d-flex', 'justify-content-between', 'mb-1');
                     
                     const nameSpan = document.createElement('span');
                     nameSpan.classList.add('neon-service-name');
                     nameSpan.textContent = service.name;
                     
+                    const rightDiv = document.createElement('div');
+                    rightDiv.classList.add('d-flex', 'align-items-center');
+                    
                     const costSpan = document.createElement('span');
-                    costSpan.classList.add('neon-service-cost');
+                    costSpan.classList.add('neon-service-cost', 'me-2');
                     costSpan.textContent = `${service.cost} руб.`;
                     
+                    const deleteBtn = document.createElement('i');
+                    deleteBtn.classList.add('fas', 'fa-times', 'text-danger', 'cursor-pointer');
+                    deleteBtn.style.cursor = 'pointer';
+                    deleteBtn.dataset.serviceId = service.id;
+                    deleteBtn.addEventListener('click', deleteServiceHandler);
+                    
+                    rightDiv.appendChild(costSpan);
+                    rightDiv.appendChild(deleteBtn);
+                    
                     serviceDiv.appendChild(nameSpan);
-                    serviceDiv.appendChild(costSpan);
+                    serviceDiv.appendChild(rightDiv);
                     typeDiv.appendChild(serviceDiv);
                 });
                 
@@ -951,12 +963,24 @@
                                             nameSpan.classList.add('neon-service-name');
                                             nameSpan.textContent = service.name;
                                             
+                                            const rightDiv = document.createElement('div');
+                                            rightDiv.classList.add('d-flex', 'align-items-center');
+                                            
                                             const costSpan = document.createElement('span');
-                                            costSpan.classList.add('neon-service-cost');
+                                            costSpan.classList.add('neon-service-cost', 'me-2');
                                             costSpan.textContent = `${service.cost} руб.`;
                                             
+                                            const deleteBtn = document.createElement('i');
+                                            deleteBtn.classList.add('fas', 'fa-times', 'text-danger', 'cursor-pointer');
+                                            deleteBtn.style.cursor = 'pointer';
+                                            deleteBtn.dataset.serviceId = service.id;
+                                            deleteBtn.addEventListener('click', deleteServiceHandler);
+                                            
+                                            rightDiv.appendChild(costSpan);
+                                            rightDiv.appendChild(deleteBtn);
+                                            
                                             serviceDiv.appendChild(nameSpan);
-                                            serviceDiv.appendChild(costSpan);
+                                            serviceDiv.appendChild(rightDiv);
                                             typeDiv.appendChild(serviceDiv);
                                         });
                                         
@@ -988,15 +1012,134 @@
                 } catch (error) {
                     console.error('Ошибка:', error);
                     Swal.fire({
+                        icon: 'error',
                         title: 'Ошибка',
-                        text: error.message || 'Произошла ошибка при обновлении услуг',
-                        icon: 'error'
+                        text: error.message || 'Произошла ошибка при обновлении услуг'
                     });
                 }
             } else {
-                // Возвращаем предыдущее значение
+                // Если пользователь отменил, возвращаем предыдущее значение
                 this.style.display = 'none';
             }
         });        
     });
+    
+    // Функция для удаления услуги
+    function deleteServiceHandler() {
+        const modal = document.getElementById('editBookingModal');
+        const bookingId = window.currentBookingId;
+        const serviceId = this.dataset.serviceId;
+        const serviceName = this.parentElement.parentElement.querySelector('.neon-service-name').textContent;
+        
+        if (!bookingId) {
+            console.error('ID брони не найден');
+            return;
+        }
+        
+        // Показываем диалог подтверждения
+        Swal.fire({
+            title: 'Подтверждение удаления',
+            text: `Вы действительно хотите удалить услугу "${serviceName}"?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Удалить',
+            cancelButtonText: 'Отмена'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Отправляем запрос на удаление услуги
+                fetch(`/booking/delete-service/${bookingId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        service_id: serviceId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Показываем уведомление об успехе
+                        Swal.fire({
+                            title: 'Успешно',
+                            text: 'Услуга успешно удалена',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        
+                        // Обновляем данные брони
+                        fetch(`/booking/get-booking-details/${bookingId}/`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Обновляем список услуг
+                                    const servicesContainer = document.getElementById('modalServicesByTypeContainer');
+                                    servicesContainer.innerHTML = '';
+                                    
+                                    // Получаем услуги из ответа
+                                    const servicesByGroup = data.booking.services_by_group;
+                                    
+                                    // Создаем элементы для каждой группы услуг
+                                    for (const [groupName, services] of Object.entries(servicesByGroup)) {
+                                        const typeDiv = document.createElement('div');
+                                        typeDiv.classList.add('mb-2');
+                                        
+                                        const typeHeader = document.createElement('div');
+                                        typeHeader.classList.add('fw-bold', 'mb-1');
+                                        typeHeader.textContent = groupName;
+                                        typeDiv.appendChild(typeHeader);
+                                        
+                                        services.forEach(service => {
+                                            const serviceDiv = document.createElement('div');
+                                            serviceDiv.classList.add('d-flex', 'justify-content-between', 'mb-1');
+                                            
+                                            const nameSpan = document.createElement('span');
+                                            nameSpan.classList.add('neon-service-name');
+                                            nameSpan.textContent = service.name;
+                                            
+                                            const rightDiv = document.createElement('div');
+                                            rightDiv.classList.add('d-flex', 'align-items-center');
+                                            
+                                            const costSpan = document.createElement('span');
+                                            costSpan.classList.add('neon-service-cost', 'me-2');
+                                            costSpan.textContent = `${service.cost} руб.`;
+                                            
+                                            const deleteBtn = document.createElement('i');
+                                            deleteBtn.classList.add('fas', 'fa-times', 'text-danger', 'cursor-pointer');
+                                            deleteBtn.style.cursor = 'pointer';
+                                            deleteBtn.dataset.serviceId = service.id;
+                                            deleteBtn.addEventListener('click', deleteServiceHandler);
+                                            
+                                            rightDiv.appendChild(costSpan);
+                                            rightDiv.appendChild(deleteBtn);
+                                            
+                                            serviceDiv.appendChild(nameSpan);
+                                            serviceDiv.appendChild(rightDiv);
+                                            typeDiv.appendChild(serviceDiv);
+                                        });
+                                        
+                                        servicesContainer.appendChild(typeDiv);
+                                    }
+                                    
+                                    // Обновляем стоимости
+                                    document.getElementById('modalTotalServicesPrice').textContent = `${data.booking.total_services_cost} руб.`;
+                                    document.getElementById('modalReservationCost').textContent = data.booking.reservation_cost;
+                                    document.getElementById('modalTotalCost').textContent = `${data.booking.total_cost} руб.`;
+                                }
+                            });
+                    } else {
+                        // Показываем уведомление об ошибке
+                        Swal.fire({
+                            title: 'Ошибка',
+                            text: data.error || 'Произошла ошибка при удалении услуги',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    }
 </script>

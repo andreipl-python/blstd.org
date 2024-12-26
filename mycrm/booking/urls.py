@@ -13,6 +13,7 @@ from .views.edit_booking import (
     update_booking_client,
     get_services,
     update_booking_services,
+    delete_booking_service,
 )
 
 urlpatterns = [
@@ -44,4 +45,5 @@ urlpatterns = [
     path('booking/update-client/<int:booking_id>/', update_booking_client, name='update_booking_client'),
     path('booking/get-services/', get_services, name='get_services'),
     path('booking/update-services/<int:booking_id>/', update_booking_services, name='update_booking_services'),
+    path('booking/delete-service/<int:booking_id>/', delete_booking_service, name='delete-booking-service'),
 ]
