@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import csrf_exempt
 from ..models import (
-    Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup, PaymentType, Payment, CancellationReason, Subscription, TariffUnit
+    Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup, PaymentType, Payment, CancellationReason, Subscription, TariffUnit, Client
 )
 import json
 
@@ -541,3 +541,44 @@ def get_cancellation_reasons(request):
         'success': True,
         'reasons': [{'id': reason.id, 'name': reason.name} for reason in reasons]
     })
+
+def get_clients(request):
+    """Получение списка клиентов"""
+    try:
+        clients = Client.objects.all().values('id', 'name')
+        return JsonResponse({
+            'success': True,
+            'clients': list(clients)
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+def update_booking_client(request, booking_id):
+    """Обновление клиента для брони"""
+    try:
+        booking = get_object_or_404(Reservation, id=booking_id)
+        data = json.loads(request.body)
+        client_id = data.get('client_id')
+        
+        if client_id:
+            client = get_object_or_404(Client, id=client_id)
+            booking.client = client
+        else:
+            booking.client = None
+            
+        booking.save()
+        
+        return JsonResponse({
+            'success': True,
+            'client_name': booking.client.name if booking.client else None,
+            'client_phone': booking.client.phone if booking.client else None,
+            'client_email': booking.client.email if booking.client else None
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })

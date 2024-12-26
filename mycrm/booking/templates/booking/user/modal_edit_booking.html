@@ -100,7 +100,20 @@
                                 <i class="bi bi-person-circle me-2 neon-icon"></i>
                                 <span class="neon-title">Информация о клиенте</span>
                             </h6>
-                            <p class="mb-2"><strong>Имя:</strong> <span id="modalClientInfo" class="neon-text"></span></p>
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="w-100">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <span class="neon-text">
+                                            <strong>Имя:</strong>
+                                            <span id="modalClientInfo" class="neon-text"></span>
+                                        </span>
+                                        <i class="bi bi-pencil-fill neon-icon edit-client-icon ms-2" style="cursor: pointer; font-size: 0.9em;" id="editClientBtn"></i>
+                                    </div>
+                                    <!-- Выпадающий список для выбора клиента (скрыт по умолчанию) -->
+                                    <select id="clientSelect" class="form-select mt-2" style="display: none;">
+                                    </select>
+                                </div>
+                            </div>
                             <div class="d-flex align-items-center mb-2">
                                 <i class="bi bi-telephone me-2 neon-contact-icon"></i>
                                 <span id="modalClientPhone" class="neon-contact"></span>
@@ -376,8 +389,8 @@
             document.getElementById('modalRoomName').textContent = data.room_name;
             document.getElementById('modalBookingType').textContent = data.reservation_type;
             document.getElementById('modalSpecialistInfo').textContent = data.specialist_name || 'Не назначен';
-            document.getElementById('modalClientInfo').textContent = data.client_name || 'Не указан';
-            document.getElementById('modalClientPhone').textContent = data.client_phone || 'Не указан';
+            document.getElementById('modalClientInfo').textContent = data.client_name || '';
+            document.getElementById('modalClientPhone').textContent = data.client_phone || '';
             
             // Отображение email только если он есть
             const emailBlock = document.getElementById('emailBlock');
@@ -618,6 +631,119 @@
                     }
                 }
             };
+        });
+        
+        // Обработчик кнопки редактирования клиента
+        const editClientBtn = document.getElementById('editClientBtn');
+        editClientBtn.addEventListener('click', function() {
+            const clientSelect = document.getElementById('clientSelect');
+            
+            // Если список уже отображается, скрываем его и выходим
+            if (clientSelect.style.display === 'block') {
+                clientSelect.style.display = 'none';
+                return;
+            }
+            
+            // Показываем список клиентов
+            fetch('/booking/get-clients/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const clients = data.clients;
+                        clientSelect.innerHTML = '';
+                        clients.forEach(client => {
+                            const option = document.createElement('option');
+                            option.value = client.id;
+                            option.textContent = client.name;
+                            clientSelect.appendChild(option);
+                        });
+                        clientSelect.style.display = 'block';
+                        clientSelect.focus();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading clients:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Ошибка',
+                        text: 'Не удалось загрузить список клиентов'
+                    });
+                });
+        });
+
+        // Обработчик изменения клиента
+        const clientSelect = document.getElementById('clientSelect');
+        clientSelect.addEventListener('change', async function() {
+            const bookingId = window.currentBookingId;
+            const clientId = this.value;
+            const newClientName = this.options[this.selectedIndex].text;
+            const currentClientName = document.getElementById('modalClientInfo').textContent;
+
+            // Показываем подтверждение с информацией об изменениях
+            const result = await Swal.fire({
+                title: 'Подтверждение изменений',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-2">
+                            <strong>Клиент:</strong> 
+                            <span class="text-muted">${currentClientName}</span>
+                            <i class="bi bi-arrow-right mx-2"></i>
+                            <span class="text-success">${newClientName}</span>
+                        </p>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Сохранить',
+                cancelButtonText: 'Отмена',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`/booking/update-client/${bookingId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: JSON.stringify({
+                            client_id: clientId
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Обновляем информацию о клиенте
+                        document.getElementById('modalClientInfo').textContent = data.client_name;
+                        document.getElementById('modalClientPhone').textContent = data.client_phone || '';
+                        const emailBlock = document.getElementById('emailBlock');
+                        if (data.client_email) {
+                            document.getElementById('modalClientEmail').textContent = data.client_email;
+                            emailBlock.style.display = 'block';
+                        } else {
+                            emailBlock.style.display = 'none';
+                        }
+                        
+                        // Скрываем select
+                        this.style.display = 'none';
+                    } else {
+                        throw new Error(data.error || 'Ошибка при сохранении изменений');
+                    }
+                } catch (error) {
+                    console.error('Ошибка при сохранении изменений:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Ошибка',
+                        text: error.message || 'Не удалось сохранить изменения. Пожалуйста, попробуйте позже.'
+                    });
+                }
+            } else {
+                // Возвращаем предыдущее значение
+                this.style.display = 'none';
+            }
         });
         
         if (confirmBookingBtn) {
