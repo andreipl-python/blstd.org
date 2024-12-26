@@ -75,11 +75,15 @@
                             <div class="d-flex align-items-center mb-2">
                                 <i class="bi bi-person me-2 neon-contact-icon"></i>
                                 <div class="w-100">
-                                    <span class="neon-text"><strong>Специалист:</strong></span>
-                                    <!-- Блок для отображения текущего специалиста -->
-                                    <span id="modalSpecialistInfo" class="neon-text"></span>
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <span class="neon-text">
+                                            <strong>Специалист:</strong>
+                                            <span id="modalSpecialistInfo" class="neon-text"></span>
+                                        </span>
+                                        <i class="bi bi-pencil-fill neon-icon edit-specialist-icon" style="cursor: pointer; font-size: 0.9em;" id="editSpecialistBtn"></i>
+                                    </div>
                                     <!-- Выпадающий список для выбора специалиста (скрыт по умолчанию) -->
-                                    <select id="specialistSelect" class="form-select mt-2" style="display: none;">
+                                    <select class="form-select mt-2" id="specialistSelect" style="display: none;">
                                         <option value="">Без специалиста</option>
                                     </select>
                                 </div>
@@ -195,11 +199,6 @@
                             id="openPaymentModalBtn">
                         Оплатить
                     </button>
-                </div>
-                <div>
-                    <!-- Правая группа кнопок -->
-                    <button type="button" class="btn btn-primary" id="editBookingBtn">Редактировать</button>
-                    <button type="button" class="btn btn-success" id="saveBookingBtn" style="display: none;">Сохранить</button>
                 </div>
             </div>
         </div>
@@ -528,87 +527,97 @@
         }
         
         // Обработчики кнопок действий
-        const editBookingBtn = document.getElementById('editBookingBtn');
-        const saveBookingBtn = document.getElementById('saveBookingBtn');
+        const editSpecialistBtn = document.getElementById('editSpecialistBtn');
         
-        // Обработчик кнопки редактирования
-        editBookingBtn.addEventListener('click', function() {
-            // Показываем кнопку сохранения и скрываем кнопку редактирования
-            this.style.display = 'none';
-            saveBookingBtn.style.display = 'inline-block';
-            
-            // Показываем select для выбора специалиста и загружаем список специалистов
+        // Обработчик кнопки редактирования специалиста
+        editSpecialistBtn.addEventListener('click', function() {
             const specialistSelect = document.getElementById('specialistSelect');
-            specialistSelect.style.display = 'block';
-            loadSpecialists();
-        });
-        
-        // Обработчик кнопки сохранения
-        saveBookingBtn.addEventListener('click', async function() {
-            const bookingId = window.currentBookingId;
-            const specialistSelect = document.getElementById('specialistSelect');
-            const specialistId = specialistSelect.value;
             const currentSpecialistName = document.getElementById('modalSpecialistInfo').textContent;
-            const newSpecialistName = specialistId ? specialistSelect.options[specialistSelect.selectedIndex].text : 'Без специалиста';
             
-            // Показываем подтверждение с информацией об изменениях
-            const result = await Swal.fire({
-                title: 'Подтверждение изменений',
-                html: `
-                    <div class="text-start">
-                        <p class="mb-2">
-                            <strong>Специалист:</strong> 
-                            <span class="text-muted">${currentSpecialistName}</span>
-                            <i class="bi bi-arrow-right mx-2"></i>
-                            <span class="text-success">${newSpecialistName}</span>
-                        </p>
-                    </div>
-                `,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Сохранить',
-                cancelButtonText: 'Отмена',
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33'
-            });
-
-            if (result.isConfirmed) {
-                try {
-                    const response = await fetch(`/booking/edit/${bookingId}/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                        },
-                        body: JSON.stringify({
-                            specialist_id: specialistId || null
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        // Обновляем информацию о специалисте
-                        document.getElementById('modalSpecialistInfo').textContent = data.specialist_name || 'Не назначен';
-                        
-                        // Возвращаем кнопки в исходное состояние
-                        editBookingBtn.style.display = 'inline-block';
-                        saveBookingBtn.style.display = 'none';
-                        
-                        // Скрываем select
-                        specialistSelect.style.display = 'none';
-                    } else {
-                        throw new Error(data.error || 'Ошибка при сохранении изменений');
-                    }
-                } catch (error) {
-                    console.error('Ошибка при сохранении изменений:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Ошибка',
-                        text: error.message || 'Не удалось сохранить изменения. Пожалуйста, попробуйте позже.'
-                    });
+            // Если список уже отображается и значение не изменилось, скрываем его
+            if (specialistSelect.style.display === 'block') {
+                const selectedOption = specialistSelect.options[specialistSelect.selectedIndex];
+                const selectedSpecialistName = selectedOption ? selectedOption.text : 'Без специалиста';
+                
+                if (selectedSpecialistName === currentSpecialistName) {
+                    specialistSelect.style.display = 'none';
+                    return;
                 }
             }
+            
+            // Показываем select для выбора специалиста и загружаем список специалистов
+            specialistSelect.style.display = 'block';
+            loadSpecialists();
+
+            // Добавляем обработчик изменения значения
+            specialistSelect.onchange = async function() {
+                const bookingId = window.currentBookingId;
+                const specialistId = this.value;
+                const newSpecialistName = specialistId ? this.options[this.selectedIndex].text : 'Без специалиста';
+
+                // Показываем подтверждение с информацией об изменениях
+                const result = await Swal.fire({
+                    title: 'Подтверждение изменений',
+                    html: `
+                        <div class="text-start">
+                            <p class="mb-2">
+                                <strong>Специалист:</strong> 
+                                <span class="text-muted">${currentSpecialistName}</span>
+                                <i class="bi bi-arrow-right mx-2"></i>
+                                <span class="text-success">${newSpecialistName}</span>
+                            </p>
+                        </div>
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Сохранить',
+                    cancelButtonText: 'Отмена',
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33'
+                });
+
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch(`/booking/edit/${bookingId}/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                            },
+                            body: JSON.stringify({
+                                specialist_id: specialistId || null
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            // Обновляем информацию о специалисте
+                            document.getElementById('modalSpecialistInfo').textContent = data.specialist_name || 'Не назначен';
+                            
+                            // Скрываем select
+                            specialistSelect.style.display = 'none';
+                        } else {
+                            throw new Error(data.error || 'Ошибка при сохранении изменений');
+                        }
+                    } catch (error) {
+                        console.error('Ошибка при сохранении изменений:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Ошибка',
+                            text: error.message || 'Не удалось сохранить изменения. Пожалуйста, попробуйте позже.'
+                        });
+                    }
+                } else {
+                    // Если пользователь отменил, возвращаем предыдущее значение
+                    for (let i = 0; i < this.options.length; i++) {
+                        if (this.options[i].text === currentSpecialistName) {
+                            this.value = this.options[i].value;
+                            break;
+                        }
+                    }
+                }
+            };
         });
         
         if (confirmBookingBtn) {
