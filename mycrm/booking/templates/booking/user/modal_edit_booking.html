@@ -295,6 +295,25 @@
             const saveBookingBtn = document.getElementById('saveBookingBtn');
             if (editBookingBtn) editBookingBtn.style.display = 'inline-block';
             if (saveBookingBtn) saveBookingBtn.style.display = 'none';
+
+            // Очищаем backdrop и стили
+            setTimeout(() => {
+                document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+                    backdrop.remove();
+                });
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+
+                // Удаляем экземпляр модального окна
+                const editModal = document.getElementById('editBookingModal');
+                if (editModal) {
+                    const bsModal = bootstrap.Modal.getInstance(editModal);
+                    if (bsModal) {
+                        bsModal.dispose();
+                    }
+                }
+            }, 150);
         }
         
         // Обработчик закрытия модального окна редактирования
@@ -307,7 +326,15 @@
             const button = event.relatedTarget;
             // Проверяем, что это кнопка редактирования брони
             if (!button || !button.hasAttribute('data-booking-id')) return;
-            
+
+            // Убедимся, что нет лишних backdrop
+            document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+                backdrop.remove();
+            });
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+
             const bookingId = button.getAttribute('data-booking-id');
             if (!bookingId) return;
 
