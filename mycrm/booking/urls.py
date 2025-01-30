@@ -1,4 +1,15 @@
-from django.urls import path
+from django.urls import path, include
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView
+)
+from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,  # Получение access и refresh токена
+    TokenRefreshView,  # Обновление access-токена
+    TokenVerifyView,  # Проверка токена
+)
 from .views_all import *
 from .views import user_index_view, create_booking_view
 from .views.edit_booking import (
@@ -15,6 +26,12 @@ from .views.edit_booking import (
     update_booking_services,
     delete_booking_service,
 )
+from .views.api import ReservationViewSet, ClientViewSet, ServiceViewSet
+
+router = DefaultRouter()
+router.register(r'reservations', ReservationViewSet)
+router.register(r'clients', ClientViewSet)
+router.register(r'services', ServiceViewSet)
 
 urlpatterns = [
     path('', user_index_view, name='index'),
@@ -32,7 +49,7 @@ urlpatterns = [
     path('user_stats_profit/', user_index_view, name='stats_profit'),
     path('user_stats_all/', user_index_view, name='stats_all'),
     path('create_booking/', create_booking_view, name='create_booking'),
-    
+
     # Редактирование брони
     path('booking/get-booking-details/<int:booking_id>/', get_booking_details, name='get_booking_details'),
     path('booking/edit/<int:booking_id>/', edit_booking_view, name='edit_booking'),
@@ -40,10 +57,27 @@ urlpatterns = [
     path('booking/confirm/<int:booking_id>/', confirm_booking_view, name='confirm_booking'),
     path('booking/process-payment/<int:booking_id>/', process_payment_view, name='process_payment'),
     path('booking/get-cancellation-reasons/', get_cancellation_reasons, name='get_cancellation_reasons'),
-    path('booking/get-available-specialists/<int:booking_id>/', get_available_specialists, name='get_available_specialists'),
+    path('booking/get-available-specialists/<int:booking_id>/', get_available_specialists,
+         name='get_available_specialists'),
     path('booking/get-clients/', get_clients, name='get_clients'),
     path('booking/update-client/<int:booking_id>/', update_booking_client, name='update_booking_client'),
     path('booking/get-services/', get_services, name='get_services'),
     path('booking/update-services/<int:booking_id>/', update_booking_services, name='update_booking_services'),
     path('booking/delete-service/<int:booking_id>/', delete_booking_service, name='delete-booking-service'),
+
+    # API
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('api/', include(router.urls)),
+
+    # API Дока
+    # JSON-схема API
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+
+    # Swagger UI
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+
+    # ReDoc UI
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]

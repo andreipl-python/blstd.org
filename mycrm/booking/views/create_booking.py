@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 
-from booking.models import Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup
+from ..models import Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup
 
 
 def parse_datetime(date: str, time: str) -> datetime:

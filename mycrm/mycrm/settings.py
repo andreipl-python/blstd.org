@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,8 +38,32 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
-    'booking'
+    'booking',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'drf_spectacular',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),  # Время жизни токена
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=5),  # Время жизни refresh-токена
+    "ROTATE_REFRESH_TOKENS": True,  # Обновлять refresh-токен при каждом запросе
+    "BLACKLIST_AFTER_ROTATION": True,  # Старый refresh становится недействителен
+    "AUTH_HEADER_TYPES": ("Bearer",),  # Заголовок для передачи токена
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Booking API",
+    "VERSION": "1.0",
+    "DESCRIPTION": "API для бронирования",
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
