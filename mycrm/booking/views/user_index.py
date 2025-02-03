@@ -1,14 +1,15 @@
 import json
-from typing import Tuple, List, Dict, Any
-from django.db.models import QuerySet, Q, Case, When, Value, IntegerField
+from calendar import monthrange
+from datetime import datetime, timedelta
+from typing import Any
+
+from booking.models import Client, Room, Service, Reservation, ReservationType, Specialist, TariffUnit, SpecialistColor, \
+    PaymentType
 from django.contrib.auth.decorators import login_required
 from django.core.serializers import serialize
+from django.db.models import QuerySet, Q, Case, When, Value, IntegerField
 from django.shortcuts import render
-from datetime import datetime, timedelta, date
-from calendar import monthrange
 from django.utils import timezone
-
-from booking.models import Client, Room, Service, Reservation, ReservationType, Specialist, TariffUnit, ServiceGroup, SpecialistColor, PaymentType
 
 from .menu2 import menu2_view
 

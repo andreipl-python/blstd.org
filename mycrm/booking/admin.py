@@ -1,9 +1,11 @@
 from django.contrib import admin
+
 from .models import (
     SpecialistColor, CancellationPolicy, CancellationReason, Subscription, ReservationStatusType,
     Reservation, ReservationType, TariffUnit, ServiceGroup, Service,
-    Specialist, Client, ClientGroup, ClientRating, Room, PaymentType, Payment
+    Specialist, Client, ClientGroup, ClientRating, Room
 )
+
 
 @admin.register(SpecialistColor)
 class SpecialistColorAdmin(admin.ModelAdmin):

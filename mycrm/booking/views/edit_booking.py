@@ -1,15 +1,18 @@
-from datetime import datetime, timedelta
 from decimal import Decimal
-from django.core.exceptions import ValidationError
+import json
+from decimal import Decimal
+
 from django.db import transaction
 from django.db.models import Sum
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
+
 from ..models import (
-    Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup, PaymentType, Payment, CancellationReason, Subscription, TariffUnit, Client
+    Reservation, Service, Specialist, ReservationStatusType, PaymentType, Payment, CancellationReason, Subscription,
+    TariffUnit, Client
 )
-import json
+
 
 def get_booking_details(request, booking_id):
     """Получение детальной информации о брони"""

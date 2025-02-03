@@ -1,0 +1,913 @@
+openapi: 3.0.3
+info:
+  title: BLS App API
+  version: '1.0'
+  description: API для приложения бронирования
+paths:
+  /api/clients/:
+    get:
+      operationId: api_clients_list
+      description: Возвращает список всех существующих клиентов.
+      summary: Получить список клиентов
+      tags:
+      - Клиент
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Client'
+          description: ''
+        '401':
+          description: Unauthorized - Неверный или отсутствующий токен
+        '403':
+          description: Forbidden - Доступ запрещен
+    post:
+      operationId: api_clients_create
+      description: Создает нового клиента с предоставленными данными.
+      summary: Добавить нового клиента
+      tags:
+      - Клиент
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: ''
+        '400':
+          description: Bad Request - Ошибка в данных запроса
+        '401':
+          description: Unauthorized - Неверный или отсутствующий токен
+        '403':
+          description: Forbidden - Доступ запрещен
+  /api/clients/{id}/:
+    get:
+      operationId: api_clients_retrieve
+      description: Возвращает детали конкретного клиента по его ID.
+      summary: Получить детали клиента
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Клиент.
+        required: true
+      tags:
+      - Клиент
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: ''
+        '401':
+          description: Unauthorized - Неверный или отсутствующий токен
+        '403':
+          description: Forbidden - Доступ запрещен
+        '404':
+          description: Not Found - Клиент не найден
+    put:
+      operationId: api_clients_update
+      description: Полностью обновляет существующего клиента по его ID.
+      summary: Полностью обновить клиента
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Клиент.
+        required: true
+      tags:
+      - Клиент
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: ''
+        '400':
+          description: Bad Request - Ошибка в данных запроса
+        '401':
+          description: Unauthorized - Неверный или отсутствующий токен
+        '403':
+          description: Forbidden - Доступ запрещен
+        '404':
+          description: Not Found - Клиент не найден
+    patch:
+      operationId: api_clients_partial_update
+      description: Частично обновляет существующего клиента по его ID.
+      summary: Частично обновить клиента
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Клиент.
+        required: true
+      tags:
+      - Клиент
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedClientRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedClientRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedClientRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: ''
+        '400':
+          description: Bad Request - Ошибка в данных запроса
+        '401':
+          description: Unauthorized - Неверный или отсутствующий токен
+        '403':
+          description: Forbidden - Доступ запрещен
+        '404':
+          description: Not Found - Клиент не найден
+  /api/reservation_status_types/:
+    get:
+      operationId: api_reservation_status_types_list
+      description: Возвращает список всех существующих статусов бронирования.
+      summary: Получить список статусов бронирования
+      tags:
+      - Статус бронирования
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReservationStatusType'
+          description: ''
+        '401':
+          description: Unauthorized - Неверный или отсутствующий токен
+        '403':
+          description: Forbidden - Доступ запрещен
+  /api/reservation_status_types/{id}/:
+    get:
+      operationId: api_reservation_status_types_retrieve
+      description: Возвращает детали конкретного статуса бронирования по его ID.
+      summary: Получить детали статуса бронирования
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Тип статуса бронирования.
+        required: true
+      tags:
+      - Статус бронирования
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationStatusType'
+          description: ''
+        '401':
+          description: Unauthorized - Неверный или отсутствующий токен
+        '403':
+          description: Forbidden - Доступ запрещен
+        '404':
+          description: Not Found - Статус бронирования не найден
+  /api/reservations/:
+    get:
+      operationId: api_reservations_list
+      description: Возвращает список всех существующих бронирований.
+      summary: Получить список бронирований
+      tags:
+      - Бронирование
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+          description: ''
+        '401':
+          description: Unauthorized - Неверный или отсутствующий токен
+        '403':
+          description: Forbidden - Доступ запрещен
+    post:
+      operationId: api_reservations_create
+      description: Создает новое бронирование с предоставленными данными.
+      summary: Создать новое бронирование
+      tags:
+      - Бронирование
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReservationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReservationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+          description: ''
+        '400':
+          description: Bad Request - Ошибка в данных запроса
+        '401':
+          description: Unauthorized - Неверный или отсутствующий токен
+        '403':
+          description: Forbidden - Доступ запрещен
+  /api/reservations/{id}/:
+    get:
+      operationId: api_reservations_retrieve
+      description: Возвращает детали конкретного бронирования по его ID.
+      summary: Получить детали бронирования
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Бронь.
+        required: true
+      tags:
+      - Бронирование
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+          description: ''
+        '401':
+          description: Unauthorized - Неверный или отсутствующий токен
+        '403':
+          description: Forbidden - Доступ запрещен
+        '404':
+          description: Not Found - Бронирование не найдено
+    put:
+      operationId: api_reservations_update
+      description: Полностью обновляет существующее бронирование по его ID.
+      summary: Полностью обновить бронирование
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Бронь.
+        required: true
+      tags:
+      - Бронирование
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReservationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReservationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+          description: ''
+        '400':
+          description: Bad Request - Ошибка в данных запроса
+        '401':
+          description: Unauthorized - Неверный или отсутствующий токен
+        '403':
+          description: Forbidden - Доступ запрещен
+        '404':
+          description: Not Found - Бронирование не найдено
+    patch:
+      operationId: api_reservations_partial_update
+      description: Частично обновляет существующее бронирование по его ID.
+      summary: Частично обновить бронирование
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Бронь.
+        required: true
+      tags:
+      - Бронирование
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedReservationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedReservationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedReservationRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+          description: ''
+        '400':
+          description: Bad Request - Ошибка в данных запроса
+        '401':
+          description: Unauthorized - Неверный или отсутствующий токен
+        '403':
+          description: Forbidden - Доступ запрещен
+        '404':
+          description: Not Found - Бронирование не найдено
+  /api/token/:
+    post:
+      operationId: api_token_create
+      description: Эндпоинт для получения JWT токена при предоставлении корректных
+        учетных данных.
+      summary: Получение JWT токена
+      tags:
+      - Аутентификация
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+            examples:
+              ПримерЗапроса:
+                value:
+                  username: admin
+                  password: admin_password
+                summary: Пример запроса
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+              examples:
+                УспешныйОтвет:
+                  value:
+                    refresh: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+                    access: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+                  summary: Успешный ответ
+          description: Успешная аутентификация
+        '401':
+          description: Неверные учетные данные
+  /api/token/refresh/:
+    post:
+      operationId: api_token_refresh_create
+      description: Эндпоинт для обновления JWT токена с использованием refresh токена.
+      summary: Обновление JWT токена
+      tags:
+      - Аутентификация
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+            examples:
+              ПримерЗапроса:
+                value:
+                  refresh: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+                summary: Пример запроса
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+              examples:
+                УспешныйОтвет:
+                  value:
+                    access: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+                  summary: Успешный ответ
+          description: Успешное обновление токена
+        '401':
+          description: Неверный или отсутствующий refresh токен
+  /api/token/verify/:
+    post:
+      operationId: api_token_verify_create
+      description: Эндпоинт для проверки валидности предоставленного JWT токена.
+      summary: Проверка JWT токена
+      tags:
+      - Аутентификация
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+            examples:
+              ПримерЗапроса:
+                value:
+                  token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+                summary: Пример запроса
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+        required: true
+      responses:
+        '200':
+          description: Токен действителен
+        '401':
+          description: Неверный или отсутствующий токен
+components:
+  schemas:
+    Client:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        phone:
+          type: string
+          description: Уникальный номер телефона, обязателен для заполнения
+        name:
+          type: string
+          title: ФИО клиента
+          description: ФИО клиента
+          maxLength: 150
+        comment:
+          type: string
+          nullable: true
+          title: Комментарий к клиенту
+          description: Комментарий к клиенту
+        email:
+          type: string
+          format: email
+          nullable: true
+          title: Email клиента
+          description: Email клиента
+          maxLength: 150
+        group:
+          type: integer
+          nullable: true
+          title: ID группы клиента
+          description: ID группы клиента
+      required:
+      - id
+      - name
+      - phone
+      unique:
+        - phone
+    ClientRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+          description: Уникальный номер телефона, обязателен для заполнения
+        name:
+          type: string
+          minLength: 1
+          title: ФИО клиента
+          description: ФИО клиента
+          maxLength: 150
+        comment:
+          type: string
+          nullable: true
+          title: Комментарий к клиенту
+          description: Комментарий к клиенту
+        email:
+          type: string
+          format: email
+          nullable: true
+          title: Email клиента
+          description: Email клиента
+          maxLength: 150
+        group:
+          type: integer
+          nullable: true
+          title: ID группы клиента
+          description: ID группы клиента
+      required:
+      - name
+      - phone
+    PatchedClientRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+          description: Уникальный номер телефона, обязателен для заполнения
+        name:
+          type: string
+          minLength: 1
+          title: ФИО клиента
+          description: ФИО клиента
+          maxLength: 150
+        comment:
+          type: string
+          nullable: true
+          title: Комментарий к клиенту
+          description: Комментарий к клиенту
+        email:
+          type: string
+          format: email
+          nullable: true
+          title: Email клиента
+          description: Email клиента
+          maxLength: 150
+        group:
+          type: integer
+          nullable: true
+          title: ID группы клиента
+          description: ID группы клиента
+    PatchedReservationRequest:
+      type: object
+      properties:
+        datetimestart:
+          type: string
+          format: date-time
+          title: Datetime начала
+          description: Дата и время начала брони
+        datetimeend:
+          type: string
+          format: date-time
+          title: Datetime конца
+          description: Дата и время окончания брони
+        comment:
+          type: string
+          nullable: true
+          minLength: 1
+          title: Комментарий
+          description: Комментарий к брони
+        total_cost:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+          title: Стоимость
+          description: Общая стоимость брони
+        specialist:
+          type: integer
+          nullable: true
+          title: ID специалиста
+          description: ID специалиста, закрепленного за бронью
+        client:
+          type: integer
+          title: ID клиента
+          description: ID клиента, закрепленного за бронью
+        client_group:
+          type: integer
+          nullable: true
+          title: ID группы клиента
+          description: ID группы (коллектива) клиента, закрепленного за бронью, если
+            групповое бронирование
+        room:
+          type: integer
+          title: ID помещения
+          description: ID помещения, которое забронировано
+        reservation_type:
+          type: integer
+          title: ID типа брони
+          description: ID типа бронирования (шаблона направления)
+        status:
+          type: integer
+          nullable: true
+          title: Статус
+          description: Статус брони
+        cancellation_reason:
+          type: integer
+          nullable: true
+          title: Причина отмены
+          description: Причина отмены брони
+        services:
+          type: array
+          items:
+            type: integer
+            title: Услуги
+          title: Услуги
+          description: Услуги, включенные в бронь
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        datetimestart:
+          type: string
+          format: date-time
+          title: Datetime начала
+          description: Дата и время начала брони
+        datetimeend:
+          type: string
+          format: date-time
+          title: Datetime конца
+          description: Дата и время окончания брони
+        comment:
+          type: string
+          nullable: true
+          title: Комментарий
+          description: Комментарий к брони
+        total_cost:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+          title: Стоимость
+          description: Общая стоимость брони
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Создана
+          description: Дата создания брони
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Обновлена
+          description: Дата обновления брони
+        specialist:
+          type: integer
+          nullable: true
+          title: ID специалиста
+          description: ID специалиста, закрепленного за бронью
+        client:
+          type: integer
+          title: ID клиента
+          description: ID клиента, закрепленного за бронью
+        client_group:
+          type: integer
+          nullable: true
+          title: ID группы клиента
+          description: ID группы (коллектива) клиента, закрепленного за бронью, если
+            групповое бронирование
+        room:
+          type: integer
+          title: ID помещения
+          description: ID помещения, которое забронировано
+        reservation_type:
+          type: integer
+          title: ID типа брони
+          description: ID типа бронирования (шаблона направления)
+        status:
+          type: integer
+          nullable: true
+          title: Статус
+          description: Статус брони
+        cancellation_reason:
+          type: integer
+          nullable: true
+          title: Причина отмены
+          description: Причина отмены брони
+        services:
+          type: array
+          items:
+            type: integer
+            title: Услуги
+          title: Услуги
+          description: Услуги, включенные в бронь
+      required:
+      - client
+      - created_at
+      - datetimeend
+      - datetimestart
+      - id
+      - reservation_type
+      - room
+      - updated_at
+    ReservationRequest:
+      type: object
+      properties:
+        datetimestart:
+          type: string
+          format: date-time
+          title: Datetime начала
+          description: Дата и время начала брони
+        datetimeend:
+          type: string
+          format: date-time
+          title: Datetime конца
+          description: Дата и время окончания брони
+        comment:
+          type: string
+          nullable: true
+          minLength: 1
+          title: Комментарий
+          description: Комментарий к брони
+        total_cost:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+          title: Стоимость
+          description: Общая стоимость брони
+        specialist:
+          type: integer
+          nullable: true
+          title: ID специалиста
+          description: ID специалиста, закрепленного за бронью
+        client:
+          type: integer
+          title: ID клиента
+          description: ID клиента, закрепленного за бронью
+        client_group:
+          type: integer
+          nullable: true
+          title: ID группы клиента
+          description: ID группы (коллектива) клиента, закрепленного за бронью, если
+            групповое бронирование
+        room:
+          type: integer
+          title: ID помещения
+          description: ID помещения, которое забронировано
+        reservation_type:
+          type: integer
+          title: ID типа брони
+          description: ID типа бронирования (шаблона направления)
+        status:
+          type: integer
+          nullable: true
+          title: Статус
+          description: Статус брони
+        cancellation_reason:
+          type: integer
+          nullable: true
+          title: Причина отмены
+          description: Причина отмены брони
+        services:
+          type: array
+          items:
+            type: integer
+            title: Услуги
+          title: Услуги
+          description: Услуги, включенные в бронь
+      required:
+      - client
+      - datetimeend
+      - datetimestart
+      - reservation_type
+      - room
+    ReservationStatusType:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: Название
+          description: Название статуса
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+          title: Описание
+          description: Описание статуса
+      required:
+      - id
+      - name
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    TokenVerifyRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - token
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+x-tagGroups:
+- name: API
+  tags:
+  - Аутентификация
+  - Бронирование
+  - Статус бронирования
+  - Клиент

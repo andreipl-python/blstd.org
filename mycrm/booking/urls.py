@@ -5,12 +5,11 @@ from drf_spectacular.views import (
     SpectacularSwaggerView
 )
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,  # Получение access и refresh токена
-    TokenRefreshView,  # Обновление access-токена
-    TokenVerifyView,  # Проверка токена
+
+from .api import (
+    CustomTokenObtainPairView, CustomTokenRefreshView, CustomTokenVerifyView, ReservationViewSet, ClientViewSet,
+    ReservationStatusTypeViewSet, SpecialistViewSet
 )
-from .views_all import *
 from .views import user_index_view, create_booking_view
 from .views.edit_booking import (
     get_booking_details,
@@ -26,18 +25,26 @@ from .views.edit_booking import (
     update_booking_services,
     delete_booking_service,
 )
-from .views.api import ReservationViewSet, ClientViewSet, ServiceViewSet
+from .views_all import auth_view, CustomLogoutView
 
+# Создание маршрутизатора API
 router = DefaultRouter()
-router.register(r'reservations', ReservationViewSet)
-router.register(r'clients', ClientViewSet)
-router.register(r'services', ServiceViewSet)
+routes = [
+    (r'reservations', ReservationViewSet),
+    (r'clients', ClientViewSet),
+    (r'reservation_status_types', ReservationStatusTypeViewSet),
+    (r'specialists', SpecialistViewSet)
+]
+for prefix, viewset in routes:
+    router.register(prefix, viewset)
 
 urlpatterns = [
+    # Основные представления
     path('', user_index_view, name='index'),
     path('login/', auth_view, name='login'),
     path('logout/', CustomLogoutView.as_view(next_page='index'), name='logout'),
     path('user/', user_index_view, name='user_index'),
+    # ************************************************* #
     path('users_list/', user_index_view, name='users_list'),
     path('smena/', user_index_view, name='smena'),
     path('smena_new/', user_index_view, name='smena_new'),
@@ -50,7 +57,8 @@ urlpatterns = [
     path('user_stats_all/', user_index_view, name='stats_all'),
     path('create_booking/', create_booking_view, name='create_booking'),
 
-    # Редактирование брони
+    # Управление бронированием
+    path('create_booking/', create_booking_view, name='create_booking'),
     path('booking/get-booking-details/<int:booking_id>/', get_booking_details, name='get_booking_details'),
     path('booking/edit/<int:booking_id>/', edit_booking_view, name='edit_booking'),
     path('booking/cancel/<int:booking_id>/', cancel_booking_view, name='cancel_booking'),
@@ -65,19 +73,16 @@ urlpatterns = [
     path('booking/update-services/<int:booking_id>/', update_booking_services, name='update_booking_services'),
     path('booking/delete-service/<int:booking_id>/', delete_booking_service, name='delete-booking-service'),
 
-    # API
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    # API-аутентификация
+    path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/verify/', CustomTokenVerifyView.as_view(), name='token_verify'),
+
+    # API-маршруты
     path('api/', include(router.urls)),
 
-    # API Дока
-    # JSON-схема API
+    # Документация API
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-
-    # Swagger UI
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-
-    # ReDoc UI
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]

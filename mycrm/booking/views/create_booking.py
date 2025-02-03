@@ -1,13 +1,10 @@
-import hashlib
-import dateparser
-
 from datetime import datetime, timedelta
-from typing import Tuple
+
+import dateparser
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Q
 
 from ..models import Reservation, Room, Service, Specialist, ReservationStatusType, ClientGroup
 

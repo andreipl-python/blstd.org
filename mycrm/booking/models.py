@@ -1,16 +1,17 @@
 from django.db import models
 from django.db.models import PROTECT, CASCADE
-from enum import IntEnum
 
 
 class Subscription(models.Model):
     """Модель для хранения информации об абонементах"""
     id = models.AutoField(primary_key=True)
     client = models.ForeignKey('Client', on_delete=models.PROTECT, help_text='ID клиента', verbose_name='ID клиента')
-    reservation_type = models.ForeignKey('ReservationType', on_delete=models.PROTECT, help_text='ID сценария', verbose_name='ID сценария')
+    reservation_type = models.ForeignKey('ReservationType', on_delete=models.PROTECT, help_text='ID сценария',
+                                         verbose_name='ID сценария')
     balance = models.IntegerField(help_text='Баланс тарифных единиц', verbose_name='Баланс тарифных единиц')
 
     class Meta:
+        app_label = 'booking'
         db_table = 'subscriptions'
         verbose_name = "Абонемент"
         verbose_name_plural = "Абонементы"
@@ -69,20 +70,20 @@ class Reservation(models.Model):
                                          help_text='ID типа бронирования (шаблона направления)',
                                          verbose_name='ID типа брони', null=False)
     status = models.ForeignKey('ReservationStatusType', on_delete=models.PROTECT,
-                              help_text='Статус брони',
-                              verbose_name='Статус',
-                              null=True)
-    cancellation_reason = models.ForeignKey('CancellationReason', 
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        help_text='Причина отмены брони',
-        verbose_name='Причина отмены'
-    )
+                               help_text='Статус брони',
+                               verbose_name='Статус',
+                               null=True)
+    cancellation_reason = models.ForeignKey('CancellationReason',
+                                            on_delete=models.PROTECT,
+                                            null=True,
+                                            blank=True,
+                                            help_text='Причина отмены брони',
+                                            verbose_name='Причина отмены'
+                                            )
     comment = models.TextField(help_text='Комментарий к брони', verbose_name='Комментарий', null=True)
     services = models.ManyToManyField('Service', related_name='reservations',
-                                    help_text='Услуги, включенные в бронь',
-                                    verbose_name='Услуги', blank=True)
+                                      help_text='Услуги, включенные в бронь',
+                                      verbose_name='Услуги', blank=True)
     total_cost = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -130,8 +131,8 @@ class TariffUnit(models.Model):
                                          help_text='ID типа бронирования (сценария)', verbose_name='ID сценария')
     min_reservation_time = models.TimeField(help_text='Минимальное время бронирования (размер тарифной единицы)',
                                             verbose_name='Минимальное время бронирования')
-    tariff_unit_cost = models.DecimalField(max_digits=10, decimal_places=2, help_text='Стоимость тарифной единицы', 
-                                            verbose_name='Стоимость тарифной единицы')
+    tariff_unit_cost = models.DecimalField(max_digits=10, decimal_places=2, help_text='Стоимость тарифной единицы',
+                                           verbose_name='Стоимость тарифной единицы')
 
     class Meta:
         db_table = 'tariff_units'
@@ -218,7 +219,7 @@ class Specialist(models.Model):
                                          'для бронирования)', verbose_name='ID клиента', null=True)
     reservation_type = models.ManyToManyField('ReservationType', related_name='reservation_types',
                                               help_text='Типы бронирования доступные для специалиста',
-                                              verbose_name='Типы бронирования',)
+                                              verbose_name='Типы бронирования', )
 
     class Meta:
         db_table = 'specialists'
@@ -236,12 +237,12 @@ class Client(models.Model):
                             blank=False)
     comment = models.TextField(help_text='Комментарий к клиенту', verbose_name='Комментарий к клиенту', null=True,
                                blank=True)
-    phone = models.CharField(max_length=150, help_text='Телефон клиента', verbose_name='Телефон клиента', null=True,
-                             blank=True)
+    phone = models.CharField(max_length=150, help_text='Телефон клиента', verbose_name='Телефон клиента', null=False,
+                             blank=False, unique=True)
     email = models.EmailField(max_length=150, help_text='Email клиента', verbose_name='Email клиента', null=True,
-                             blank=True)
-    group = models.ForeignKey('ClientGroup', on_delete=models.PROTECT, help_text='ID группы клиента', verbose_name='ID группы клиента',
-                             null=True)
+                              blank=True)
+    group = models.ForeignKey('ClientGroup', on_delete=models.PROTECT, help_text='ID группы клиента',
+                              verbose_name='ID группы клиента', null=True)
 
     class Meta:
         db_table = 'clients'
@@ -275,7 +276,8 @@ class ClientGroup(models.Model):
 class ClientRating(models.Model):
     """Модель для хранения оценок клиентов"""
     client = models.ForeignKey('Client', on_delete=models.PROTECT, help_text='ID клиента', null=False)
-    rating = models.IntegerField(help_text='Оценка выставленная клиенту', verbose_name='Оценка клиента', null=False, blank=False)
+    rating = models.IntegerField(help_text='Оценка выставленная клиенту', verbose_name='Оценка клиента', null=False,
+                                 blank=False)
     comment = models.TextField(help_text='Комментарий к оценке', verbose_name='Комментарий к оценке', null=True,
                                blank=True)
 
@@ -298,7 +300,8 @@ class Room(models.Model):
     reservation_type = models.ManyToManyField('ReservationType', related_name='rooms',
                                               help_text="Типы бронирования, доступные для помещения",
                                               verbose_name="Типы бронирования")
-    service = models.ManyToManyField('Service', related_name='services', help_text='Услуги доступные для помещения', verbose_name='Услуги')
+    service = models.ManyToManyField('Service', related_name='services', help_text='Услуги доступные для помещения',
+                                     verbose_name='Услуги')
 
     class Meta:
         db_table = 'rooms'
@@ -311,7 +314,7 @@ class Room(models.Model):
 
 class SpecialistColor(models.Model):
     specialist = models.OneToOneField(
-        Specialist, 
+        Specialist,
         on_delete=models.PROTECT,
         related_name='color_scheme',
         verbose_name='Специалист'
@@ -326,7 +329,7 @@ class SpecialistColor(models.Model):
         help_text='HEX код цвета для градиента',
         verbose_name='Дополнительный цвет'
     )
-    
+
     def __str__(self):
         return f'Цветовая схема: {self.specialist.name}'
 
@@ -338,7 +341,7 @@ class SpecialistColor(models.Model):
 
 class CancellationPolicy(models.Model):
     """Модель для хранения правил отмены бронирования"""
-    
+
     reservation_type = models.OneToOneField(
         'ReservationType',
         on_delete=models.PROTECT,
@@ -346,13 +349,13 @@ class CancellationPolicy(models.Model):
         help_text='Тип бронирования, к которому применяется политика отмены',
         verbose_name='Тип бронирования'
     )
-    
+
     hours_before = models.PositiveIntegerField(
         help_text='За сколько часов до начала брони можно отменить без штрафа',
         verbose_name='Часов до начала',
         default=2
     )
-    
+
     class Meta:
         db_table = 'cancellation_policies'
         verbose_name = 'Правило отмены бронирования'
@@ -364,7 +367,7 @@ class CancellationPolicy(models.Model):
 
 class CancellationReason(models.Model):
     """Модель для хранения причин отмены броней"""
-    
+
     name = models.CharField(
         max_length=255,
         verbose_name='Причина отмены',
@@ -380,10 +383,10 @@ class CancellationReason(models.Model):
         verbose_name='Порядок отображения',
         help_text='Порядок отображения в списке (меньше = выше)'
     )
-    
+
     def __str__(self):
         return self.name
-    
+
     class Meta:
         db_table = 'cancellation_reasons'
         verbose_name = 'Причина отмены'
