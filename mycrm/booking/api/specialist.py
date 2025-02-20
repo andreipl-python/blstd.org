@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
 from .api_serializers import SpecialistSerializer
+from .schema_helpers import specialist_list_schema
 from .settings import BaseViewSet
 from ..models import Specialist
 
@@ -17,27 +18,7 @@ class SpecialistViewSet(BaseViewSet):
     @extend_schema(
         summary="Получить список специалистов",
         description="Возвращает список всех существующих специалистов.",
-        responses={
-            200: SpecialistSerializer(many=True),
-            401: OpenApiResponse(
-                description="Unauthorized - Неверный или отсутствующий токен",
-                examples=[
-                    OpenApiExample(
-                        'Unauthorized Example',
-                        value={"detail": "Given token not valid for any token type"}
-                    )
-                ]
-            ),
-            403: OpenApiResponse(
-                description="Forbidden - Доступ запрещен",
-                examples=[
-                    OpenApiExample(
-                        'Forbidden Example',
-                        value={"detail": "You do not have permission to perform this action"}
-                    )
-                ]
-            )
-        },
+        responses=specialist_list_schema(),
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
