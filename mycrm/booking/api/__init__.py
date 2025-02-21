@@ -10,6 +10,8 @@ from .reservation_type import ReservationTypeViewSet
 from .specialist import SpecialistViewSet
 from .subscription import SubscriptionViewSet
 from .tariff_unit import TariffUnitViewSet
+from .service import ServiceViewSet
+from .service_group import ServiceGroupViewSet
 
 __all__ = [
     'ReservationViewSet',
@@ -19,6 +21,8 @@ __all__ = [
     'SpecialistViewSet',
     'SubscriptionViewSet',
     'TariffUnitViewSet',
+    'ServiceGroupViewSet',
+    'ServiceViewSet',
     'CustomTokenObtainPairView',
     'CustomTokenRefreshView',
     'CustomTokenVerifyView'

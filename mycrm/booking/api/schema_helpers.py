@@ -50,7 +50,7 @@ class OpenApiResponses:
             ]
         )
 
-class UniversalChemas:
+class UniversalSchemas:
     def list_schema(serializer):
         return {
             200: serializer(many=True),

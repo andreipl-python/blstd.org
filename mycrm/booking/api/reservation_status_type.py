@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
 from .api_serializers import ReservationStatusTypeSerializer
-from .schema_helpers import UniversalChemas
+from .schema_helpers import UniversalSchemas
 from .settings import BaseViewSet
 from ..models import ReservationStatusType
 
@@ -23,7 +23,7 @@ class ReservationStatusTypeViewSet(BaseViewSet):
     @extend_schema(
         summary="Получить список статусов бронирования",
         description="Возвращает список всех существующих статусов бронирования.",
-        responses=UniversalChemas.list_schema(ReservationStatusTypeSerializer),
+        responses=UniversalSchemas.list_schema(ReservationStatusTypeSerializer),
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -32,7 +32,7 @@ class ReservationStatusTypeViewSet(BaseViewSet):
         summary="Добавление нового статуса бронирования запрещено",
         description="Добавление нового статуса бронирования запрещено",
         request=ReservationStatusTypeSerializer,
-        responses=UniversalChemas.create_schema(ReservationStatusTypeSerializer, forbidden_create_object=True),
+        responses=UniversalSchemas.create_schema(ReservationStatusTypeSerializer, forbidden_create_object=True),
     )
     def create(self, request, *args, **kwargs):
         raise ValidationError(
@@ -43,7 +43,7 @@ class ReservationStatusTypeViewSet(BaseViewSet):
     @extend_schema(
         summary="Получить детали статуса бронирования",
         description="Возвращает детали конкретного статуса бронирования по его ID.",
-        responses=UniversalChemas.retrieve_schema(ReservationStatusTypeSerializer),
+        responses=UniversalSchemas.retrieve_schema(ReservationStatusTypeSerializer),
     )
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
@@ -52,7 +52,7 @@ class ReservationStatusTypeViewSet(BaseViewSet):
         summary="Обновление статуса бронирования запрещено",
         description="Обновление статуса бронирования запрещено",
         request=ReservationStatusTypeSerializer,
-        responses=UniversalChemas.update_schema(ReservationStatusTypeSerializer, forbidden_update_object=True),
+        responses=UniversalSchemas.update_schema(ReservationStatusTypeSerializer, forbidden_update_object=True),
     )
     def update(self, request, *args, **kwargs):
         raise ValidationError(
@@ -64,7 +64,7 @@ class ReservationStatusTypeViewSet(BaseViewSet):
         summary="Частичное обновление статусов бронирования запрещено",
         description="Частичное обновление статусов бронирования запрещено",
         request=ReservationStatusTypeSerializer,
-        responses=UniversalChemas.partial_update_schema(ReservationStatusTypeSerializer, forbidden_update_object=True),
+        responses=UniversalSchemas.partial_update_schema(ReservationStatusTypeSerializer, forbidden_update_object=True),
     )
     def partial_update(self, request, *args, **kwargs):
         raise ValidationError(
@@ -75,7 +75,7 @@ class ReservationStatusTypeViewSet(BaseViewSet):
     @extend_schema(
         summary="Удаление статусов бронирования запрещено.",
         description="Удаление статусов бронирования запрещено.",
-        responses=UniversalChemas.destroy_schema(ReservationStatusTypeSerializer),
+        responses=UniversalSchemas.destroy_schema(ReservationStatusTypeSerializer),
     )
     def destroy(self, request, *args, **kwargs):
         raise ValidationError(

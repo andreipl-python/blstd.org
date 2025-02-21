@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
 from .api_serializers import SubscriptionSerializer
-from .schema_helpers import UniversalChemas
+from .schema_helpers import UniversalSchemas
 from .settings import BaseViewSet
 from ..models import Subscription
 
@@ -18,7 +18,7 @@ class SubscriptionViewSet(BaseViewSet):
     @extend_schema(
         summary="Получить список абонементов",
         description="Возвращает список всех существующих абонементов.",
-        responses=UniversalChemas.list_schema(SubscriptionSerializer),
+        responses=UniversalSchemas.list_schema(SubscriptionSerializer),
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -27,7 +27,7 @@ class SubscriptionViewSet(BaseViewSet):
         summary="Добавить новый абонемент",
         description="Создает новый абонемент с предоставленными данными.",
         request=SubscriptionSerializer,
-        responses=UniversalChemas.create_schema(SubscriptionSerializer),
+        responses=UniversalSchemas.create_schema(SubscriptionSerializer),
     )
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
@@ -35,7 +35,7 @@ class SubscriptionViewSet(BaseViewSet):
     @extend_schema(
         summary="Получить детали абонемента",
         description="Возвращает детали конкретного абонемента по его ID.",
-        responses=UniversalChemas.retrieve_schema(SubscriptionSerializer),
+        responses=UniversalSchemas.retrieve_schema(SubscriptionSerializer),
     )
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
@@ -44,7 +44,7 @@ class SubscriptionViewSet(BaseViewSet):
         summary="Полностью обновить абонемент",
         description="Полностью обновляет существующий абонемент по его ID.",
         request=SubscriptionSerializer,
-        responses=UniversalChemas.update_schema(SubscriptionSerializer),
+        responses=UniversalSchemas.update_schema(SubscriptionSerializer),
     )
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
@@ -53,7 +53,7 @@ class SubscriptionViewSet(BaseViewSet):
         summary="Частично обновить абонемент",
         description="Частично обновляет существующий абонемент по его ID.",
         request=SubscriptionSerializer,
-        responses=UniversalChemas.partial_update_schema(SubscriptionSerializer),
+        responses=UniversalSchemas.partial_update_schema(SubscriptionSerializer),
     )
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)
@@ -61,7 +61,7 @@ class SubscriptionViewSet(BaseViewSet):
     @extend_schema(
         summary="Удалить абонемент",
         description="Удаление абонементов запрещено.",
-        responses=UniversalChemas.destroy_schema(SubscriptionSerializer),
+        responses=UniversalSchemas.destroy_schema(SubscriptionSerializer),
     )
     def destroy(self, request, *args, **kwargs):
         raise ValidationError(

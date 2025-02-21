@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
 from .api_serializers import ReservationSerializer
-from .schema_helpers import UniversalChemas
+from .schema_helpers import UniversalSchemas
 from .settings import BaseViewSet
 from ..models import Reservation
 
@@ -18,7 +18,7 @@ class ReservationViewSet(BaseViewSet):
     @extend_schema(
         summary="Получить список бронирований",
         description="Возвращает список всех существующих бронирований.",
-        responses=UniversalChemas.list_schema(ReservationSerializer),
+        responses=UniversalSchemas.list_schema(ReservationSerializer),
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -27,7 +27,7 @@ class ReservationViewSet(BaseViewSet):
         summary="Создать новое бронирование",
         description="Создает новое бронирование с предоставленными данными.",
         request=ReservationSerializer,
-        responses=UniversalChemas.create_schema(ReservationSerializer),
+        responses=UniversalSchemas.create_schema(ReservationSerializer),
     )
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
@@ -35,7 +35,7 @@ class ReservationViewSet(BaseViewSet):
     @extend_schema(
         summary="Получить детали бронирования",
         description="Возвращает детали конкретного бронирования по его ID.",
-        responses=UniversalChemas.retrieve_schema(ReservationSerializer),
+        responses=UniversalSchemas.retrieve_schema(ReservationSerializer),
     )
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
@@ -44,7 +44,7 @@ class ReservationViewSet(BaseViewSet):
         summary="Полностью обновить бронирование",
         description="Полностью обновляет существующее бронирование по его ID.",
         request=ReservationSerializer,
-        responses=UniversalChemas.update_schema(ReservationSerializer),
+        responses=UniversalSchemas.update_schema(ReservationSerializer),
     )
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
@@ -53,7 +53,7 @@ class ReservationViewSet(BaseViewSet):
         summary="Частично обновить бронирование",
         description="Частично обновляет существующее бронирование по его ID.",
         request=ReservationSerializer,
-        responses=UniversalChemas.partial_update_schema(ReservationSerializer),
+        responses=UniversalSchemas.partial_update_schema(ReservationSerializer),
     )
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)
@@ -61,7 +61,7 @@ class ReservationViewSet(BaseViewSet):
     @extend_schema(
         summary="Удалить бронирование",
         description="Удаление бронирований запрещено.",
-        responses=UniversalChemas.destroy_schema(ReservationSerializer),
+        responses=UniversalSchemas.destroy_schema(ReservationSerializer),
     )
     def destroy(self, request, *args, **kwargs):
         raise ValidationError(

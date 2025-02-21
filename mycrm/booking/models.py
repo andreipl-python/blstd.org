@@ -170,31 +170,37 @@ class ServiceGroup(models.Model):
 class Service(models.Model):
     """Модель для хранения информации об услугах"""
     id = models.AutoField(primary_key=True)
-    name = models.CharField(help_text='Наименование услуги',
-                            verbose_name='Наименование услуги',
-                            max_length=100,
-                            unique=True)
-    active = models.BooleanField(help_text='Активность услуги (включена или нет)',
-                                 verbose_name='Активность услуги',
-                                 default=True)
-    group = models.ForeignKey('ServiceGroup',
-                              on_delete=PROTECT,
-                              help_text='Группа услуг',
-                              verbose_name='Группа услуг',
-                              null=True,
-                              blank=True)
+    name = models.CharField(
+        help_text='Наименование услуги',
+        verbose_name='Наименование услуги',
+        max_length=100,
+        unique=True, null=False, blank=False
+        )
+    active = models.BooleanField(
+        help_text='Активность услуги (включена или нет)',
+        verbose_name='Активность услуги',
+        default=True, null=False, blank=False
+        )
+    group = models.ForeignKey(
+        'ServiceGroup',
+        on_delete=PROTECT,
+        help_text='Группа услуг',
+        verbose_name='Группа услуг',
+        null=False, blank=False
+        )
     cost = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         help_text='Стоимость услуги',
         verbose_name='Стоимость',
-        null=True,
-        blank=True
-    )
-    reservation_type = models.ManyToManyField('ReservationType',
-                                              related_name='services',
-                                              help_text='Типы бронирования доступные для услуги',
-                                              verbose_name='Типы бронирования')
+        null=False, blank=False
+        )
+    reservation_type = models.ManyToManyField(
+        'ReservationType',
+        related_name='services',
+        help_text='Типы бронирования доступные для услуги',
+        verbose_name='Типы бронирования'
+        )
 
     class Meta:
         db_table = 'services'
