@@ -1,8 +1,9 @@
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
 from .api_serializers import ReservationStatusTypeSerializer
+from .schema_helpers import UniversalChemas
 from .settings import BaseViewSet
 from ..models import ReservationStatusType
 
@@ -15,34 +16,14 @@ from ..models import ReservationStatusType
     create=extend_schema(exclude=True)
 )
 class ReservationStatusTypeViewSet(BaseViewSet):
-    """CRUD для клиентов"""
+    """CRUD для типов статусов бронирования"""
     queryset = ReservationStatusType.objects.all()
     serializer_class = ReservationStatusTypeSerializer
 
     @extend_schema(
         summary="Получить список статусов бронирования",
         description="Возвращает список всех существующих статусов бронирования.",
-        responses={
-            200: ReservationStatusTypeSerializer(many=True),
-            401: OpenApiResponse(
-                description="Unauthorized - Неверный или отсутствующий токен",
-                examples=[
-                    OpenApiExample(
-                        'Unauthorized Example',
-                        value={"detail": "Given token not valid for any token type"}
-                    )
-                ]
-            ),
-            403: OpenApiResponse(
-                description="Forbidden - Доступ запрещен",
-                examples=[
-                    OpenApiExample(
-                        'Forbidden Example',
-                        value={"detail": "You do not have permission to perform this action"}
-                    )
-                ]
-            )
-        },
+        responses=UniversalChemas.list_schema(ReservationStatusTypeSerializer),
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -51,35 +32,7 @@ class ReservationStatusTypeViewSet(BaseViewSet):
         summary="Добавление нового статуса бронирования запрещено",
         description="Добавление нового статуса бронирования запрещено",
         request=ReservationStatusTypeSerializer,
-        responses={
-            400: OpenApiResponse(
-                description="Bad Request - Добавление запрещено",
-                examples=[
-                    OpenApiExample(
-                        'Bad Request Example',
-                        value={"error": "Invalid data provided"}
-                    )
-                ]
-            ),
-            401: OpenApiResponse(
-                description="Unauthorized - Неверный или отсутствующий токен",
-                examples=[
-                    OpenApiExample(
-                        'Unauthorized Example',
-                        value={"detail": "Authentication credentials were not provided."}
-                    )
-                ]
-            ),
-            403: OpenApiResponse(
-                description="Forbidden - Доступ запрещен",
-                examples=[
-                    OpenApiExample(
-                        'Forbidden Example',
-                        value={"detail": "You do not have permission to perform this action"}
-                    )
-                ]
-            )
-        },
+        responses=UniversalChemas.create_schema(ReservationStatusTypeSerializer, forbidden_create_object=True),
     )
     def create(self, request, *args, **kwargs):
         raise ValidationError(
@@ -90,36 +43,7 @@ class ReservationStatusTypeViewSet(BaseViewSet):
     @extend_schema(
         summary="Получить детали статуса бронирования",
         description="Возвращает детали конкретного статуса бронирования по его ID.",
-        responses={
-            200: ReservationStatusTypeSerializer,
-            401: OpenApiResponse(
-                description="Unauthorized - Неверный или отсутствующий токен",
-                examples=[
-                    OpenApiExample(
-                        'Unauthorized Example',
-                        value={"detail": "Given token not valid for any token type"}
-                    )
-                ]
-            ),
-            403: OpenApiResponse(
-                description="Forbidden - Доступ запрещен",
-                examples=[
-                    OpenApiExample(
-                        'Forbidden Example',
-                        value={"detail": "You do not have permission to perform this action"}
-                    )
-                ]
-            ),
-            404: OpenApiResponse(
-                description="Not Found - Статус бронирования не найден",
-                examples=[
-                    OpenApiExample(
-                        'Not Found Example',
-                        value={"detail": "Not found."}
-                    )
-                ]
-            )
-        },
+        responses=UniversalChemas.retrieve_schema(ReservationStatusTypeSerializer),
     )
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
@@ -128,44 +52,7 @@ class ReservationStatusTypeViewSet(BaseViewSet):
         summary="Обновление статуса бронирования запрещено",
         description="Обновление статуса бронирования запрещено",
         request=ReservationStatusTypeSerializer,
-        responses={
-            400: OpenApiResponse(
-                description="Bad Request - Обновление запрещено",
-                examples=[
-                    OpenApiExample(
-                        'Bad Request Example',
-                        value={"error": "Invalid data provided"}
-                    )
-                ]
-            ),
-            401: OpenApiResponse(
-                description="Unauthorized - Неверный или отсутствующий токен",
-                examples=[
-                    OpenApiExample(
-                        'Unauthorized Example',
-                        value={"detail": "Given token not valid for any token type"}
-                    )
-                ]
-            ),
-            403: OpenApiResponse(
-                description="Forbidden - Доступ запрещен",
-                examples=[
-                    OpenApiExample(
-                        'Forbidden Example',
-                        value={"detail": "You do not have permission to perform this action"}
-                    )
-                ]
-            ),
-            404: OpenApiResponse(
-                description="Not Found - Cтатус бронирования не найден",
-                examples=[
-                    OpenApiExample(
-                        'Not Found Example',
-                        value={"detail": "Not found."}
-                    )
-                ]
-            )
-        },
+        responses=UniversalChemas.update_schema(ReservationStatusTypeSerializer, forbidden_update_object=True),
     )
     def update(self, request, *args, **kwargs):
         raise ValidationError(
@@ -177,44 +64,7 @@ class ReservationStatusTypeViewSet(BaseViewSet):
         summary="Частичное обновление статусов бронирования запрещено",
         description="Частичное обновление статусов бронирования запрещено",
         request=ReservationStatusTypeSerializer,
-        responses={
-            400: OpenApiResponse(
-                description="Bad Request - Частичное обновление запрещено",
-                examples=[
-                    OpenApiExample(
-                        'Bad Request Example',
-                        value={"error": "Invalid data provided"}
-                    )
-                ]
-            ),
-            401: OpenApiResponse(
-                description="Unauthorized - Неверный или отсутствующий токен",
-                examples=[
-                    OpenApiExample(
-                        'Unauthorized Example',
-                        value={"detail": "Given token not valid for any token type"}
-                    )
-                ]
-            ),
-            403: OpenApiResponse(
-                description="Forbidden - Доступ запрещен",
-                examples=[
-                    OpenApiExample(
-                        'Forbidden Example',
-                        value={"detail": "You do not have permission to perform this action"}
-                    )
-                ]
-            ),
-            404: OpenApiResponse(
-                description="Not Found - Статус бронирования не найден",
-                examples=[
-                    OpenApiExample(
-                        'Not Found Example',
-                        value={"detail": "Not found."}
-                    )
-                ]
-            )
-        },
+        responses=UniversalChemas.partial_update_schema(ReservationStatusTypeSerializer, forbidden_update_object=True),
     )
     def partial_update(self, request, *args, **kwargs):
         raise ValidationError(
@@ -225,44 +75,7 @@ class ReservationStatusTypeViewSet(BaseViewSet):
     @extend_schema(
         summary="Удаление статусов бронирования запрещено.",
         description="Удаление статусов бронирования запрещено.",
-        responses={
-            400: OpenApiResponse(
-                description="Bad Request - Удаление запрещено",
-                examples=[
-                    OpenApiExample(
-                        'Delete Forbidden Example',
-                        value={"detail": "Удаление клиентов запрещено"},
-                    )
-                ]
-            ),
-            401: OpenApiResponse(
-                description="Unauthorized - Неверный или отсутствующий токен",
-                examples=[
-                    OpenApiExample(
-                        'Unauthorized Example',
-                        value={"detail": "Given token not valid for any token type"}
-                    )
-                ]
-            ),
-            403: OpenApiResponse(
-                description="Forbidden - Доступ запрещен",
-                examples=[
-                    OpenApiExample(
-                        'Forbidden Example',
-                        value={"detail": "You do not have permission to perform this action"}
-                    )
-                ]
-            ),
-            404: OpenApiResponse(
-                description="Not Found - Статус бронирования не найден",
-                examples=[
-                    OpenApiExample(
-                        'Not Found Example',
-                        value={"detail": "Not found."}
-                    )
-                ]
-            )
-        },
+        responses=UniversalChemas.destroy_schema(ReservationStatusTypeSerializer),
     )
     def destroy(self, request, *args, **kwargs):
         raise ValidationError(

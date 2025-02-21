@@ -110,15 +110,15 @@ class Reservation(models.Model):
 
 
 class ReservationType(models.Model):
-    """Модель для хранения информации о типах бронирования (шаблонах направлений)"""
+    """Модель для хранения информации о типах бронирования (сценариях)"""
     id = models.AutoField(primary_key=True)
-    name = models.CharField(help_text='Наименование типа бронирования (шаблона направления)',
+    name = models.CharField(help_text='Наименование типа бронирования (сценария)',
                             verbose_name='Наименование типа бронирования', max_length=100, null=False, unique=True)
 
     class Meta:
         db_table = 'reservation_types'
-        verbose_name = "Тип бронирования (шаблон направления)"
-        verbose_name_plural = "Типы бронирования (шаблоны направлений)"
+        verbose_name = "Тип бронирования (сценарий)"
+        verbose_name_plural = "Типы бронирования (сценарии)"
 
     def __str__(self):
         return self.name
@@ -138,6 +138,7 @@ class TariffUnit(models.Model):
         db_table = 'tariff_units'
         verbose_name = "Тарифная единица"
         verbose_name_plural = "Тарифные единицы"
+        unique_together = ('reservation_type',)
 
     def __str__(self):
         return f"{self.reservation_type} - {self.min_reservation_time} ({self.tariff_unit_cost} руб.)"

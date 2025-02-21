@@ -152,8 +152,6 @@ class CustomTokenVerifyView(TokenVerifyView):
     """
 
     def post(self, request, *args, **kwargs):
-        print(request.body)
-        print(request.META.get('CONTENT_TYPE'))
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
