@@ -3,7 +3,7 @@ from rest_framework.validators import UniqueValidator
 
 from ..models import (
     Reservation, Client, Service, ReservationStatusType, Specialist, Subscription, ReservationType, TariffUnit, 
-    ServiceGroup
+    ServiceGroup, ClientGroup, ClientRating
 )
 
 
@@ -68,4 +68,16 @@ class TariffUnitSerializer(serializers.ModelSerializer):
 class ServiceGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceGroup
+        fields = '__all__'
+
+
+class ClientGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClientGroup
+        fields = '__all__'
+
+
+class ClientRatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClientRating
         fields = '__all__'

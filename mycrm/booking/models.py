@@ -217,14 +217,19 @@ class Service(models.Model):
 class Specialist(models.Model):
     """Модель для хранения информации о специалистах"""
     id = models.AutoField(primary_key=True)
-    name = models.CharField(help_text='ФИО специалиста', verbose_name='ФИО специалиста', max_length=100, null=False,
-                            unique=True)
+    name = models.CharField(
+        help_text='ФИО специалиста',
+        verbose_name='ФИО специалиста',
+        max_length=100,
+        null=False,
+        unique=True
+        )
     active = models.BooleanField(help_text='Активность специалиста (работает или нет)',
                                  verbose_name='Активность специалиста', default=True)
     client = models.ForeignKey('Client', on_delete=CASCADE,
                                help_text='ID клиента (для тех случаев, когда специалист выступает в роли клиента '
                                          'для бронирования)', verbose_name='ID клиента', null=True)
-    reservation_type = models.ManyToManyField('ReservationType', related_name='reservation_types',
+    reservation_type = models.ManyToManyField('ReservationType', related_name='reservation_types', 
                                               help_text='Типы бронирования доступные для специалиста',
                                               verbose_name='Типы бронирования', )
 
