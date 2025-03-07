@@ -9,7 +9,8 @@ from rest_framework.routers import DefaultRouter
 from .api import (
     CustomTokenObtainPairView, CustomTokenRefreshView, CustomTokenVerifyView, ReservationViewSet, ClientViewSet,
     ClientGroupViewSet, ReservationStatusTypeViewSet, ReservationTypeViewSet, SpecialistViewSet, SubscriptionViewSet,
-    TariffUnitViewSet, ServiceGroupViewSet, ServiceViewSet, ClientRatingViewSet
+    TariffUnitViewSet, ServiceGroupViewSet, ServiceViewSet, ClientRatingViewSet, RoomViewSet, SpecialistColorViewSet,
+    CancellationPolicyViewSet, CancellationReasonViewSet, PaymentTypeViewSet, PaymentViewSet
 )
 from .views import user_index_view, create_booking_view
 from .views.edit_booking import (
@@ -41,7 +42,13 @@ routes = [
     (r'tariff_units', TariffUnitViewSet),
     (r'service_groups', ServiceGroupViewSet),
     (r'services', ServiceViewSet),
-    (r'client_ratings', ClientRatingViewSet)
+    (r'client_ratings', ClientRatingViewSet),
+    (r'rooms', RoomViewSet),
+    (r'specialist_colors', SpecialistColorViewSet),
+    (r'cancellation_policies', CancellationPolicyViewSet),
+    (r'cancellation_reasons', CancellationReasonViewSet),
+    (r'payment_types', PaymentTypeViewSet),
+    (r'payments', PaymentViewSet)
 ]
 for prefix, viewset in routes:
     router.register(prefix, viewset)
