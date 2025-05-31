@@ -4,7 +4,7 @@ from django.db.models import PROTECT, CASCADE
 
 class Subscription(models.Model):
     """Модель для хранения информации об абонементах"""
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     client = models.ForeignKey('Client', on_delete=models.PROTECT, help_text='ID клиента', verbose_name='ID клиента')
     reservation_type = models.ForeignKey('ReservationType', on_delete=models.PROTECT, help_text='ID сценария',
                                          verbose_name='ID сценария')
@@ -22,7 +22,7 @@ class Subscription(models.Model):
 
 class ReservationStatusType(models.Model):
     """Модель для хранения типов статусов бронирования"""
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(
         max_length=100,
         help_text='Название статуса',
@@ -48,7 +48,7 @@ class ReservationStatusType(models.Model):
 class Reservation(models.Model):
     """Модель для хранения информации о созданных бронях"""
 
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     datetimestart = models.DateTimeField(help_text='Дата и время начала брони', verbose_name='Datetime начала',
                                          null=False, blank=False)
     datetimeend = models.DateTimeField(help_text='Дата и время окончания брони', verbose_name='Datetime конца',
@@ -111,7 +111,7 @@ class Reservation(models.Model):
 
 class ReservationType(models.Model):
     """Модель для хранения информации о типах бронирования (сценариях)"""
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(help_text='Наименование типа бронирования (сценария)',
                             verbose_name='Наименование типа бронирования', max_length=100, null=False, unique=True)
 
@@ -146,7 +146,7 @@ class TariffUnit(models.Model):
 
 class ServiceGroup(models.Model):
     """Модель для хранения информации о группах услуг"""
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(help_text='Наименование группы услуг',
                             verbose_name='Наименование группы услуг',
                             max_length=100,
@@ -169,7 +169,7 @@ class ServiceGroup(models.Model):
 
 class Service(models.Model):
     """Модель для хранения информации об услугах"""
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(
         help_text='Наименование услуги',
         verbose_name='Наименование услуги',
@@ -216,7 +216,7 @@ class Service(models.Model):
 
 class Specialist(models.Model):
     """Модель для хранения информации о специалистах"""
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(
         help_text='ФИО специалиста',
         verbose_name='ФИО специалиста',
@@ -244,7 +244,7 @@ class Specialist(models.Model):
 
 class Client(models.Model):
     """Модель для хранения информации о клиентах"""
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(max_length=150, help_text='ФИО клиента', verbose_name='ФИО клиента', null=False,
                             blank=False)
     comment = models.TextField(help_text='Комментарий к клиенту', verbose_name='Комментарий к клиенту', null=True,
@@ -275,7 +275,7 @@ class Client(models.Model):
 
 class ClientGroup(models.Model):
     """Модель для хранения информации о группах клиентов"""
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(help_text='Название группы', verbose_name='Название группы', max_length=100, null=False,
                             unique=True)
 
@@ -304,7 +304,7 @@ class ClientRating(models.Model):
 
 class Room(models.Model):
     """Модель для хранения информации о помещениях"""
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(max_length=150, help_text='Наименование помещения', verbose_name='Наименование помещения',
                             null=False, blank=False, unique=True)
     hourstart = models.TimeField(help_text="Время начала работы помещения", verbose_name="Начало работы")
@@ -408,7 +408,7 @@ class CancellationReason(models.Model):
 
 class PaymentType(models.Model):
     """Модель для хранения типов оплаты"""
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(
         max_length=100,
         help_text='Название типа оплаты',
@@ -433,7 +433,7 @@ class PaymentType(models.Model):
 
 class Payment(models.Model):
     """Модель для хранения информации о платежах"""
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     reservation = models.ForeignKey(
         'Reservation',
         on_delete=models.PROTECT,

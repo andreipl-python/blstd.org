@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from django.db import models
 
 import dateparser
 from django.core.exceptions import ValidationError
@@ -63,6 +64,8 @@ def check_specialist_availability(specialist: Specialist, start_datetime: dateti
     return True
 
 
+import random
+
 @csrf_exempt
 def create_booking_view(request):
     if request.method != "POST":
@@ -91,6 +94,17 @@ def create_booking_view(request):
 
         if not all([booking_type, client_id, booking_duration, room_id]):
             return JsonResponse({"success": False, "error": "Не все обязательные поля заполнены"})
+
+        # --- Заглушка для интеграции с внешним API ---
+        # В будущем здесь будет запрос к внешнему API, который вернёт id для бронирования.
+        # Сейчас просто генерируем id для новой брони (максимальный + 1 или случайный).
+        def get_external_booking_id():
+            max_id = Reservation.objects.aggregate(max_id=models.Max('id'))['max_id']
+            return (max_id or 0) + 1
+            # Альтернатива: return random.randint(100000, 999999)
+
+        external_booking_id = get_external_booking_id()
+        # --- Конец заглушки ---
 
         try:
             room = Room.objects.get(id=room_id)
@@ -121,6 +135,7 @@ def create_booking_view(request):
             pending_status = ReservationStatusType.objects.get(name='Не подтверждена')
             
             reservation = Reservation.objects.create(
+                id=external_booking_id,  # id, полученный от "внешнего API"
                 datetimestart=start_datetime,
                 datetimeend=end_datetime,
                 specialist=specialist,
@@ -143,7 +158,9 @@ def create_booking_view(request):
         })
 
     except Exception as e:
+        print(f"Произошла ошибка при создании брони: {str(e)}")
         return JsonResponse({
             "success": False,
             "error": f"Произошла ошибка при создании брони: {str(e)}"
         })
+        
