@@ -74,9 +74,13 @@ class SpecialistAdmin(admin.ModelAdmin):
 
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone', 'group')
-    list_filter = ('group',)
+    list_display = ('name', 'phone', 'get_groups')
+    list_filter = ('groups',)
     search_fields = ('name', 'phone')
+
+    def get_groups(self, obj):
+        return ", ".join([g.name for g in obj.groups.all()])
+    get_groups.short_description = "Группы"
 
 @admin.register(ClientGroup)
 class ClientGroupAdmin(admin.ModelAdmin):

@@ -253,8 +253,13 @@ class Client(models.Model):
                              blank=False, unique=True)
     email = models.EmailField(max_length=150, help_text='Email клиента', verbose_name='Email клиента', null=True,
                               blank=True)
-    group = models.ForeignKey('ClientGroup', on_delete=models.PROTECT, help_text='ID группы клиента',
-                              verbose_name='ID группы клиента', null=True)
+    groups = models.ManyToManyField(
+        'ClientGroup',
+        blank=True,
+        related_name='clients',
+        verbose_name='Группы клиента',
+        help_text='Группы, в которые входит клиент'
+    )
 
     class Meta:
         db_table = 'clients'

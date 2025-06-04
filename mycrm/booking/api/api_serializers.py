@@ -30,6 +30,12 @@ class ClientSerializer(serializers.ModelSerializer):
             'Номер телефона клиента'
         ),
     )
+    groups = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=ClientGroup.objects.all(),
+        required=False,
+        help_text='ID групп, в которые входит клиент'
+    )
 
     class Meta:
         model = Client
