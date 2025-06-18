@@ -20,6 +20,7 @@ from .service import ServiceViewSet
 from .service_group import ServiceGroupViewSet
 from .client_rating import ClientRatingViewSet
 from .specialist_color import SpecialistColorViewSet
+from .area import AreaViewSet
 
 __all__ = [
     'ReservationViewSet',
@@ -36,6 +37,7 @@ __all__ = [
     'ServiceViewSet',
     'ClientRatingViewSet',
     'RoomViewSet',
+    'AreaViewSet',
     'SpecialistColorViewSet',
     'PaymentTypeViewSet',
     'PaymentViewSet',

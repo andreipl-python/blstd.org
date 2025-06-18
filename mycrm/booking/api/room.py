@@ -8,24 +8,24 @@ from .settings import BaseViewSet
 from ..models import Room
 
 
-@extend_schema(tags=['Помещение'])
+@extend_schema(tags=['Комната'])
 @extend_schema_view(destroy=extend_schema(exclude=True))
 class RoomViewSet(BaseViewSet):
-    """CRUD для помещения"""
+    """CRUD для комнаты"""
     queryset = Room.objects.all()
     serializer_class = RoomSerializer
 
     @extend_schema(
-        summary="Получить список помещений",
-        description="Возвращает список всех существующих помещений.",
+        summary="Получить список комнат",
+        description="Возвращает список всех существующих комнат.",
         responses=UniversalSchemas.list_schema(RoomSerializer),
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
     @extend_schema(
-        summary="Создать новое помещение",
-        description="Создает новое помещение с предоставленными данными.",
+        summary="Создать новую комнату",
+        description="Создает новую комнату с предоставленными данными.",
         request=RoomSerializer,
         responses=UniversalSchemas.create_schema(RoomSerializer),
     )
@@ -33,16 +33,16 @@ class RoomViewSet(BaseViewSet):
         return super().create(request, *args, **kwargs)
 
     @extend_schema(
-        summary="Получить детали помещения",
-        description="Возвращает детали конкретного помещения по его ID.",
+        summary="Получить детали комнаты",
+        description="Возвращает детали конкретной комнаты по её ID.",
         responses=UniversalSchemas.retrieve_schema(RoomSerializer),
     )
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
 
     @extend_schema(
-        summary="Полностью обновить помещение",
-        description="Полностью обновляет существующее помещение по его ID.",
+        summary="Полностью обновить комнату",
+        description="Полностью обновляет существующую комнату по её ID.",
         request=RoomSerializer,
         responses=UniversalSchemas.update_schema(RoomSerializer),
     )
@@ -50,8 +50,8 @@ class RoomViewSet(BaseViewSet):
         return super().update(request, *args, **kwargs)
 
     @extend_schema(
-        summary="Частично обновить помещение",
-        description="Частично обновляет существующее помещение по его ID.",
+        summary="Частично обновить комнату",
+        description="Частично обновляет существующую комнату по её ID.",
         request=RoomSerializer,
         responses=UniversalSchemas.partial_update_schema(RoomSerializer),
     )
@@ -59,12 +59,12 @@ class RoomViewSet(BaseViewSet):
         return super().partial_update(request, *args, **kwargs)
 
     @extend_schema(
-        summary="Удалить помещение",
-        description="Удаление помещения запрещено.",
+        summary="Удалить комнату",
+        description="Удаление комнаты запрещено.",
         responses=UniversalSchemas.destroy_schema(RoomSerializer),
     )
     def destroy(self, request, *args, **kwargs):
         raise ValidationError(
-            {"detail": "Удаление помещения запрещено"},
+            {"detail": "Удаление комнаты запрещено"},
             code=status.HTTP_400_BAD_REQUEST
         )

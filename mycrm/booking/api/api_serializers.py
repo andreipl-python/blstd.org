@@ -4,7 +4,7 @@ from rest_framework.validators import UniqueValidator
 from ..models import (
     Reservation, Client, Service, ReservationStatusType, Specialist, Subscription, ReservationType, TariffUnit, 
     ServiceGroup, ClientGroup, ClientRating, Room, SpecialistColor, CancellationPolicy, CancellationReason, PaymentType,
-    Payment
+    Payment, Area
 )
 
 
@@ -90,7 +90,13 @@ class ClientRatingSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class AreaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Area
+        fields = '__all__'
+
 class RoomSerializer(serializers.ModelSerializer):
+    area = serializers.PrimaryKeyRelatedField(queryset=Area.objects.all(), required=True, allow_null=False, help_text='ID помещения')
     class Meta:
         model = Room
         fields = '__all__'

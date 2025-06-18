@@ -1,5 +1,5 @@
 import pytest
-from booking.models import Specialist, Client, Reservation
+from booking.models import Area
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -10,7 +10,6 @@ def api_client():
     client = APIClient()
     return client
 
-
 @pytest.fixture
 def auth_client(api_client):
     user = User.objects.create_user(username='admin', password='66033017')
@@ -19,81 +18,42 @@ def auth_client(api_client):
     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
     return api_client
 
-
 @pytest.fixture
-def specialist():
-    return Specialist.objects.create(name="Иван Иванов", active=True)
-
-
-@pytest.fixture
-def client_obj():
-    return Client.objects.create(name="Петр Петров", phone="1234567890", email="petr@example.com")
-
-
-@pytest.fixture
-def reservation(client_obj, specialist):
-    return Reservation.objects.create(
-        datetimestart="2025-02-01T10:00:00",
-        datetimeend="2025-02-01T12:00:00",
-        client=client_obj,
-        specialist=specialist
-    )
+def area():
+    return Area.objects.create(id=101, name="Тестовое помещение", description="Описание для теста")
 
 
 @pytest.mark.django_db
-class TestSpecialistAPI:
+class TestAreaAPI:
+    def test_area_list(self, auth_client, area):
+        response = auth_client.get('/api/areas/')
+        assert response.status_code == 200
+        assert any(a['id'] == area.id for a in response.data)
 
-    def test_create_specialist(self, auth_client):
-        url = "/api/specialists/"
-        data = {"name": "Дмитрий Дмитриев", "active": True}
-        response = auth_client.post(url, data, format='json')
-        assert response.status_code == status.HTTP_201_CREATED
-        assert "id" in response.data
-        assert response.data["name"] == "Дмитрий Дмитриев"
+    def test_area_create(self, auth_client):
+        data = {"id": 202, "name": "Новое помещение", "description": "Описание"}
+        response = auth_client.post('/api/areas/', data)
+        assert response.status_code == 201
+        assert response.data['name'] == "Новое помещение"
 
-    def test_get_specialist(self, auth_client, specialist):
-        url = f"/api/specialists/{specialist.id}/"
-        response = auth_client.get(url)
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["name"] == specialist.name
+    def test_area_retrieve(self, auth_client, area):
+        response = auth_client.get(f'/api/areas/{area.id}/')
+        assert response.status_code == 200
+        assert response.data['id'] == area.id
 
+    def test_area_update(self, auth_client, area):
+        data = {"id": area.id, "name": "Измененное помещение", "description": "Новое описание"}
+        response = auth_client.put(f'/api/areas/{area.id}/', data)
+        assert response.status_code == 200
+        assert response.data['name'] == "Измененное помещение"
 
-@pytest.mark.django_db
-class TestClientAPI:
+    def test_area_partial_update(self, auth_client, area):
+        data = {"description": "Частичное обновление"}
+        response = auth_client.patch(f'/api/areas/{area.id}/', data)
+        assert response.status_code == 200
+        assert response.data['description'] == "Частичное обновление"
 
-    def test_create_client(self, auth_client):
-        url = "/api/clients/"
-        data = {"name": "Олег Олегов", "phone": "9876543210", "email": "oleg@example.com"}
-        response = auth_client.post(url, data, format='json')
-        assert response.status_code == status.HTTP_201_CREATED
-        assert "id" in response.data
-        assert response.data["name"] == "Олег Олегов"
-
-    def test_get_client(self, auth_client, client_obj):
-        url = f"/api/clients/{client_obj.id}/"
-        response = auth_client.get(url)
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["name"] == client_obj.name
-
-
-@pytest.mark.django_db
-class TestReservationAPI:
-
-    def test_create_reservation(self, auth_client, client_obj, specialist):
-        url = "/api/reservations/"
-        data = {
-            "datetimestart": "2025-02-02T10:00:00",
-            "datetimeend": "2025-02-02T12:00:00",
-            "client": client_obj.id,
-            "specialist": specialist.id
-        }
-        response = auth_client.post(url, data, format='json')
-        assert response.status_code == status.HTTP_201_CREATED
-        assert "id" in response.data
-        assert response.data["client"] == client_obj.id
-
-    def test_get_reservation(self, auth_client, reservation):
-        url = f"/api/reservations/{reservation.id}/"
-        response = auth_client.get(url)
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["datetimestart"] == reservation.datetimestart
+    def test_area_destroy_forbidden(self, auth_client, area):
+        response = auth_client.delete(f'/api/areas/{area.id}/')
+        assert response.status_code == 400
+        assert "запрещено" in response.data['detail']

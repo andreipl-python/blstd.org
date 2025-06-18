@@ -307,23 +307,40 @@ class ClientRating(models.Model):
         return f"Оценка {self.rating} для {self.client}"
 
 
-class Room(models.Model):
-    """Модель для хранения информации о помещениях"""
+class Area(models.Model):
+    """Модель для хранения информации о помещениях (area)"""
     id = models.IntegerField(primary_key=True, null=False, blank=False)
-    name = models.CharField(max_length=150, help_text='Наименование помещения', verbose_name='Наименование помещения',
+    name = models.CharField(max_length=150, help_text='Название помещения', verbose_name='Название помещения', null=False, unique=True)
+    description = models.TextField(help_text='Описание помещения', verbose_name='Описание', null=True, blank=True)
+
+    class Meta:
+        db_table = 'areas'
+        verbose_name = 'Помещение'
+        verbose_name_plural = 'Помещения'
+
+    def __str__(self):
+        return self.name
+
+
+class Room(models.Model):
+    """Модель для хранения информации о комнатах"""
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
+    name = models.CharField(max_length=150, help_text='Наименование комнаты', verbose_name='Наименование комнаты',
                             null=False, blank=False, unique=True)
-    hourstart = models.TimeField(help_text="Время начала работы помещения", verbose_name="Начало работы")
-    hourend = models.TimeField(help_text="Время окончания работы помещения", verbose_name="Конец работы")
+    area = models.ForeignKey('Area', on_delete=models.SET_NULL, null=True, blank=True,
+                            help_text='ID помещения, к которому относится комната', verbose_name='Помещение')
+    hourstart = models.TimeField(help_text="Время начала работы комнаты", verbose_name="Начало работы")
+    hourend = models.TimeField(help_text="Время окончания работы комнаты", verbose_name="Конец работы")
     reservation_type = models.ManyToManyField('ReservationType', related_name='rooms',
-                                              help_text="Типы бронирования, доступные для помещения",
-                                              verbose_name="Типы бронирования")
-    service = models.ManyToManyField('Service', related_name='services', help_text='Услуги доступные для помещения',
+                                              help_text="Типы бронирования (сценарии), доступные для комнаты",
+                                              verbose_name="Типы бронирования (сценарии)")
+    service = models.ManyToManyField('Service', related_name='services', help_text='Услуги доступные для комнаты',
                                      verbose_name='Услуги')
 
     class Meta:
         db_table = 'rooms'
-        verbose_name = 'Помещение'
-        verbose_name_plural = 'Помещения'
+        verbose_name = 'Комната'
+        verbose_name_plural = 'Комнаты'
 
     def __str__(self):
         return self.name

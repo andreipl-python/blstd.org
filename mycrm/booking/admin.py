@@ -3,7 +3,7 @@ from django.contrib import admin
 from .models import (
     SpecialistColor, CancellationPolicy, CancellationReason, Subscription, ReservationStatusType,
     Reservation, ReservationType, TariffUnit, ServiceGroup, Service,
-    Specialist, Client, ClientGroup, ClientRating, Room
+    Specialist, Client, ClientGroup, ClientRating, Room, Area, PaymentType, Payment
 )
 
 
@@ -95,7 +95,12 @@ class ClientRatingAdmin(admin.ModelAdmin):
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ('name', 'hourstart', 'hourend')
-    search_fields = ('name',)
+    list_display = ('name', 'area', 'hourstart', 'hourend',)
+    list_filter = ('area',)
+    search_fields = ('name', 'area__name')
     filter_horizontal = ('reservation_type', 'service')
 
+@admin.register(Area)
+class AreaAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
