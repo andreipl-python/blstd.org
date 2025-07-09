@@ -104,3 +104,4 @@ class RoomAdmin(admin.ModelAdmin):
 class AreaAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
+    filter_horizontal = ('scenario',)

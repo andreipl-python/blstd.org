@@ -68,7 +68,7 @@ class Reservation(models.Model):
                              null=False, blank=False)
     scenario = models.ForeignKey('Scenario', on_delete=PROTECT,
                                  help_text='ID сценария',
-                                 verbose_name='ID сценария', null=False)
+                                 verbose_name='ID сценария',)
     status = models.ForeignKey('ReservationStatusType', on_delete=models.PROTECT,
                                help_text='Статус брони',
                                verbose_name='Статус',
@@ -312,6 +312,9 @@ class Area(models.Model):
     id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(max_length=150, help_text='Название помещения', verbose_name='Название помещения', null=False, unique=True)
     description = models.TextField(help_text='Описание помещения', verbose_name='Описание', null=True, blank=True)
+    scenario = models.ManyToManyField('Scenario', related_name='areas',
+                                      help_text="Типы бронирования (сценарии), доступные для помещения",
+                                      verbose_name="Типы бронирования (сценарии)")
 
     class Meta:
         db_table = 'areas'
@@ -331,9 +334,7 @@ class Room(models.Model):
                             help_text='ID помещения, к которому относится комната', verbose_name='Помещение')
     hourstart = models.TimeField(help_text="Время начала работы комнаты", verbose_name="Начало работы")
     hourend = models.TimeField(help_text="Время окончания работы комнаты", verbose_name="Конец работы")
-    scenario = models.ManyToManyField('Scenario', related_name='rooms',
-                                              help_text="Типы бронирования (сценарии), доступные для комнаты",
-                                              verbose_name="Типы бронирования (сценарии)")
+
     service = models.ManyToManyField('Service', related_name='services', help_text='Услуги доступные для комнаты',
                                      verbose_name='Услуги')
 
