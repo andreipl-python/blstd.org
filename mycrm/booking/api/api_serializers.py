@@ -97,6 +97,27 @@ class AreaSerializer(serializers.ModelSerializer):
 
 class RoomSerializer(serializers.ModelSerializer):
     area = serializers.PrimaryKeyRelatedField(queryset=Area.objects.all(), required=True, allow_null=False, help_text='ID помещения')
+    scenario = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Scenario.objects.all(),
+        required=True,
+        allow_empty=False,
+        help_text='ID сценариев, назначенных комнате (только из сценариев помещения)'
+    )
+
+    def validate(self, attrs):
+        area = attrs.get('area') or getattr(self.instance, 'area', None)
+        scenarios = attrs.get('scenario')
+        if area is None:
+            raise serializers.ValidationError({'area': 'Необходимо выбрать помещение.'})
+        if not scenarios:
+            raise serializers.ValidationError({'scenario': 'Необходимо выбрать хотя бы один сценарий.'})
+        allowed_scenarios = set(area.scenario.values_list('id', flat=True))
+        scenario_ids = set([s.id for s in scenarios])
+        if not scenario_ids.issubset(allowed_scenarios):
+            raise serializers.ValidationError({'scenario': 'Можно выбрать только сценарии, назначенные у выбранного помещения.'})
+        return attrs
+
     class Meta:
         model = Room
         fields = '__all__'

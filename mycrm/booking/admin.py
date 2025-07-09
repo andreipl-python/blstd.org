@@ -98,7 +98,30 @@ class RoomAdmin(admin.ModelAdmin):
     list_display = ('name', 'area', 'hourstart', 'hourend')
     list_filter = ('area',)
     search_fields = ('name', 'area__name')
-    filter_horizontal = ('service',)
+    filter_horizontal = ('service', 'scenario')
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        from .models import Area
+        if db_field.name == 'scenario':
+            obj_id = request.resolver_match.kwargs.get('object_id') if hasattr(request, 'resolver_match') else None
+            area_id = None
+            if obj_id:
+                from .models import Room
+                try:
+                    room = Room.objects.get(pk=obj_id)
+                    if room.area_id:
+                        area_id = room.area_id
+                except Room.DoesNotExist:
+                    pass
+            if area_id:
+                area = Area.objects.filter(pk=area_id).first()
+                if area:
+                    kwargs["queryset"] = area.scenario.all()
+                else:
+                    kwargs["queryset"] = Area.objects.none()
+            else:
+                kwargs["queryset"] = Area.objects.none()
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
 
 @admin.register(Area)
 class AreaAdmin(admin.ModelAdmin):

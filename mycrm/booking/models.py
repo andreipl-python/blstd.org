@@ -337,6 +337,25 @@ class Room(models.Model):
 
     service = models.ManyToManyField('Service', related_name='services', help_text='Услуги доступные для комнаты',
                                      verbose_name='Услуги')
+    scenario = models.ManyToManyField('Scenario', related_name='rooms',
+                                      help_text="Типы бронирования (сценарии), доступные для комнаты",
+                                      verbose_name="Типы бронирования (сценарии)",
+                                      blank=False)
+
+    def clean(self):
+        super().clean()
+        if self.area_id is not None:
+            area_scenarios = set(self.area.scenario.values_list('id', flat=True))
+            room_scenarios = set(self.scenario.values_list('id', flat=True)) if self.pk else set()
+            # Для новых объектов self.pk ещё нет, поэтому room_scenarios пустой
+            # Проверка будет работать при сохранении через форму или после первого сохранения
+            if room_scenarios and not room_scenarios.issubset(area_scenarios):
+                from django.core.exceptions import ValidationError
+                raise ValidationError('Сценарии комнаты должны быть выбраны только из сценариев, заданных у помещения.')
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     class Meta:
         db_table = 'rooms'

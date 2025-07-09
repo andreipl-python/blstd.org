@@ -61,7 +61,7 @@ SIMPLE_JWT = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "BLS App API",
-    "VERSION": "1.0.0",
+    "VERSION": "2.2.0",
     "DESCRIPTION": "API для приложения бронирования",
     'EXTENSIONS_ROOT': {
         'x-tagGroups': [
