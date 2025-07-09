@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from .models import (
     SpecialistColor, CancellationPolicy, CancellationReason, Subscription, ReservationStatusType,
-    Reservation, ReservationType, TariffUnit, ServiceGroup, Service,
+    Reservation, Scenario, TariffUnit, ServiceGroup, Service,
     Specialist, Client, ClientGroup, ClientRating, Room, Area, PaymentType, Payment
 )
 
@@ -14,9 +14,9 @@ class SpecialistColorAdmin(admin.ModelAdmin):
 
 @admin.register(CancellationPolicy)
 class CancellationPolicyAdmin(admin.ModelAdmin):
-    list_display = ('reservation_type', 'hours_before')
-    list_filter = ('reservation_type',)
-    search_fields = ('reservation_type__name',)
+    list_display = ('scenario', 'hours_before')
+    list_filter = ('scenario',)
+    search_fields = ('scenario__name',)
 
 @admin.register(CancellationReason)
 class CancellationReasonAdmin(admin.ModelAdmin):
@@ -27,9 +27,9 @@ class CancellationReasonAdmin(admin.ModelAdmin):
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('client', 'reservation_type', 'balance')
-    list_filter = ('reservation_type',)
-    search_fields = ('client__name', 'reservation_type__name')
+    list_display = ('client', 'scenario', 'balance')
+    list_filter = ('scenario',)
+    search_fields = ('client__name', 'scenario__name')
 
 @admin.register(ReservationStatusType)
 class ReservationStatusTypeAdmin(admin.ModelAdmin):
@@ -38,21 +38,21 @@ class ReservationStatusTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Reservation)
 class ReservationAdmin(admin.ModelAdmin):
-    list_display = ('client', 'specialist', 'room', 'reservation_type', 'datetimestart', 'datetimeend', 'status')
-    list_filter = ('status', 'reservation_type', 'specialist', 'room')
+    list_display = ('client', 'specialist', 'room', 'scenario', 'datetimestart', 'datetimeend', 'status')
+    list_filter = ('status', 'scenario', 'specialist', 'room')
     search_fields = ('client__name', 'specialist__name', 'room__name')
     date_hierarchy = 'datetimestart'
 
-@admin.register(ReservationType)
-class ReservationTypeAdmin(admin.ModelAdmin):
+@admin.register(Scenario)
+class ScenarioAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
 
 @admin.register(TariffUnit)
 class TariffUnitAdmin(admin.ModelAdmin):
-    list_display = ('reservation_type', 'min_reservation_time', 'tariff_unit_cost')
-    list_filter = ('reservation_type',)
-    search_fields = ('reservation_type__name',)
+    list_display = ('scenario', 'min_reservation_time', 'tariff_unit_cost')
+    list_filter = ('scenario',)
+    search_fields = ('scenario__name',)
 
 @admin.register(ServiceGroup)
 class ServiceGroupAdmin(admin.ModelAdmin):
@@ -63,13 +63,13 @@ class ServiceGroupAdmin(admin.ModelAdmin):
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
     list_display = ('name', 'active', 'group')
-    list_filter = ('active', 'group', 'reservation_type')
+    list_filter = ('active', 'group')
     search_fields = ('name', 'group__name')
 
 @admin.register(Specialist)
 class SpecialistAdmin(admin.ModelAdmin):
     list_display = ('name', 'active')
-    list_filter = ('active', 'reservation_type')
+    list_filter = ('active',)
     search_fields = ('name',)
 
 @admin.register(Client)
@@ -95,10 +95,10 @@ class ClientRatingAdmin(admin.ModelAdmin):
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ('name', 'area', 'hourstart', 'hourend',)
+    list_display = ('name', 'area', 'hourstart', 'hourend')
     list_filter = ('area',)
     search_fields = ('name', 'area__name')
-    filter_horizontal = ('reservation_type', 'service')
+    filter_horizontal = ('service',)
 
 @admin.register(Area)
 class AreaAdmin(admin.ModelAdmin):

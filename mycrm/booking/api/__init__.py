@@ -5,9 +5,9 @@ from .auth import (
 )
 from .client import ClientViewSet
 from .client_group import ClientGroupViewSet
-from .reservation import ReservationViewSet
 from .reservation_status_type import ReservationStatusTypeViewSet
-from .reservation_type import ReservationTypeViewSet
+from .reservation import ReservationViewSet
+from .scenario import ScenarioViewSet
 from .specialist import SpecialistViewSet
 from .subscription import SubscriptionViewSet
 from .cancellation_policy import CancellationPolicyViewSet
@@ -27,7 +27,7 @@ __all__ = [
     'ClientViewSet',
     'ClientGroupViewSet',
     'ReservationStatusTypeViewSet',
-    'ReservationTypeViewSet',
+    'ScenarioViewSet',
     'SpecialistViewSet',
     'SubscriptionViewSet',
     'CancellationPolicyViewSet',

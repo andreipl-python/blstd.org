@@ -3,7 +3,7 @@ from calendar import monthrange
 from datetime import datetime, timedelta
 from typing import Any
 
-from booking.models import Client, Room, Service, Reservation, ReservationType, Specialist, TariffUnit, SpecialistColor, \
+from booking.models import Client, Room, Service, Reservation, Scenario, Specialist, TariffUnit, SpecialistColor, \
     PaymentType
 from django.contrib.auth.decorators import login_required
 from django.core.serializers import serialize
@@ -215,8 +215,8 @@ def user_index_view(request):
     
     specialist_colors_json = json.dumps(specialist_colors)
 
-    reservation_types = ReservationType.objects.all()
-    reservation_types_json = serialize('json', reservation_types, use_natural_primary_keys=True)
+    scenarios = ReservationType.objects.all()
+    scenarios_json = serialize('json', scenarios, use_natural_primary_keys=True)
 
     tariff_units = TariffUnit.objects.all()
     tariff_units_json = serialize('json', tariff_units, use_natural_primary_keys=True)
@@ -236,7 +236,7 @@ def user_index_view(request):
         'services_json': services_json,
         'specialists_json': specialists_json,
         'bookings_in_range': bookings_in_range_json,
-        'reservation_types_json': reservation_types_json,
+        'scenarios_json': scenarios_json,
         'tariff_units_json': tariff_units_json,
         'clients': clients,
         'clients_json': clients_json,

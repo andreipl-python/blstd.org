@@ -8,7 +8,7 @@ from rest_framework.routers import DefaultRouter
 
 from .api import (
     CustomTokenObtainPairView, CustomTokenRefreshView, CustomTokenVerifyView, ReservationViewSet, ClientViewSet,
-    ClientGroupViewSet, ReservationStatusTypeViewSet, ReservationTypeViewSet, SpecialistViewSet, SubscriptionViewSet,
+    ClientGroupViewSet, ReservationStatusTypeViewSet, ScenarioViewSet, SpecialistViewSet, SubscriptionViewSet,
     TariffUnitViewSet, ServiceGroupViewSet, ServiceViewSet, ClientRatingViewSet, RoomViewSet, SpecialistColorViewSet,
     CancellationPolicyViewSet, CancellationReasonViewSet, PaymentTypeViewSet, PaymentViewSet, AreaViewSet
 )
@@ -35,8 +35,7 @@ routes = [
     (r'reservations', ReservationViewSet),
     (r'clients', ClientViewSet),
     (r'client_groups', ClientGroupViewSet),
-    (r'reservation_status_types', ReservationStatusTypeViewSet),
-    (r'reservation_types', ReservationTypeViewSet),
+    (r'scenarios', ScenarioViewSet),
     (r'specialists', SpecialistViewSet),
     (r'subscriptions', SubscriptionViewSet),
     (r'tariff_units', TariffUnitViewSet),

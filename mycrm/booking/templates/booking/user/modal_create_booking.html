@@ -159,7 +159,7 @@
         if (selectedTypeId && duration) {
             // Находим тарифную единицу для выбранного типа бронирования
             const tariffUnit = cachedData.tariffUnits.find(unit => 
-                unit.fields.reservation_type === parseInt(selectedTypeId)
+                unit.fields.scenario === parseInt(selectedTypeId)
             );
             
             if (tariffUnit) {
@@ -377,12 +377,12 @@
         });
     });
 
-    function openModal(date, time, room_name, timeblocksjson, rooms_json_str, reservation_types_json_str,
+    function openModal(date, time, room_name, timeblocksjson, rooms_json_str, scenarios_json_str,
                       specialists_json_str, cell) {
         try {
             cachedData.rooms = JSON.parse(rooms_json_str);
             cachedData.specialists = JSON.parse(specialists_json_str);
-            cachedData.reservationTypes = JSON.parse(reservation_types_json_str);
+            cachedData.scenarios = JSON.parse(scenarios_json_str);
         } catch (error) {
             return;
         }
@@ -452,8 +452,8 @@
             return;
         }
 
-        const availableReservationTypes = room.fields.reservation_type;
-        const availableTypes = cachedData.reservationTypes.filter(type =>
+        const availableReservationTypes = room.fields.scenario;
+        const availableTypes = cachedData.scenarios.filter(type =>
             availableReservationTypes.includes(type.pk)
         );
 
@@ -573,7 +573,7 @@
             }
 
             const availableSpecialists = cachedData.specialists.filter(specialist =>
-                specialist.fields.reservation_type.includes(parseInt(selectedTypeId))
+                specialist.fields.scenario.includes(parseInt(selectedTypeId))
             );
 
             if (availableSpecialists.length > 0) {
@@ -630,7 +630,7 @@
         const $durationSelect = $('#bookingDuration');
         
         // Получаем тарифную единицу для выбранного типа брони
-        const tariffUnit = cachedData.tariffUnits.find(tu => parseInt(tu.fields.reservation_type) === parseInt(selectedTypeId));
+        const tariffUnit = cachedData.tariffUnits.find(tu => parseInt(tu.fields.scenario) === parseInt(selectedTypeId));
         
         if (!tariffUnit) {
             $balanceDot.removeClass('green-dot red-dot yellow-dot').addClass('gray-dot').show();
@@ -721,7 +721,7 @@
         const serviceSelect = $('#serviceType');
 
         const filteredServices = cachedData.services.filter(service => {
-            return service.fields.reservation_type.includes(parseInt(selectedTypeId));
+            return service.fields.scenario.includes(parseInt(selectedTypeId));
         });
         
         if (filteredServices.length === 0) {
@@ -807,13 +807,13 @@
         }
 
         // Находим тип бронирования
-        const reservationType = cachedData.reservationTypes.find(type => type.pk === parseInt(selectedTypeId));
+        const reservationType = cachedData.scenarios.find(type => type.pk === parseInt(selectedTypeId));
 
         // Ищем тарифную единицу
         let unitDuration = 0;
         if (cachedData.tariffUnits) {
             const tariffUnit = cachedData.tariffUnits.find(unit => 
-                unit.fields.reservation_type === parseInt(selectedTypeId)
+                unit.fields.scenario === parseInt(selectedTypeId)
             );
             
             if (tariffUnit && tariffUnit.fields.min_reservation_time) {

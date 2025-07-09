@@ -6,8 +6,8 @@ class Subscription(models.Model):
     """Модель для хранения информации об абонементах"""
     id = models.IntegerField(primary_key=True, null=False, blank=False)
     client = models.ForeignKey('Client', on_delete=models.PROTECT, help_text='ID клиента', verbose_name='ID клиента')
-    reservation_type = models.ForeignKey('ReservationType', on_delete=models.PROTECT, help_text='ID сценария',
-                                         verbose_name='ID сценария')
+    scenario = models.ForeignKey('Scenario', on_delete=models.PROTECT, help_text='ID сценария',
+                                 verbose_name='ID сценария')
     balance = models.IntegerField(help_text='Баланс тарифных единиц', verbose_name='Баланс тарифных единиц')
 
     class Meta:
@@ -17,7 +17,7 @@ class Subscription(models.Model):
         verbose_name_plural = "Абонементы"
 
     def __str__(self):
-        return f"{self.client} - {self.reservation_type} ({self.balance} ед.)"
+        return f"{self.client} - {self.scenario} ({self.balance} ед.)"
 
 
 class ReservationStatusType(models.Model):
@@ -66,9 +66,9 @@ class Reservation(models.Model):
     room = models.ForeignKey('Room', on_delete=models.PROTECT,
                              help_text='ID помещения, которое забронировано', verbose_name='ID помещения',
                              null=False, blank=False)
-    reservation_type = models.ForeignKey('ReservationType', on_delete=PROTECT,
-                                         help_text='ID типа бронирования (шаблона направления)',
-                                         verbose_name='ID типа брони', null=False)
+    scenario = models.ForeignKey('Scenario', on_delete=PROTECT,
+                                 help_text='ID сценария',
+                                 verbose_name='ID сценария', null=False)
     status = models.ForeignKey('ReservationStatusType', on_delete=models.PROTECT,
                                help_text='Статус брони',
                                verbose_name='Статус',
@@ -109,16 +109,16 @@ class Reservation(models.Model):
         verbose_name_plural = "Брони"
 
 
-class ReservationType(models.Model):
-    """Модель для хранения информации о типах бронирования (сценариях)"""
+class Scenario(models.Model):
+    """Модель для хранения информации о сценариях бронирования"""
     id = models.IntegerField(primary_key=True, null=False, blank=False)
-    name = models.CharField(help_text='Наименование типа бронирования (сценария)',
-                            verbose_name='Наименование типа бронирования', max_length=100, null=False, unique=True)
+    name = models.CharField(help_text='Наименование сценария',
+                            verbose_name='Наименование сценария', max_length=100, null=False, unique=True)
 
     class Meta:
-        db_table = 'reservation_types'
-        verbose_name = "Тип бронирования (сценарий)"
-        verbose_name_plural = "Типы бронирования (сценарии)"
+        db_table = 'scenarios'
+        verbose_name = "Сценарий"
+        verbose_name_plural = "Сценарии"
 
     def __str__(self):
         return self.name
@@ -127,8 +127,8 @@ class ReservationType(models.Model):
 class TariffUnit(models.Model):
     """Модель для хранения информации о тарифных единицах"""
 
-    reservation_type = models.ForeignKey('ReservationType', on_delete=models.PROTECT,
-                                         help_text='ID типа бронирования (сценария)', verbose_name='ID сценария')
+    scenario = models.ForeignKey('Scenario', on_delete=models.PROTECT,
+                                 help_text='ID сценария', verbose_name='ID сценария')
     min_reservation_time = models.TimeField(help_text='Минимальное время бронирования (размер тарифной единицы)',
                                             verbose_name='Минимальное время бронирования')
     tariff_unit_cost = models.DecimalField(max_digits=10, decimal_places=2, help_text='Стоимость тарифной единицы',
@@ -138,10 +138,10 @@ class TariffUnit(models.Model):
         db_table = 'tariff_units'
         verbose_name = "Тарифная единица"
         verbose_name_plural = "Тарифные единицы"
-        unique_together = ('reservation_type',)
+        unique_together = ('scenario',)
 
     def __str__(self):
-        return f"{self.reservation_type} - {self.min_reservation_time} ({self.tariff_unit_cost} руб.)"
+        return f"{self.scenario} - {self.min_reservation_time} ({self.tariff_unit_cost} руб.)"
 
 
 class ServiceGroup(models.Model):
@@ -195,11 +195,11 @@ class Service(models.Model):
         verbose_name='Стоимость',
         null=False, blank=False
         )
-    reservation_type = models.ManyToManyField(
-        'ReservationType',
+    scenario = models.ManyToManyField(
+        'Scenario',
         related_name='services',
-        help_text='Типы бронирования доступные для услуги',
-        verbose_name='Типы бронирования'
+        help_text='Сценарии, доступные для услуги',
+        verbose_name='Сценарии'
         )
 
     class Meta:
@@ -229,7 +229,7 @@ class Specialist(models.Model):
     client = models.ForeignKey('Client', on_delete=CASCADE,
                                help_text='ID клиента (для тех случаев, когда специалист выступает в роли клиента '
                                          'для бронирования)', verbose_name='ID клиента', null=True)
-    reservation_type = models.ManyToManyField('ReservationType', related_name='reservation_types', 
+    scenario = models.ManyToManyField('Scenario', related_name='scenarios', 
                                               help_text='Типы бронирования доступные для специалиста',
                                               verbose_name='Типы бронирования', )
 
@@ -331,7 +331,7 @@ class Room(models.Model):
                             help_text='ID помещения, к которому относится комната', verbose_name='Помещение')
     hourstart = models.TimeField(help_text="Время начала работы комнаты", verbose_name="Начало работы")
     hourend = models.TimeField(help_text="Время окончания работы комнаты", verbose_name="Конец работы")
-    reservation_type = models.ManyToManyField('ReservationType', related_name='rooms',
+    scenario = models.ManyToManyField('Scenario', related_name='rooms',
                                               help_text="Типы бронирования (сценарии), доступные для комнаты",
                                               verbose_name="Типы бронирования (сценарии)")
     service = models.ManyToManyField('Service', related_name='services', help_text='Услуги доступные для комнаты',
@@ -376,12 +376,12 @@ class SpecialistColor(models.Model):
 class CancellationPolicy(models.Model):
     """Модель для хранения правил отмены бронирования"""
 
-    reservation_type = models.OneToOneField(
-        'ReservationType',
+    scenario = models.OneToOneField(
+        'Scenario',
         on_delete=models.PROTECT,
         related_name='cancellation_policy',
-        help_text='Тип бронирования, к которому применяется политика отмены',
-        verbose_name='Тип бронирования'
+        help_text='Сценарий, к которому применяется политика отмены',
+        verbose_name='Сценарий'
     )
 
     hours_before = models.PositiveIntegerField(
@@ -396,7 +396,7 @@ class CancellationPolicy(models.Model):
         verbose_name_plural = 'Правила отмены бронирования'
 
     def __str__(self):
-        return f'Политика отмены для {self.reservation_type.name}'
+        return f'Политика отмены для {self.scenario.name}'
 
 
 class CancellationReason(models.Model):

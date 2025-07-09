@@ -396,7 +396,7 @@
             document.getElementById('modalTime').textContent = data.time;
             document.getElementById('modalDuration').textContent = data.duration;
             document.getElementById('modalRoomName').textContent = data.room_name;
-            document.getElementById('modalBookingType').textContent = data.reservation_type;
+            document.getElementById('modalBookingType').textContent = data.scenario;
             document.getElementById('modalSpecialistInfo').textContent = data.specialist_name || 'Не назначен';
             document.getElementById('modalClientInfo').textContent = data.client_name || 'Не указан';
             document.getElementById('modalClientPhone').textContent = data.client_phone || '';
@@ -433,7 +433,7 @@
                 paymentsHistoryBlock.style.display = 'none';
             }
 
-            document.getElementById('modalReservationCost').textContent = data.reservation_cost || '0';
+            document.getElementById('modalReservationCost').textContent = data.scenario || '0';
 
             // Отображение комментария только если он есть
             const commentBlock = document.getElementById('commentBlock');
@@ -997,7 +997,7 @@
                                     
                                     // Обновляем стоимости
                                     document.getElementById('modalTotalServicesPrice').textContent = `${data.booking.total_services_cost} руб.`;
-                                    document.getElementById('modalReservationCost').textContent = data.booking.reservation_cost;
+                                    document.getElementById('modalReservationCost').textContent = data.booking.scenario;
                                     document.getElementById('modalTotalCost').textContent = `${data.booking.total_cost} руб.`;
                                 }
                             })
@@ -1137,7 +1137,7 @@
                                     
                                     // Обновляем стоимости
                                     document.getElementById('modalTotalServicesPrice').textContent = `${data.booking.total_services_cost} руб.`;
-                                    document.getElementById('modalReservationCost').textContent = data.booking.reservation_cost;
+                                    document.getElementById('modalReservationCost').textContent = data.booking.scenario;
                                     document.getElementById('modalTotalCost').textContent = `${data.booking.total_cost} руб.`;
                                 }
                             });

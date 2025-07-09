@@ -29,7 +29,7 @@
                         <div class="d-flex gap-2">
                             <span class="badge bg-secondary position-relative" title="Стоимость аренды">
                                 <i class="fas fa-home me-1"></i>
-                                <span id="reservationCost"></span>
+                                <span id="scenarioCost"></span>
                                 <div class="dot-container-payment" title="">
                                     <div id="balanceDot" class="balance-dot"></div>
                                 </div>
@@ -194,7 +194,7 @@
                     document.getElementById('modalTime').textContent = window.bookingData.time;
                     document.getElementById('modalDuration').textContent = window.bookingData.duration;
                     document.getElementById('modalRoomName').textContent = window.bookingData.room_name;
-                    document.getElementById('modalBookingType').textContent = window.bookingData.reservation_type;
+                    document.getElementById('modalBookingType').textContent = window.bookingData.scenario;
                     document.getElementById('modalSpecialistInfo').textContent = window.bookingData.specialist_name || 'Не назначен';
                     document.getElementById('modalClientInfo').textContent = window.bookingData.client_name || 'Не указан';
                     document.getElementById('modalClientPhone').textContent = window.bookingData.client_phone || 'Не указан';
@@ -292,7 +292,7 @@
                             const remainingAmount = parseFloat(response.booking.remaining_amount) || 0;
                             document.getElementById('paidAmount').textContent = paidAmount.toFixed(2) + ' BYN';
                             document.getElementById('remainingAmount').textContent = remainingAmount.toFixed(2) + ' BYN';
-                            document.getElementById('reservationCost').textContent = response.booking.reservation_cost + ' BYN';
+                            document.getElementById('scenarioCost').textContent = response.booking.scenario_cost + ' BYN';
                             document.getElementById('serviceCost').textContent = response.booking.total_services_cost + ' BYN';
                             document.getElementById('bookingTotalCost').textContent = response.booking.total_cost + ' BYN';
 
@@ -301,7 +301,7 @@
                             document.getElementById('availableUnits').textContent = availableUnits;
                             
                             // Вычисляем оставшиеся единицы для оплаты
-                            const totalRentalCost = parseFloat(response.booking.reservation_cost) || 0;
+                            const totalRentalCost = parseFloat(response.booking.scenario_cost) || 0;
                             const remainingRentalCost = parseFloat(response.booking.remaining_rental_cost) || 0;
                             const paidRentalCost = totalRentalCost - remainingRentalCost;
                             const maxUnitsAllowed = parseInt(response.booking.max_units_allowed) || 0;

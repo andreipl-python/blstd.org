@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from ..models import (
-    Reservation, Client, Service, ReservationStatusType, Specialist, Subscription, ReservationType, TariffUnit, 
+    Reservation, Client, Service, ReservationStatusType, Specialist, Subscription, Scenario, TariffUnit, 
     ServiceGroup, ClientGroup, ClientRating, Room, SpecialistColor, CancellationPolicy, CancellationReason, PaymentType,
     Payment, Area
 )
@@ -60,9 +60,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ReservationTypeSerializer(serializers.ModelSerializer):
+class ScenarioSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ReservationType
+        model = Scenario
         fields = '__all__'
 
 

@@ -91,7 +91,7 @@
                                                     `{{ block.time|time_add:forloop.counter0 }}`,
                                                     `{{ room.name }}`,
                                                     `{{ time_blocks_json|escapejs }}`, `{{ rooms_json|escapejs }}`,
-                                                    `{{ reservation_types_json|escapejs }}`,
+                                                    `{{ scenarios_json|escapejs }}`,
                                                     `{{ specialists_json|escapejs }}`,
                                                      this
                                                     )">
@@ -191,10 +191,10 @@
             }
 
             // Добавляем выбранные услуги
-            const selectedServices = $('#serviceType').val();
+            const selectedServices = $('#scenarios').val();
             if (selectedServices && selectedServices.length > 0) {
                 selectedServices.forEach(service => {
-                    formData.append('serviceType', service);
+                    formData.append('scenarios', service);
                 });
             }
 
