@@ -48,7 +48,8 @@ routes = [
     (r'cancellation_policies', CancellationPolicyViewSet),
     (r'cancellation_reasons', CancellationReasonViewSet),
     (r'payment_types', PaymentTypeViewSet),
-    (r'payments', PaymentViewSet)
+    (r'payments', PaymentViewSet),
+    (r'reservation_status_types', ReservationStatusTypeViewSet)
 ]
 for prefix, viewset in routes:
     router.register(prefix, viewset)
