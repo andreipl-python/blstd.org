@@ -44,7 +44,7 @@ def area_with_scenarios(services):
 @pytest.mark.parametrize("scenarios,expected_status,expected_error", [
     (["valid"], 201, None),
     (["invalid"], 400, "Можно выбрать только сценарии, назначенные у выбранного помещения."),
-    ([], 400, "Необходимо выбрать хотя бы один сценарий."),
+    ([], 201, None),  # Теперь пустой список допустим
 ])
 def test_room_create_api(api_client, area_with_scenarios, scenarios, expected_status, expected_error):
     area, scenario_objs, services = area_with_scenarios
@@ -74,6 +74,35 @@ def test_room_create_api(api_client, area_with_scenarios, scenarios, expected_st
         assert response.data["area"] == area.id
         assert set(response.data["scenario"]) == set(scenario_ids)
         assert set(response.data["service"]) == set([services[0].id])
+
+    # Дополнительно: Room без scenario/service вообще
+    payload_no_scenarios = {
+        "id": 200,
+        "name": "No Scenario Room",
+        "area": area.id,
+        "hourstart": "10:00:00",
+        "hourend": "19:00:00"
+    }
+    response_no_scenarios = api_client.post("/api/rooms/", payload_no_scenarios, format="json")
+    assert response_no_scenarios.status_code == 201
+    assert response_no_scenarios.data["scenario"] == []
+    assert response_no_scenarios.data["service"] == []
+
+    # Room с пустыми списками явно
+    payload_empty = {
+        "id": 201,
+        "name": "Empty Lists Room",
+        "area": area.id,
+        "hourstart": "11:00:00",
+        "hourend": "20:00:00",
+        "scenario": [],
+        "service": []
+    }
+    response_empty = api_client.post("/api/rooms/", payload_empty, format="json")
+    assert response_empty.status_code == 201
+    assert response_empty.data["scenario"] == []
+    assert response_empty.data["service"] == []
+
 
 # Дополнительно: тест на обновление комнаты
 @pytest.mark.django_db

@@ -336,19 +336,18 @@ class Room(models.Model):
     hourend = models.TimeField(help_text="Время окончания работы комнаты", verbose_name="Конец работы")
 
     service = models.ManyToManyField('Service', related_name='services', help_text='Услуги доступные для комнаты',
-                                     verbose_name='Услуги')
+                                     verbose_name='Услуги', blank=True)
     scenario = models.ManyToManyField('Scenario', related_name='rooms',
                                       help_text="Типы бронирования (сценарии), доступные для комнаты",
                                       verbose_name="Типы бронирования (сценарии)",
-                                      blank=False)
+                                      blank=True)
 
     def clean(self):
         super().clean()
         if self.area_id is not None:
             area_scenarios = set(self.area.scenario.values_list('id', flat=True))
             room_scenarios = set(self.scenario.values_list('id', flat=True)) if self.pk else set()
-            # Для новых объектов self.pk ещё нет, поэтому room_scenarios пустой
-            # Проверка будет работать при сохранении через форму или после первого сохранения
+            # Если сценарии не заданы — это допустимо (поле опционально)
             if room_scenarios and not room_scenarios.issubset(area_scenarios):
                 from django.core.exceptions import ValidationError
                 raise ValidationError('Сценарии комнаты должны быть выбраны только из сценариев, заданных у помещения.')
