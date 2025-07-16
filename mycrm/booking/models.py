@@ -199,7 +199,8 @@ class Service(models.Model):
         'Scenario',
         related_name='services',
         help_text='Сценарии, доступные для услуги',
-        verbose_name='Сценарии'
+        verbose_name='Сценарии',
+        blank=True
         )
 
     class Meta:

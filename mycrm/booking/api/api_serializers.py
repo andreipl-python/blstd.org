@@ -49,6 +49,14 @@ class SpecialistSerializer(serializers.ModelSerializer):
 
 
 class ServiceSerializer(serializers.ModelSerializer):
+    scenario = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Scenario.objects.all(),
+        required=False,
+        allow_empty=True,
+        help_text='ID сценариев, доступных для услуги. Необязательное поле.'
+    )
+
     class Meta:
         model = Service
         fields = '__all__'
