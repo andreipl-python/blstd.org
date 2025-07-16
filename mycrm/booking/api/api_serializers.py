@@ -117,13 +117,7 @@ class RoomSerializer(serializers.ModelSerializer):
         allow_empty=True,
         help_text='ID сценариев, назначенных комнате (только из сценариев помещения). Необязательное поле.'
     )
-    service = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Service.objects.all(),
-        required=False,
-        allow_empty=True,
-        help_text='ID услуг, назначенных комнате. Необязательное поле.'
-    )
+
 
     def validate(self, attrs):
         area = attrs.get('area') or getattr(self.instance, 'area', None)
