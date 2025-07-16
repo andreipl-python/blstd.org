@@ -50,11 +50,16 @@ class SpecialistSerializer(serializers.ModelSerializer):
 
 class ServiceSerializer(serializers.ModelSerializer):
     scenario = serializers.PrimaryKeyRelatedField(
-        many=True,
         queryset=Scenario.objects.all(),
         required=False,
-        allow_empty=True,
-        help_text='ID сценариев, доступных для услуги. Необязательное поле.'
+        allow_null=True,
+        help_text='ID сценария, к которому относится услуга. Необязательное поле.'
+    )
+    room = serializers.PrimaryKeyRelatedField(
+        queryset=Room.objects.all(),
+        required=False,
+        allow_null=True,
+        help_text='ID комнаты, к которой относится услуга. Необязательное поле.'
     )
 
     class Meta:

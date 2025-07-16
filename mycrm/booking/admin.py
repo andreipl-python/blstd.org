@@ -98,7 +98,7 @@ class RoomAdmin(admin.ModelAdmin):
     list_display = ('name', 'area', 'hourstart', 'hourend')
     list_filter = ('area',)
     search_fields = ('name', 'area__name')
-    filter_horizontal = ('service', 'scenario')
+    filter_horizontal = ('scenario',)
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         from .models import Area

@@ -64,7 +64,7 @@ class Reservation(models.Model):
                                                'если групповое бронирование',
                                      verbose_name='ID группы клиента', null=True)
     room = models.ForeignKey('Room', on_delete=models.PROTECT,
-                             help_text='ID помещения, которое забронировано', verbose_name='ID помещения',
+                             help_text='ID комнаты, которая забронирована', verbose_name='ID комнаты',
                              null=False, blank=False)
     scenario = models.ForeignKey('Scenario', on_delete=PROTECT,
                                  help_text='ID сценария',
@@ -195,13 +195,20 @@ class Service(models.Model):
         verbose_name='Стоимость',
         null=False, blank=False
         )
-    scenario = models.ManyToManyField(
+    scenario = models.ForeignKey(
         'Scenario',
-        related_name='services',
-        help_text='Сценарии, доступные для услуги',
-        verbose_name='Сценарии',
-        blank=True
-        )
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        help_text='Сценарий, доступный для услуги',
+        verbose_name='Сценарий'
+    )
+    room = models.ForeignKey(
+        'Room',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        help_text='Комната, к которой относится услуга',
+        verbose_name='Комната'
+    )
 
     class Meta:
         db_table = 'services'
@@ -336,8 +343,6 @@ class Room(models.Model):
     hourstart = models.TimeField(help_text="Время начала работы комнаты", verbose_name="Начало работы")
     hourend = models.TimeField(help_text="Время окончания работы комнаты", verbose_name="Конец работы")
 
-    service = models.ManyToManyField('Service', related_name='services', help_text='Услуги доступные для комнаты',
-                                     verbose_name='Услуги', blank=True)
     scenario = models.ManyToManyField('Scenario', related_name='rooms',
                                       help_text="Типы бронирования (сценарии), доступные для комнаты",
                                       verbose_name="Типы бронирования (сценарии)",
