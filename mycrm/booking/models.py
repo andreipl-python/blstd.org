@@ -323,7 +323,7 @@ class ClientRating(models.Model):
 class Area(models.Model):
     """Модель для хранения информации о помещениях (area)"""
     id = models.IntegerField(primary_key=True, null=False, blank=False)
-    name = models.CharField(max_length=150, help_text='Название помещения', verbose_name='Название помещения', null=False, unique=True)
+    name = models.CharField(max_length=150, help_text='Название помещения', verbose_name='Название помещения', null=False)
     description = models.TextField(help_text='Описание помещения', verbose_name='Описание', null=True, blank=True)
     scenario = models.ManyToManyField('Scenario', related_name='areas',
                                       help_text="Типы бронирования (сценарии), доступные для помещения",
@@ -342,7 +342,7 @@ class Room(models.Model):
     """Модель для хранения информации о комнатах"""
     id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(max_length=150, help_text='Наименование комнаты', verbose_name='Наименование комнаты',
-                            null=False, blank=False, unique=True)
+                            null=False, blank=False)
     area = models.ForeignKey('Area', on_delete=models.SET_NULL, null=True, blank=True,
                             help_text='ID помещения, к которому относится комната', verbose_name='Помещение')
     hourstart = models.TimeField(help_text="Время начала работы комнаты", verbose_name="Начало работы")
