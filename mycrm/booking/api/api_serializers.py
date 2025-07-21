@@ -74,6 +74,10 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 
 class ScenarioSerializer(serializers.ModelSerializer):
+    active = serializers.BooleanField(
+        required=True,
+        help_text='Активен ли сценарий. True — доступен для выбора, False — скрыт.'
+    )
     class Meta:
         model = Scenario
         fields = '__all__'

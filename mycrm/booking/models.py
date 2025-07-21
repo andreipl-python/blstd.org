@@ -110,6 +110,11 @@ class Reservation(models.Model):
 
 
 class Scenario(models.Model):
+    active = models.BooleanField(
+        default=True,
+        help_text='Активен ли сценарий',
+        verbose_name='Активность'
+    )
     """Модель для хранения информации о сценариях бронирования"""
     id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(help_text='Наименование сценария',
@@ -425,6 +430,7 @@ class CancellationPolicy(models.Model):
 
 
 class CancellationReason(models.Model):
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
     """Модель для хранения причин отмены броней"""
 
     name = models.CharField(
