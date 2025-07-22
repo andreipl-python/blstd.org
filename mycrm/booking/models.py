@@ -179,7 +179,7 @@ class Service(models.Model):
         help_text='Наименование услуги',
         verbose_name='Наименование услуги',
         max_length=100,
-        unique=True, null=False, blank=False
+        null=False, blank=False
         )
     active = models.BooleanField(
         help_text='Активность услуги (включена или нет)',
@@ -290,12 +290,10 @@ class Client(models.Model):
             return ratings.aggregate(models.Avg('rating'))['rating__avg']
         return None  # Если нет оценок
 
-
 class ClientGroup(models.Model):
     """Модель для хранения информации о группах клиентов"""
     id = models.IntegerField(primary_key=True, null=False, blank=False)
-    name = models.CharField(help_text='Название группы', verbose_name='Название группы', max_length=100, null=False,
-                            unique=True)
+    name = models.CharField(max_length=100, help_text='Название группы', verbose_name='Название группы', null=False)
 
     class Meta:
         db_table = 'client_groups'
