@@ -30,7 +30,25 @@ class ReservationViewSet(BaseViewSet):
         responses=UniversalSchemas.create_schema(ReservationSerializer),
     )
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        response = super().create(request, *args, **kwargs)
+        # После успешного создания бронирования отправляем POST-запрос на внешний сервис
+        try:
+            import requests
+            from requests.auth import HTTPBasicAuth
+            booking_id = response.data.get('id')
+            if booking_id:
+                url = "https://repa.plavno.io:8443/~api/json/catalog.crm/approveBooking"
+                payload = {"id": str(booking_id)}
+                auth = HTTPBasicAuth("x4", "x4")
+                headers = {"Content-Type": "application/json"}
+                print(f"[BookingAPI] Отправляю approveBooking: url={url}, payload={payload}")
+                r = requests.post(url, json=payload, auth=auth, headers=headers, timeout=5)
+                print(f"[BookingAPI] Ответ approveBooking: status={r.status_code}, text={r.text}")
+        except Exception as e:
+            print(f"[BookingAPI] Ошибка отправки approveBooking: {e}")
+        except Exception as e:
+            print(f"[BookingAPI] Ошибка отправки approveBooking: {e}")
+        return response
 
     @extend_schema(
         summary="Получить детали бронирования",
