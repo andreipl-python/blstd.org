@@ -33,6 +33,7 @@ class ReservationViewSet(BaseViewSet):
         response = super().create(request, *args, **kwargs)
         # После успешного создания бронирования отправляем POST-запрос на внешний сервис
         try:
+            from .booking_integration_logging import logger
             import requests
             from requests.auth import HTTPBasicAuth
             booking_id = response.data.get('id')
@@ -41,11 +42,11 @@ class ReservationViewSet(BaseViewSet):
                 payload = {"id": str(booking_id)}
                 auth = HTTPBasicAuth("x4", "x4")
                 headers = {"Content-Type": "application/json"}
-                print(f"[BookingAPI] Отправляю approveBooking: url={url}, payload={payload}")
+                logger.info(f"Отправляю approveBooking: url={url}, payload={payload}")
                 r = requests.post(url, json=payload, auth=auth, headers=headers, timeout=5)
-                print(f"[BookingAPI] Ответ approveBooking: status={r.status_code}, text={r.text}")
+                logger.info(f"Ответ approveBooking: status={r.status_code}, text={r.text}")
         except Exception as e:
-            print(f"[BookingAPI] Ошибка отправки approveBooking: {e}")
+            logger.error(f"Ошибка отправки approveBooking: {e}")
         except Exception as e:
             print(f"[BookingAPI] Ошибка отправки approveBooking: {e}")
         return response
