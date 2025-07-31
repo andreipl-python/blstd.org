@@ -145,8 +145,8 @@ def user_index_view(request):
     clients = Client.objects.prefetch_related(
         'subscription_set__reservation_type',
         'clientrating_set',
-        'group__client_set'
-    ).select_related('group').all()
+        'groups'
+    ).all()
     
     clients_with_balances = []
     for client in clients:
@@ -158,11 +158,11 @@ def user_index_view(request):
         }
         
         group_data = None
-        if client.group:
+        if client.groups:
             group_data = {
-                'id': client.group.id,
-                'name': client.group.name,
-                'clients': [c.name for c in client.group.client_set.all()]
+                'id': client.groups.id,
+                'name': client.groups.name,
+                'clients': [c.name for c in client.groups.client_set.all()]
             }
         
         clients_with_balances.append({
