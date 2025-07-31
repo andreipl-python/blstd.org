@@ -377,15 +377,22 @@
         });
     });
 
-    function openModal(date, time, room_name, timeblocksjson, rooms_json_str, scenarios_json_str,
-                      specialists_json_str, cell) {
-        try {
-            cachedData.rooms = JSON.parse(rooms_json_str);
-            cachedData.specialists = JSON.parse(specialists_json_str);
-            cachedData.scenarios = JSON.parse(scenarios_json_str);
-        } catch (error) {
-            return;
+    function openModal(date, time, room_name, room_id, timeblocksjson, scenarios_json_str, specialists_json_str, cell) {
+    try {
+        // Вместо парсинга rooms_json_str используем глобальный window.ROOMS
+        cachedData.rooms = window.ROOMS;
+        cachedData.specialists = JSON.parse(specialists_json_str);
+        cachedData.scenarios = JSON.parse(scenarios_json_str);
+        // Найдём объект комнаты по room_id
+        const roomObj = window.ROOMS.find(r => r.id == room_id || r.pk == room_id);
+        if (roomObj) {
+            cachedData.currentRoom = roomObj;
+        } else {
+            cachedData.currentRoom = null;
         }
+    } catch (error) {
+        return;
+    }
 
         // Сброс всех полей формы
         $('#client').val('').trigger('chosen:updated');

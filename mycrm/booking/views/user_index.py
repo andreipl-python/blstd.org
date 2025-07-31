@@ -181,7 +181,7 @@ def user_index_view(request):
     services = Service.objects.select_related(
         'group'
     ).prefetch_related(
-        'reservation_type'
+        'scenario'
     ).annotate(
         group_order=Case(
             When(group__name='Аренда оборудования', then=Value(1)),
@@ -192,10 +192,10 @@ def user_index_view(request):
 
     services_json = serialize('json', services, use_natural_foreign_keys=True)
 
-    specialists = Specialist.objects.prefetch_related('reservation_type').all()
+    specialists = Specialist.objects.prefetch_related('scenario').all()
     specialists_json = serialize('json', specialists, use_natural_primary_keys=True)
 
-    rooms = Room.objects.prefetch_related('reservation_type').all()
+    rooms = Room.objects.prefetch_related('scenario').all()
     rooms_json = serialize('json', rooms, use_natural_primary_keys=True)
 
     specialist_colors = {
@@ -215,13 +215,35 @@ def user_index_view(request):
     
     specialist_colors_json = json.dumps(specialist_colors)
 
-    scenarios = ReservationType.objects.all()
+    scenarios = Scenario.objects.all()
     scenarios_json = serialize('json', scenarios, use_natural_primary_keys=True)
 
     tariff_units = TariffUnit.objects.all()
     tariff_units_json = serialize('json', tariff_units, use_natural_primary_keys=True)
 
     payment_types = PaymentType.objects.all()
+
+    days_of_month = days_of_month[:1]
+    rooms = rooms[:1]
+
+    print("==== DEBUG user_index_view ====")
+    print("Количество клиентов:", clients.count())
+    print("Количество бронирований (all_bookings):", all_bookings.count())
+    print("Количество бронирований в диапазоне:", len(bookings_in_range))
+    print("Количество услуг:", services.count())
+    print("Количество специалистов:", specialists.count())
+    print("Количество комнат:", len(rooms))
+    print("Количество сценариев:", scenarios.count())
+    print("Количество тарифных единиц:", tariff_units.count())
+    print("Количество типов оплаты:", payment_types.count())
+
+    print("Длина bookings_in_range_json:", len(bookings_in_range_json))
+    print("Длина clients_json:", len(clients_json))
+    print("Длина services_json:", len(services_json))
+    print("Длина specialists_json:", len(specialists_json))
+    print("Длина rooms_json:", len(rooms_json))
+    print("Длина scenarios_json:", len(scenarios_json))
+    print("Длина tariff_units_json:", len(tariff_units_json))
 
     context = {
         **menu2_context,

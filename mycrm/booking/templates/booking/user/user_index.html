@@ -18,6 +18,13 @@
 {% include 'booking/add/menu.html' %}
 {% include 'booking/add/menu2.html' %}
 
+<script>
+  window.ROOMS = JSON.parse('{{ rooms_json|escapejs }}');
+  window.TIME_BLOCKS = JSON.parse('{{ time_blocks_json|escapejs }}');
+  window.SCENARIOS = JSON.parse('{{ scenarios_json|escapejs }}');
+  window.SPECIALISTS = JSON.parse('{{ specialists_json|escapejs }}');
+</script>
+
 <!--<div class="container">-->
 <!--    <div class="row">-->
 <!--        <div class="col-md-12 mt-4">-->
@@ -90,7 +97,8 @@
                                                     `{{ day.date|date:'d E Y' }}`,
                                                     `{{ block.time|time_add:forloop.counter0 }}`,
                                                     `{{ room.name }}`,
-                                                    `{{ time_blocks_json|escapejs }}`, `{{ rooms_json|escapejs }}`,
+                                                    '{{ room.id }}',
+                                                    `{{ time_blocks_json|escapejs }}`,
                                                     `{{ scenarios_json|escapejs }}`,
                                                     `{{ specialists_json|escapejs }}`,
                                                      this
