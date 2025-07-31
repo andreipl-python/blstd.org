@@ -157,13 +157,13 @@ def user_index_view(request):
             for subscription in subscriptions
         }
         
-        group_data = None
-        if client.groups:
-            group_data = {
-                'id': client.groups.id,
-                'name': client.groups.name,
-                'clients': [c.name for c in client.groups.client_set.all()]
-            }
+        group_data = []
+        for group in client.groups.all():
+            group_data.append({
+                'id': group.id,
+                'name': group.name,
+                'clients': [c.name for c in group.clients.all()]
+            })
         
         clients_with_balances.append({
             'id': client.id,
