@@ -1,0 +1,207 @@
+@font-face {
+    font-family: 'Manrope';
+    src: url('../fonts/Manrope-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Manrope';
+    src: url('../fonts/Manrope-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Manrope';
+    src: url('../fonts/Manrope-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+  }
+
+@font-face {
+    font-family: 'Manrope';
+    src: url('../fonts/Manrope-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+  }
+
+body {
+    background: #F9F9F9;
+}
+
+#main-menu, #main-menu-name {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    color: #4F4F57;
+}
+
+#alert-count {
+    width: 36px;
+    height: 25px;
+    background: #FF8522;
+    border-radius: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 144%;
+    color: #181B22;
+}
+
+#ring-dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: -4px;
+    right: -4px;
+    background: #FF8522;
+    border-radius: 50%;
+}
+
+#booking-filters {
+    display: flex;
+    align-items: center;
+  }
+
+h1 {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 700;
+    font-size: 32px;
+    line-height: 120%;
+    letter-spacing: -0.04em;
+    color: #181B22;
+  }
+
+  /* Выпадающие списки */
+
+  .custom-select-wrapper {
+    position: relative;
+    width: 100%;
+  }
+
+  .custom-select {
+    position: relative;
+    background: #fff;
+    border: 1px solid #EBEBEC;
+    border-radius: 16px;
+    padding: 12px 16px;
+    padding-right: 48px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    color: #181B22;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .custom-select .chevron {
+    position: absolute;
+    top: 50%;
+    right: 16px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    transition: transform 0.3s ease;
+  }
+  
+  .custom-select.open .chevron svg{
+    transform: rotate(180deg);
+  }
+
+  .custom-select .options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    max-height: none;
+    margin: 4px 0 0 0;
+    padding: 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #EBEBEC;
+    border-radius: 16px;
+    overflow-y: visible;
+    display: none;
+    z-index: 1000;
+  }
+
+  .custom-select .options li {
+    padding: 12px 16px;
+    cursor: pointer;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    color: #4F4F57;
+  }
+
+  .custom-select .options li:hover {
+    background-color: #7C3AED;
+    color: #ffffff;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+  }
+
+  .custom-select .options li:first-child:hover,
+  .custom-select .options li.selected:first-child {
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+  }
+
+  .custom-select .options li:last-child:hover,
+  .custom-select .options li.selected:last-child {
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+  }
+
+  .custom-select .options li.selected {
+    background-color: #7C3AED;
+    color: #ffffff;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+  }
+
+  .custom-select.open .options {
+    display: block;
+  }
+
+  /* Календарь */   
+  .calendar-period {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .calendar-period span {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    color: #7A52FF;
+  }

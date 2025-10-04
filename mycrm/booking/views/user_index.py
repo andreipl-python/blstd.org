@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from booking.models import Client, Room, Service, Reservation, Scenario, Specialist, TariffUnit, SpecialistColor, \
-    PaymentType
+    PaymentType, Area
 from django.contrib.auth.decorators import login_required
 from django.core.serializers import serialize
 from django.db.models import QuerySet, Q, Case, When, Value, IntegerField
@@ -223,27 +223,15 @@ def user_index_view(request):
 
     payment_types = PaymentType.objects.all()
 
-    days_of_month = days_of_month[:1]
-    rooms = rooms[:1]
+    days_of_month = days_of_month
+    rooms = rooms
 
     print("==== DEBUG user_index_view ====")
-    print("Количество клиентов:", clients.count())
-    print("Количество бронирований (all_bookings):", all_bookings.count())
-    print("Количество бронирований в диапазоне:", len(bookings_in_range))
-    print("Количество услуг:", services.count())
-    print("Количество специалистов:", specialists.count())
-    print("Количество комнат:", len(rooms))
-    print("Количество сценариев:", scenarios.count())
-    print("Количество тарифных единиц:", tariff_units.count())
-    print("Количество типов оплаты:", payment_types.count())
-
-    print("Длина bookings_in_range_json:", len(bookings_in_range_json))
-    print("Длина clients_json:", len(clients_json))
-    print("Длина services_json:", len(services_json))
-    print("Длина specialists_json:", len(specialists_json))
-    print("Длина rooms_json:", len(rooms_json))
-    print("Длина scenarios_json:", len(scenarios_json))
-    print("Длина tariff_units_json:", len(tariff_units_json))
+    
+    areas = Area.objects.prefetch_related('scenario').all()
+    areas_json = serialize('json', areas, use_natural_primary_keys=True)
+    scenarios = Scenario.objects.all()
+    scenarios_json = serialize('json', scenarios, use_natural_primary_keys=True)
 
     context = {
         **menu2_context,
@@ -252,6 +240,10 @@ def user_index_view(request):
         'time_blocks_json': time_blocks_json,
         'rooms': rooms,
         'rooms_json': rooms_json,
+        'areas': areas,
+        'areas_json': areas_json,
+        'scenarios': scenarios,
+        'scenarios_json': scenarios_json,
         'show_datefrom': days_of_month[0]['date'].date().isoformat(),
         'show_dateto': days_of_month[-1]['date'].date().isoformat(),
         'services': services,

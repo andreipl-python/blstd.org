@@ -4,9 +4,9 @@
 <html lang="ru">
 <head>
     <title>CRM</title>
-    {% include 'booking/add/head.html' %}
     <link rel="stylesheet" href="{% static 'css/main.css' %}?v={% now 'U' %}">
-    <link rel="stylesheet" href="{% static 'css/neon-dark-theme.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/repa.css' %}?v={% now 'U' %}">
+    <!-- <link rel="stylesheet" href="{% static 'css/neon-dark-theme.css' %}?v={% now 'U' %}"> -->
     <link rel="stylesheet" href="{% static 'css/status-indicators.css' %}?v={% now 'U' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -15,9 +15,6 @@
 </head>
 <body>
 
-{% include 'booking/add/menu.html' %}
-{% include 'booking/add/menu2.html' %}
-
 <script>
   window.ROOMS = JSON.parse('{{ rooms_json|escapejs }}');
   window.TIME_BLOCKS = JSON.parse('{{ time_blocks_json|escapejs }}');
@@ -25,24 +22,152 @@
   window.SPECIALISTS = JSON.parse('{{ specialists_json|escapejs }}');
 </script>
 
-<!--<div class="container">-->
-<!--    <div class="row">-->
-<!--        <div class="col-md-12 mt-4">-->
-<!--            {% include 'booking/add/oblast_change.html' %}-->
-<!--        </div>-->
-<!--    </div>-->
-<!--</div>-->
-
 <p id="bookings_in_range" style="display: none;">{{ bookings_in_range }}</p>
+<script>
+    // Получаем данные о связях area-сценарии
+    window.AREAS = JSON.parse('{{ areas_json|escapejs }}');
+    window.SCENARIOS = JSON.parse('{{ scenarios_json|escapejs }}');
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const areaSelect = document.getElementById('area-select');
+        const scenarioSelect = document.getElementById('scenario-select');
+        areaSelect.addEventListener('change', function() {
+            const areaId = this.value;
+            scenarioSelect.innerHTML = '<option value="">Сценарий</option>';
+            if (!areaId) return;
+            const areaObj = window.AREAS.find(a => a.pk == areaId);
+            if (areaObj && areaObj.fields && areaObj.fields.scenario) {
+                areaObj.fields.scenario.forEach(scenId => {
+                    const scenarioObj = window.SCENARIOS.find(s => s.pk == scenId);
+                    if (scenarioObj) {
+                        const opt = document.createElement('option');
+                        opt.value = scenarioObj.pk;
+                        opt.textContent = scenarioObj.fields.name;
+                        scenarioSelect.appendChild(opt);
+                    }
+                });
+            }
+        });
+    });
+</script>
 
-<div class="container-fluid" style="padding-bottom: 20px;">
+<div class="container-fluid">
+    {% include 'booking/add/head.html' %}
+    {% include 'booking/add/menu.html' %}
+    <!--{% include 'booking/add/menu2.html' %}-->
+    <div style="height:40px"></div>
     <div class="row mt-4" style="padding: 0; margin: 0;">
+
+        <h1 class="mb-3">Брони</h1>
+
+        <div class="row mb-4" id="booking-filters">
+            <div class="col-md-3">
+                <div class="custom-select-wrapper">
+                    <div class="custom-select" data-placeholder="Выберите помещение">
+                        <span class="selected">Выберите помещение</span>
+                        <span class="chevron">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2"/>
+                            </svg>
+                        </span>
+                        <ul class="options">
+                            {% for area in areas %}
+                              <li data-value="{{ area.id }}">{{ area.name }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="custom-select-wrapper">
+                    <div class="custom-select" data-placeholder="Выберите сценарий">
+                        <span class="selected">Выберите сценарий</span>
+                        <span class="chevron">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2"/>
+                            </svg>
+                        </span>
+                        <ul class="options">
+                            {% for scenario in scenarios %}
+                              <li data-value="{{ scenario.id }}">{{ scenario.name }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="custom-select-wrapper">
+                    <div class="custom-select" data-placeholder="Выберите период">
+                        <span class="selected">Выберите период</span>
+                        <span class="chevron">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2"/>
+                            </svg>
+                        </span>
+                        <ul class="options">
+                            <li data-value="period">Период</li>
+                            <li data-value="month">Месяц</li>
+                            <li data-value="week">Неделя</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="calendar-period">
+                    <span>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 10H21" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M8 14H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 14H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 14H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M8 18H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 18H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 18H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
+                    <span id="start-calendar-period-text">
+                        18 сентября
+                    </span>
+                    <span style="color: #818EA2;"> — </span>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 10H21" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M8 14H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 14H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 14H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M8 18H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 18H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 18H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    <span id="end-calendar-period-text">
+                        24 сентября
+                    </span>
+                <span style="color: #818EA2;">
+                    /
+                </span>
+                <span>
+                    Сегодня
+                </span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 6L15 12L9 18" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg> 
+                </div>                   
+            </div>
+        </div>
+
         <div class="col-md-12">
             <div style="width: 100%; margin: 0 auto;">
                 {% for day in days_of_month %}
                 <div>
                     <br>
-                    <hr style="width: 100%; background: none; padding-top: 50px;">
                     <a name="date={{ day.date }}"></a>
                     <div class="container_block">
                         <div class="row">
@@ -435,6 +560,40 @@
         subtree: true
     });
 </script>
+
+<script>
+    // Поведение выпадающих списков
+    const customSelects = document.querySelectorAll('.custom-select');
+
+    customSelects.forEach(select => {
+        const selected = select.querySelector('.selected');
+        const optionsContainer = select.querySelector('.options');
+        const optionsList = optionsContainer.querySelectorAll('li');
+
+        // событие на весь div
+        select.addEventListener('click', () => {
+            select.classList.toggle('open');
+        });
+
+        optionsList.forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // убрать выделение со всех
+                optionsList.forEach(opt => opt.classList.remove('selected'));
+                // добавить выбранному
+                option.classList.add('selected');
+                selected.textContent = option.textContent;
+                select.classList.remove('open');
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!select.contains(e.target)) {
+            select.classList.remove('open');
+            }
+        });
+    });
+ </script>
 
 </body>
 </html>
