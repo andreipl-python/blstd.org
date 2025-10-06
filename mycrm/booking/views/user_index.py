@@ -121,7 +121,7 @@ def user_index_view(request):
     
     days_of_month = generate_days_of_month(request_range, start_date_str, end_date_str)
     menu2_context = menu2_view(request)
-    time_blocks = generate_time_blocks("09:00", 1, 14)
+    time_blocks = generate_time_blocks("00:00", 1, 24)
     time_blocks_json = json.dumps(time_blocks)
 
     start_date = timezone.datetime.combine(days_of_month[0]['date'].date(), timezone.datetime.min.time())

@@ -55,10 +55,14 @@
     {% include 'booking/add/head.html' %}
     {% include 'booking/add/menu.html' %}
     <!--{% include 'booking/add/menu2.html' %}-->
-    <div style="height:40px"></div>
     <div class="container-fluid">
-        <div class="row mt-4" style="border-bottom: 1px solid #EBEBEC;">
-            <div class="row mt-4 mb-4">
+        <div class="row mt-4" style="border-bottom: 1px solid #EBEBEC; 
+        position: sticky;
+        top: 41px;
+        z-index: 900;
+        background-color: #fff;
+        padding: 1rem;">
+            <div class="row mt-4 mb-2">
                 <div class="col-md-12 d-flex justify-content-between align-items-center">
                 <h1 class="mb-0">Брони</h1>
                 <div class="d-flex gap-2">
@@ -80,7 +84,7 @@
                 </div>
             </div>
 
-            <div class="row mb-4" id="booking-filters">
+            <div class="row mb-2" id="booking-filters">
                 <div class="col-md-3">
                     <div class="custom-select-wrapper">
                         <div class="custom-select" data-placeholder="Выберите помещение">
@@ -186,7 +190,7 @@
 
 
         {% for day in days_of_month %}
-        <div class="row mt-4">
+        <div class="row mt-5">
             <div class="col-md-2" id="day-header">
                 <h3>{{ day.date|date:"d E" }} / {{ day.date|date:"l"|lower }}</h3>
             </div>
@@ -197,7 +201,7 @@
                 </svg>    
             </div>
         </div>
-        
+        <!-- Блок занятости администраторов и преподавателей -->
         <div class="row mt-4 align-items-start";>
             <h6 class="d-flex align-items-center gap-3 w-100">
                 Администраторы
@@ -207,12 +211,9 @@
               </h6>
             
               <div class="d-flex">
-                <!-- Фото -->
                 <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
                   <img src="{% static 'image/image.png' %}" alt="Описание картинки" width="32" height="32">
                 </div>
-            
-                <!-- Имя + ячейки -->
                 <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
                   <span class="fw-semibold" style="font-size: 14px;">Алия Петрова</span>
                   <div class="d-flex w-100 specialist-time">
@@ -224,80 +225,147 @@
               </div>
 
               <div class="d-flex">
-                <!-- Фото -->
                 <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
                   <img src="{% static 'image/image2.png' %}" alt="Описание картинки" width="32" height="32">
                 </div>
-            
-                <!-- Имя + ячейки -->
                 <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
                   <span class="fw-semibold" style="font-size: 14px;">Каныш Сидоренко</span>
-                  <div class="d-flex gap-1" style="flex:1;">
+                  <div class="d-flex w-100 specialist-time">
                     {% for i in time_cells %}
-                      <div class="time-cell bg-warning" style="flex:1; height: 8px;"></div>
+                      <div class="time-cell flex-fill"></div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex">
+                <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+                  <img src="{% static 'image/default.png' %}" alt="Описание картинки" width="32" height="32">
+                </div>
+                <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+                  <span class="fw-semibold" style="font-size: 14px;">Мукатай Смирнов</span>
+                  <div class="d-flex w-100 specialist-time">
+                    {% for i in time_cells %}
+                      <div class="time-cell flex-fill"></div>
                     {% endfor %}
                   </div>
                 </div>
               </div>
         </div>
 
-        <div class="table-responsive mt-3">
-            <table id="table-{{ forloop.counter }}"
-                class="table table-bordered text-center"
-                style="width: 100%; border-collapse: collapse;">
-                <thead>
-                <tr>
-                    <th style="border: none;"></th>
-                    {% for block in time_blocks %}
-                    <th colspan="4"
-                        style="text-align: left; padding-left: 10px; border: none;">
-                        {{ block.time }}
-                    </th>
+        <div class="row mt-2 align-items-start";>
+            <h6 class="d-flex align-items-center gap-3 w-100">
+                Преподаватели
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 15L12 9L6 15" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </h6>
+            
+              <div class="d-flex">
+                <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+                  <img src="{% static 'image/image3.png' %}" alt="Описание картинки" width="32" height="32">
+                </div>
+                <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-semibold" style="font-size: 14px;">Ангелина Власова</span>
+                        <span>•</span>
+                        <span>Вокал / Фортепиано</span>
+                    </div>
+                  <div class="d-flex w-100 specialist-time">
+                    {% for i in time_cells %}
+                      <div class="time-cell flex-fill"></div>
                     {% endfor %}
-                </tr>
-                </thead>
-                <tbody>
-                {% for room in rooms %}
-                <tr id="row-{{ forloop.counter }}">
-                    <td style="border-right: 2px solid #666; border-left: none;
-                    white-space: nowrap; overflow: hidden; max-width: 150px;
-                    text-overflow: ellipsis;"
-                        title="{{ room.name }}">
-                        {{ room.name }}
-                    </td>
+                  </div>
+                </div>
+              </div>
 
-                    {% for block in time_blocks %}
-                    {% for i in "1234" %}
-                    {% with block_time=block.time|time_add:forloop.counter0|str_to_time %}
-                    {% with full_datetime=day.date|combine_date_time:block_time %}
+              <div class="d-flex">
+                <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+                  <img src="{% static 'image/image4.png' %}" alt="Описание картинки" width="32" height="32">
+                </div>
+                <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-semibold" style="font-size: 14px;">Сергей Золотарёв</span>
+                        <span>•</span>
+                        <span>Вокал / Гитара</span>
+                    </div>
+                  <div class="d-flex w-100 specialist-time">
+                    {% for i in time_cells %}
+                      <div class="time-cell flex-fill"></div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
 
-                    <td class="highlight-cell available {% if forloop.counter0|add:1 == 4 %}border-right{% endif %}"
-                        full_datetime="{{ full_datetime|date:'Y-m-d H:i:s' }}"
-                        room_name="{{ room.name }}"
-                        room_id="{{ room.id }}"
-                        title="{{ block.time|time_add:forloop.counter0 }}"
-                        data-bs-toggle="modal"
-                        data-bs-target="#createBookingModal"
-                        onclick="openModal(
-                        `{{ day.date|date:'d E Y' }}`,
-                        `{{ block.time|time_add:forloop.counter0 }}`,
-                        `{{ room.name }}`,
-                        '{{ room.id }}',
-                        'global',
-                        `{{ scenarios_json|escapejs }}`,
-                        `{{ specialists_json|escapejs }}`,
-                        this
-                        )">
-                    </td>
-                    {% endwith %}
-                    {% endwith %}
+              <div class="d-flex">
+                <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+                  <img src="{% static 'image/image5.png' %}" alt="Описание картинки" width="32" height="32">
+                </div>
+                <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-semibold" style="font-size: 14px;">Виолетта Бочарова</span>
+                        <span>•</span>
+                        <span>Фортепиано</span>
+                    </div>
+                  <div class="d-flex w-100 specialist-time">
+                    {% for i in time_cells %}
+                      <div class="time-cell flex-fill"></div>
                     {% endfor %}
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+                  </div>
+                </div>
+              </div>
         </div>
+        <!--Таблица броней-->    
+        <table id="table-{{ forloop.counter }}"
+            class="table table-bordered">
+            <thead>
+            <tr>
+                <th></th>
+                {% for block in time_blocks %}
+                <th colspan="4">
+                    {{ block.time }}
+                </th>
+                {% endfor %}
+            </tr>
+            </thead>
+            <tbody>
+            {% for room in rooms %}
+            <tr id="row-{{ forloop.counter }}">
+                <td title="{{ room.name }}">
+                    {{ room.name }}
+                </td>
+
+                {% for block in time_blocks %}
+                {% for i in "1234" %}
+                {% with block_time=block.time|time_add:forloop.counter0|str_to_time %}
+                {% with full_datetime=day.date|combine_date_time:block_time %}
+
+                <td class="highlight-cell available"
+                    full_datetime="{{ full_datetime|date:'Y-m-d H:i:s' }}"
+                    room_name="{{ room.name }}"
+                    room_id="{{ room.id }}"
+                    title="{{ block.time|time_add:forloop.counter0 }}"
+                    data-bs-toggle="modal"
+                    data-bs-target="#createBookingModal"
+                    onclick="openModal(
+                    `{{ day.date|date:'d E Y' }}`,
+                    `{{ block.time|time_add:forloop.counter0 }}`,
+                    `{{ room.name }}`,
+                    '{{ room.id }}',
+                    'global',
+                    `{{ scenarios_json|escapejs }}`,
+                    `{{ specialists_json|escapejs }}`,
+                    this
+                    )">
+                </td>
+                {% endwith %}
+                {% endwith %}
+                {% endfor %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
         {% endfor %} 
     </div>           
 </div>
