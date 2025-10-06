@@ -30,14 +30,46 @@ body {
     background: #F9F9F9;
 }
 
+h1 {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700 !important;
+  font-size: 32px !important;
+  line-height: 120%;
+  letter-spacing: -0.04em;
+  color: #181B22;
+}
+
+h3 {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700 !important;
+  font-size: 22px !important;
+  line-height: 120%;
+  letter-spacing: -0.008em;
+  color: #181B22;
+}
+
+h6 {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400 !important;
+    font-size: 16px !important;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    color: #181B22;
+}
+
+/*Меню*/
+
 #main-menu, #main-menu-name {
     display: flex;
     align-items: center;
     justify-content: flex-start;
     font-family: 'Manrope';
     font-style: normal;
-    font-weight: 600;
-    font-size: 16px;
+    font-weight: 600 !important;
+    font-size: 16px !important;
     line-height: 128%;
     letter-spacing: -0.008em;
     color: #4F4F57;
@@ -53,8 +85,8 @@ body {
     align-items: center;
     font-family: 'Manrope';
     font-style: normal;
-    font-weight: 400;
-    font-size: 12px;
+    font-weight: 400 !important;
+    font-size: 12px !important;
     line-height: 144%;
     color: #181B22;
 }
@@ -74,16 +106,6 @@ body {
     align-items: center;
   }
 
-h1 {
-    font-family: 'Manrope';
-    font-style: normal;
-    font-weight: 700;
-    font-size: 32px;
-    line-height: 120%;
-    letter-spacing: -0.04em;
-    color: #181B22;
-  }
-
   /* Выпадающие списки */
 
   .custom-select-wrapper {
@@ -99,8 +121,8 @@ h1 {
     padding: 12px 16px;
     padding-right: 48px;
     font-family: 'Manrope', sans-serif;
-    font-size: 16px;
-    font-weight: 400;
+    font-size: 16px !important;
+    font-weight: 400 !important;
     line-height: 128%;
     letter-spacing: -0.008em;
     color: #181B22;
@@ -144,8 +166,8 @@ h1 {
     cursor: pointer;
     font-family: 'Manrope';
     font-style: normal;
-    font-weight: 400;
-    font-size: 16px;
+    font-weight: 400 !important;
+    font-size: 16px !important;
     line-height: 128%;
     letter-spacing: -0.008em;
     color: #4F4F57;
@@ -156,8 +178,8 @@ h1 {
     color: #ffffff;
     font-family: 'Manrope';
     font-style: normal;
-    font-weight: 600;
-    font-size: 16px;
+    font-weight: 600 !important;
+    font-size: 16px !important;
     line-height: 128%;
     letter-spacing: -0.008em;
   }
@@ -199,9 +221,99 @@ h1 {
   .calendar-period span {
     font-family: 'Manrope';
     font-style: normal;
-    font-weight: 600;
-    font-size: 16px;
+    font-weight: 600 !important;
+    font-size: 16px !important;
     line-height: 128%;
     letter-spacing: -0.008em;
     color: #7A52FF;
   }
+
+  /*Кнопки*/
+
+  .button-secondary {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    width: 234px;
+    height: 48px;
+    background: #FFFFFF;
+    border: 1px solid #7A52FF;
+    border-radius: 16px;
+    background-color: #F9F9F9;
+    color: #7A52FF;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    cursor: pointer;
+  }
+
+  /*Сетка броней*/
+   /*Дата/день недели*/
+  #day-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #CCFF00;
+    height: 44px;
+    border-radius: 16px;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    color: #4F4F57;
+  }
+
+    /*Специалисты*/
+  #hide-specialists {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    color: #7A52FF;
+  }
+
+  .specialist-time {
+    display: flex;
+    gap: 1px;
+  }
+  
+  .time-cell {
+    background-color: #CCFF00;
+    height: 8px;
+    flex: 1;
+    position: relative;
+  }
+  
+  .time-cell:nth-child(4n):not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -1px;
+    width: 1px;
+    height: 100%;
+    background-color: #FF5722;
+  }
+
+  .specialist-time span {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400 !important;
+    font-size: 12px !important;
+    line-height: 144% !important;
+    letter-spacing: -0.008em;
+    color: #4F4F57;
+  }
+

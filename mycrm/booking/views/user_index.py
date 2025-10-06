@@ -256,6 +256,7 @@ def user_index_view(request):
         'clients_json': clients_json,
         'specialist_colors': specialist_colors_json,
         'payment_types': payment_types,
+        'time_cells': range(96),
     }
 
     return render(request, 'booking/user/user_index.html', context)
