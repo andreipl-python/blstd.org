@@ -4,11 +4,15 @@ from django.contrib.auth.views import LogoutView
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from .models import Client, Reservation, Subscription
+from django.urls import reverse_lazy
 
 
 class CustomLogoutView(LogoutView):
+    next_page = reverse_lazy('index')  # Перенаправление на 'index'
+    http_method_names = ['get', 'post']  # Разрешаем GET и POST
+
     def get(self, request, *args, **kwargs):
-        return self.post(request, *args, **kwargs)
+        return self.post(request, *args, **kwargs)  # Перенаправляем GET на POST
 
 
 def auth_view(request):

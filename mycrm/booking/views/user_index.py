@@ -14,7 +14,7 @@ from django.utils import timezone
 from .menu2 import menu2_view
 
 
-def generate_days_of_month(request_range: str = 'day7', start_date_str: str = None, end_date_str: str = None) -> list[dict[str, datetime | str | int]]:
+def generate_days_of_month(request_range: str = 'day14', start_date_str: str = None, end_date_str: str = None) -> list[dict[str, datetime | str | int]]:
     """Функция определяет текущий месяц и возврашает список дней месяца, начальную и конечную даты"""
     days_of_month = []
     today = timezone.now()
@@ -39,10 +39,9 @@ def generate_days_of_month(request_range: str = 'day7', start_date_str: str = No
         # Для месяца берем первый день
         start_date = timezone.datetime(today.year, today.month, 1, tzinfo=today.tzinfo)
         _, number_of_days = monthrange(today.year, today.month)
-    else:  # по умолчанию показываем неделю
-        # Для недели берем начало текущего дня
+    else:  # по умолчанию показываем  2 недели
         start_date = timezone.datetime(today.year, today.month, today.day, 0, 0, 0, tzinfo=today.tzinfo)
-        number_of_days = 8
+        number_of_days = 14
 
     for day in range(number_of_days):
         current_date = start_date + timedelta(days=day)
@@ -104,7 +103,7 @@ def add_blocks_datetime_range_and_room_name(reservation_objects: QuerySet, defau
 
 @login_required(login_url='login')
 def user_index_view(request):
-    request_range = 'day7'  # по умолчанию неделя
+    request_range = 'day14'  # по умолчанию 2 неделb
     start_date_str = None
     end_date_str = None
     

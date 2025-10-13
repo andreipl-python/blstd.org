@@ -74,7 +74,8 @@ h6 {
 #main-menu, #main-menu-name {
     display: flex;
     align-items: center;
-    justify-content: space-evenly;
+    justify-content: left;
+    gap: 16px;
     font-family: 'Manrope';
     font-style: normal;
     font-weight: 600 !important;
@@ -224,7 +225,8 @@ h6 {
   .calendar-period {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
+    gap: 16px;
   }
 
   .calendar-period span {
@@ -245,7 +247,7 @@ h6 {
     justify-content: center;
     align-items: center;
     gap: 12px;
-    width: 200px;
+    width: 240px;
     height: 42px;
     background: #FFFFFF;
     border: 1px solid #7A52FF;

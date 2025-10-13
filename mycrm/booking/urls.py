@@ -58,7 +58,7 @@ urlpatterns = [
     # Основные представления
     path('', user_index_view, name='index'),
     path('login/', auth_view, name='login'),
-    path('logout/', CustomLogoutView.as_view(next_page='index'), name='logout'),
+    path('logout/', CustomLogoutView.as_view(), name='logout'),
     path('user/', user_index_view, name='user_index'),
     # ************************************************* #
     path('users_list/', user_index_view, name='users_list'),

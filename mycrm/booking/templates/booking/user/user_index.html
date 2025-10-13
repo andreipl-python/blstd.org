@@ -2,6 +2,7 @@
 {% load static %}
 {% load custom_filters %}
 <html lang="ru">
+
 <head>
     <title>CRM</title>
     <link rel="stylesheet" href="{% static 'css/main.css' %}?v={% now 'U' %}">
@@ -13,74 +14,79 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.js"></script>
 
 </head>
+
 <body>
 
-<script>
-  window.ROOMS = JSON.parse('{{ rooms_json|escapejs }}');
-  window.TIME_BLOCKS = JSON.parse('{{ time_blocks_json|escapejs }}');
-  window.SCENARIOS = JSON.parse('{{ scenarios_json|escapejs }}');
-  window.SPECIALISTS = JSON.parse('{{ specialists_json|escapejs }}');
-</script>
+    <script>
+        window.ROOMS = JSON.parse('{{ rooms_json|escapejs }}');
+        window.TIME_BLOCKS = JSON.parse('{{ time_blocks_json|escapejs }}');
+        window.SCENARIOS = JSON.parse('{{ scenarios_json|escapejs }}');
+        window.SPECIALISTS = JSON.parse('{{ specialists_json|escapejs }}');
+    </script>
 
-<p id="bookings_in_range" style="display: none;">{{ bookings_in_range }}</p>
-<script>
-    // Получаем данные о связях area-сценарии
-    window.AREAS = JSON.parse('{{ areas_json|escapejs }}');
-    window.SCENARIOS = JSON.parse('{{ scenarios_json|escapejs }}');
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        const areaSelect = document.getElementById('area-select');
-        const scenarioSelect = document.getElementById('scenario-select');
-        areaSelect.addEventListener('change', function() {
-            const areaId = this.value;
-            scenarioSelect.innerHTML = '<option value="">Сценарий</option>';
-            if (!areaId) return;
-            const areaObj = window.AREAS.find(a => a.pk == areaId);
-            if (areaObj && areaObj.fields && areaObj.fields.scenario) {
-                areaObj.fields.scenario.forEach(scenId => {
-                    const scenarioObj = window.SCENARIOS.find(s => s.pk == scenId);
-                    if (scenarioObj) {
-                        const opt = document.createElement('option');
-                        opt.value = scenarioObj.pk;
-                        opt.textContent = scenarioObj.fields.name;
-                        scenarioSelect.appendChild(opt);
-                    }
-                });
-            }
+    <p id="bookings_in_range" style="display: none;">{{ bookings_in_range }}</p>
+    <script>
+        // Получаем данные о связях area-сценарии
+        window.AREAS = JSON.parse('{{ areas_json|escapejs }}');
+        window.SCENARIOS = JSON.parse('{{ scenarios_json|escapejs }}');
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const areaSelect = document.getElementById('area-select');
+            const scenarioSelect = document.getElementById('scenario-select');
+            areaSelect.addEventListener('change', function () {
+                const areaId = this.value;
+                scenarioSelect.innerHTML = '<option value="">Сценарий</option>';
+                if (!areaId) return;
+                const areaObj = window.AREAS.find(a => a.pk == areaId);
+                if (areaObj && areaObj.fields && areaObj.fields.scenario) {
+                    areaObj.fields.scenario.forEach(scenId => {
+                        const scenarioObj = window.SCENARIOS.find(s => s.pk == scenId);
+                        if (scenarioObj) {
+                            const opt = document.createElement('option');
+                            opt.value = scenarioObj.pk;
+                            opt.textContent = scenarioObj.fields.name;
+                            scenarioSelect.appendChild(opt);
+                        }
+                    });
+                }
+            });
         });
-    });
-</script>
+    </script>
 
-<div class="container-fluid">
-    {% include 'booking/add/head.html' %}
-    {% include 'booking/add/menu.html' %}
-    <!--{% include 'booking/add/menu2.html' %}-->
     <div class="container-fluid">
-        <div class="row mt-4" style="border-bottom: 1px solid #EBEBEC; 
-        position: sticky;
-        top: 41px;
-        z-index: 900;
-        background-color: #fff;
-        padding: 1rem;">
-            <div class="row mt-4 mb-2">
+        {% include 'booking/add/head.html' %}
+        {% include 'booking/add/menu.html' %}
+        <!--{% include 'booking/add/menu2.html' %}-->
+        <div class="row mt-4 mb-2" style="border-bottom: 1px solid #EBEBEC; 
+    position: sticky;
+    top: 41px;
+    z-index: 900;
+    background-color: #fff;">
+            <div class="row mt-5 mb-2">
                 <div class="col-md-12 d-flex justify-content-between align-items-center">
-                <h1 class="mb-0">Брони</h1>
-                <div class="d-flex gap-2">
-                    <button type="button" class="button-secondary">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12H19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 5V19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span>Добавить клиента</span>
-                    </button>
-                    <button type="button" class="button-secondary">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12H19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 5V19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span>Добавить абонемент</span>
-                    </button>
-                </div>
+                    <h1 class="mb-0">Брони</h1>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="button-secondary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M5 12H19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M12 5V19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                            <span>Добавить клиента</span>
+                        </button>
+                        <button type="button" class="button-secondary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M5 12H19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M12 5V19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                            <span>Добавить абонемент</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -90,8 +96,9 @@
                         <div class="custom-select" data-placeholder="Выберите помещение">
                             <span class="selected">Выберите помещение</span>
                             <span class="chevron">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2"/>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
                                 </svg>
                             </span>
                             <ul class="options">
@@ -108,8 +115,9 @@
                         <div class="custom-select" data-placeholder="Выберите сценарий">
                             <span class="selected">Выберите сценарий</span>
                             <span class="chevron">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2"/>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
                                 </svg>
                             </span>
                             <ul class="options">
@@ -121,233 +129,227 @@
                     </div>
                 </div>
 
-                <div class="col-md-3">
-                    <div class="custom-select-wrapper">
-                        <div class="custom-select" data-placeholder="Выберите период">
-                            <span class="selected">Выберите период</span>
-                            <span class="chevron">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2"/>
-                                </svg>
-                            </span>
-                            <ul class="options">
-                                <li data-value="period">Период</li>
-                                <li data-value="month">Месяц</li>
-                                <li data-value="week">Неделя</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-3">
+                <div class="col-md-3 offset-md-3">
                     <div class="calendar-period">
                         <span>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M8 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M16 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M3 10H21" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M8 14H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 14H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M16 14H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M8 18H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 18H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M16 18H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M8 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M16 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path
+                                    d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z"
+                                    stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M3 10H21" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M8 14H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M12 14H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M16 14H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M8 18H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M12 18H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M16 18H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
                         </span>
                         <span id="start-calendar-period-text">
                             18 сентября
                         </span>
                         <span style="color: #818EA2;"> — </span>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M8 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M16 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M3 10H21" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M8 14H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 14H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M16 14H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M8 18H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 18H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M16 18H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M8 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M16 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path
+                                d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z"
+                                stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M3 10H21" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M8 14H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M12 14H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M16 14H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M8 18H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M12 18H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M16 18H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
                         </svg>
                         <span id="end-calendar-period-text">
                             24 сентября
                         </span>
-                    <span style="color: #818EA2;">
-                        /
-                    </span>
-                    <span>
-                        Сегодня
-                    </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="height: 30px;"></div>
+        <div class="container-fluid">
+            {% for day in days_of_month %}
+            <div class="row">
+                <div class="col-md-2" id="day-header" style="white-space: nowrap;">
+                    <h3>{{ day.date|date:"d E" }} / {{ day.date|date:"l"|lower }}</h3>
+                </div>
+                <div class="col-md-2" id="hide-specialists" style="white-space: nowrap;">
+                    <span>Скрыть специалистов</span>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 6L15 12L9 18" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg> 
-                    </div>                   
+                        <path d="M18 15L12 9L6 15" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
                 </div>
             </div>
-        </div>
+            <!-- Блок занятости администраторов и преподавателей -->
+            <div class="row mt-4 align-items-start" ;>
+                <h6 class="d-flex align-items-center gap-3 w-100">
+                    Администраторы
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 15L12 9L6 15" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </h6>
 
+                <div class="d-flex">
+                    <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+                        <img src="{% static 'image/image.png' %}" alt="Описание картинки" width="32" height="32">
+                    </div>
+                    <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+                        <span class="fw-semibold" style="font-size: 14px;">Алия Петрова</span>
+                        <div class="d-flex w-100 specialist-time">
+                            {% for i in time_cells %}
+                            <div class="time-cell flex-fill"></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
 
-        {% for day in days_of_month %}
-        <div class="row mt-5">
-            <div class="col-md-2" id="day-header">
-                <h3>{{ day.date|date:"d E" }} / {{ day.date|date:"l"|lower }}</h3>
+                <div class="d-flex">
+                    <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+                        <img src="{% static 'image/image2.png' %}" alt="Описание картинки" width="32" height="32">
+                    </div>
+                    <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+                        <span class="fw-semibold" style="font-size: 14px;">Каныш Сидоренко</span>
+                        <div class="d-flex w-100 specialist-time">
+                            {% for i in time_cells %}
+                            <div class="time-cell flex-fill"></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex">
+                    <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+                        <img src="{% static 'image/default.png' %}" alt="Описание картинки" width="32" height="32">
+                    </div>
+                    <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+                        <span class="fw-semibold" style="font-size: 14px;">Мукатай Смирнов</span>
+                        <div class="d-flex w-100 specialist-time">
+                            {% for i in time_cells %}
+                            <div class="time-cell flex-fill"></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-2" id="hide-specialists">
-                <span>Скрыть специалистов</span>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18 15L12 9L6 15" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>    
+
+            <div class="row mt-2 align-items-start" ;>
+                <h6 class="d-flex align-items-center gap-3 w-100">
+                    Преподаватели
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 15L12 9L6 15" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </h6>
+
+                <div class="d-flex">
+                    <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+                        <img src="{% static 'image/image3.png' %}" alt="Описание картинки" width="32" height="32">
+                    </div>
+                    <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-semibold" style="font-size: 14px;">Ангелина Власова</span>
+                            <span>•</span>
+                            <span>Вокал / Фортепиано</span>
+                        </div>
+                        <div class="d-flex w-100 specialist-time">
+                            {% for i in time_cells %}
+                            <div class="time-cell flex-fill"></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex">
+                    <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+                        <img src="{% static 'image/image4.png' %}" alt="Описание картинки" width="32" height="32">
+                    </div>
+                    <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-semibold" style="font-size: 14px;">Сергей Золотарёв</span>
+                            <span>•</span>
+                            <span>Вокал / Гитара</span>
+                        </div>
+                        <div class="d-flex w-100 specialist-time">
+                            {% for i in time_cells %}
+                            <div class="time-cell flex-fill"></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex">
+                    <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+                        <img src="{% static 'image/image5.png' %}" alt="Описание картинки" width="32" height="32">
+                    </div>
+                    <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-semibold" style="font-size: 14px;">Виолетта Бочарова</span>
+                            <span>•</span>
+                            <span>Фортепиано</span>
+                        </div>
+                        <div class="d-flex w-100 specialist-time">
+                            {% for i in time_cells %}
+                            <div class="time-cell flex-fill"></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <!-- Блок занятости администраторов и преподавателей -->
-        <div class="row mt-4 align-items-start";>
-            <h6 class="d-flex align-items-center gap-3 w-100">
-                Администраторы
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 15L12 9L6 15" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </h6>
-            
-              <div class="d-flex">
-                <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
-                  <img src="{% static 'image/image.png' %}" alt="Описание картинки" width="32" height="32">
-                </div>
-                <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
-                  <span class="fw-semibold" style="font-size: 14px;">Алия Петрова</span>
-                  <div class="d-flex w-100 specialist-time">
-                    {% for i in time_cells %}
-                      <div class="time-cell flex-fill"></div>
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
+            <!--Таблица броней-->
+            <table id="table-{{ forloop.counter }}" class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th></th>
+                        {% for block in time_blocks %}
+                        <th colspan="4">
+                            {{ block.time }}
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for room in rooms %}
+                    <tr id="row-{{ forloop.counter }}">
+                        <td title="{{ room.name }}">
+                            {{ room.name }}
+                        </td>
 
-              <div class="d-flex">
-                <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
-                  <img src="{% static 'image/image2.png' %}" alt="Описание картинки" width="32" height="32">
-                </div>
-                <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
-                  <span class="fw-semibold" style="font-size: 14px;">Каныш Сидоренко</span>
-                  <div class="d-flex w-100 specialist-time">
-                    {% for i in time_cells %}
-                      <div class="time-cell flex-fill"></div>
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
+                        {% for block in time_blocks %}
+                        {% for i in "1234" %}
+                        {% with block_time=block.time|time_add:forloop.counter0|str_to_time %}
+                        {% with full_datetime=day.date|combine_date_time:block_time %}
 
-              <div class="d-flex">
-                <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
-                  <img src="{% static 'image/default.png' %}" alt="Описание картинки" width="32" height="32">
-                </div>
-                <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
-                  <span class="fw-semibold" style="font-size: 14px;">Мукатай Смирнов</span>
-                  <div class="d-flex w-100 specialist-time">
-                    {% for i in time_cells %}
-                      <div class="time-cell flex-fill"></div>
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
-        </div>
-
-        <div class="row mt-2 align-items-start";>
-            <h6 class="d-flex align-items-center gap-3 w-100">
-                Преподаватели
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 15L12 9L6 15" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </h6>
-            
-              <div class="d-flex">
-                <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
-                  <img src="{% static 'image/image3.png' %}" alt="Описание картинки" width="32" height="32">
-                </div>
-                <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="fw-semibold" style="font-size: 14px;">Ангелина Власова</span>
-                        <span>•</span>
-                        <span>Вокал / Фортепиано</span>
-                    </div>
-                  <div class="d-flex w-100 specialist-time">
-                    {% for i in time_cells %}
-                      <div class="time-cell flex-fill"></div>
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
-
-              <div class="d-flex">
-                <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
-                  <img src="{% static 'image/image4.png' %}" alt="Описание картинки" width="32" height="32">
-                </div>
-                <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="fw-semibold" style="font-size: 14px;">Сергей Золотарёв</span>
-                        <span>•</span>
-                        <span>Вокал / Гитара</span>
-                    </div>
-                  <div class="d-flex w-100 specialist-time">
-                    {% for i in time_cells %}
-                      <div class="time-cell flex-fill"></div>
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
-
-              <div class="d-flex">
-                <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
-                  <img src="{% static 'image/image5.png' %}" alt="Описание картинки" width="32" height="32">
-                </div>
-                <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="fw-semibold" style="font-size: 14px;">Виолетта Бочарова</span>
-                        <span>•</span>
-                        <span>Фортепиано</span>
-                    </div>
-                  <div class="d-flex w-100 specialist-time">
-                    {% for i in time_cells %}
-                      <div class="time-cell flex-fill"></div>
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
-        </div>
-        <!--Таблица броней-->    
-        <table id="table-{{ forloop.counter }}"
-            class="table table-bordered">
-            <thead>
-            <tr>
-                <th></th>
-                {% for block in time_blocks %}
-                <th colspan="4">
-                    {{ block.time }}
-                </th>
-                {% endfor %}
-            </tr>
-            </thead>
-            <tbody>
-            {% for room in rooms %}
-            <tr id="row-{{ forloop.counter }}">
-                <td title="{{ room.name }}">
-                    {{ room.name }}
-                </td>
-
-                {% for block in time_blocks %}
-                {% for i in "1234" %}
-                {% with block_time=block.time|time_add:forloop.counter0|str_to_time %}
-                {% with full_datetime=day.date|combine_date_time:block_time %}
-
-                <td class="highlight-cell available"
-                    full_datetime="{{ full_datetime|date:'Y-m-d H:i:s' }}"
-                    room_name="{{ room.name }}"
-                    room_id="{{ room.id }}"
-                    title="{{ block.time|time_add:forloop.counter0 }}"
-                    data-bs-toggle="modal"
-                    data-bs-target="#createBookingModal"
-                    onclick="openModal(
+                        <td class="highlight-cell available" full_datetime="{{ full_datetime|date:'Y-m-d H:i:s' }}"
+                            room_name="{{ room.name }}" room_id="{{ room.id }}"
+                            title="{{ block.time|time_add:forloop.counter0 }}" data-bs-toggle="modal"
+                            data-bs-target="#createBookingModal" onclick="openModal(
                     `{{ day.date|date:'d E Y' }}`,
                     `{{ block.time|time_add:forloop.counter0 }}`,
                     `{{ room.name }}`,
@@ -357,259 +359,259 @@
                     `{{ specialists_json|escapejs }}`,
                     this
                     )">
-                </td>
-                {% endwith %}
-                {% endwith %}
-                {% endfor %}
-                {% endfor %}
-            </tr>
+                        </td>
+                        {% endwith %}
+                        {% endwith %}
+                        {% endfor %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
             {% endfor %}
-            </tbody>
-        </table>
-        {% endfor %} 
-    </div>           
-</div>
+        </div>
+    </div>
 
-{% include "booking/user/modal_create_booking.html" %}
-{% include "booking/user/modal_edit_booking.html" %}
-{% include "booking/user/modal_payment_booking.html" %}
+    {% include "booking/user/modal_create_booking.html" %}
+    {% include "booking/user/modal_edit_booking.html" %}
+    {% include "booking/user/modal_payment_booking.html" %}
 
-{% include 'booking/add/scripts.html' %}
+    {% include 'booking/add/scripts.html' %}
 
-<script>
-    $(document).ready(function() {
-        // Обработка формы создания брони
-        $('#bookingForm').on('submit', function(e) {
-            e.preventDefault();
-            
-            const bookingType = $('#bookingType').val();
-            const client = $('#client').val();
-            const specialist = $('#specialist').val();
-            const duration = $('#bookingDuration').val();
+    <script>
+        $(document).ready(function () {
+            // Обработка формы создания брони
+            $('#bookingForm').on('submit', function (e) {
+                e.preventDefault();
 
-            if (!bookingType || !client || !duration) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Ошибка',
-                    text: 'Заполните все обязательные поля'
-                });
-                return false;
-            }
+                const bookingType = $('#bookingType').val();
+                const client = $('#client').val();
+                const specialist = $('#specialist').val();
+                const duration = $('#bookingDuration').val();
 
-            const fullDatetime = $('#fullDatetimeField').val();
-            if (!fullDatetime) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Ошибка',
-                    text: 'Не указано время начала брони'
-                });
-                return false;
-            }
-
-            Swal.fire({
-                title: 'Создание брони...',
-                text: 'Пожалуйста, подождите',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            // Собираем данные формы
-            const formData = new FormData();
-            formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
-            formData.append('bookingType', bookingType);
-            formData.append('client', client);
-            if (specialist) {
-                formData.append('specialist', specialist);
-            }
-            
-            // Добавляем ID группы, если включено групповое бронирование
-            const selectedClientData = cachedData.clients.find(c => c.id === parseInt(client));
-            const isGroupBooking = $('#groupBookingSwitch').is(':checked');
-            if (isGroupBooking && selectedClientData && selectedClientData.group) {
-                formData.append('client_group', selectedClientData.group.id);
-            }
-            
-            formData.append('bookingDuration', duration);
-            formData.append('full_datetime', fullDatetime);
-            formData.append('room_id', $('#roomIdField').val());
-            formData.append('comment', $('#comment').val());
-
-            // Добавляем стоимость брони
-            const bookingCost = $('#bookingCost').text();
-            if (bookingCost) {
-                formData.append('total_cost', bookingCost);
-            }
-
-            // Добавляем выбранные услуги
-            const selectedServices = $('#scenarios').val();
-            if (selectedServices && selectedServices.length > 0) {
-                selectedServices.forEach(service => {
-                    formData.append('scenarios', service);
-                });
-            }
-
-            // Отправляем запрос
-            $.ajax({
-                url: '{% url "create_booking" %}',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                headers: {
-                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-                },
-                success: function(response) {
-                    if (response.success) {
-                        // Закрываем модальное окно
-                        $('#createBookingModal').modal('hide');
-                        
-                        // Показываем сообщение об успехе
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Бронь создана успешно!',
-                            showConfirmButton: false,
-                            timer: 1500
-                        }).then(() => {
-                            // Обновляем страницу для отображения новой брони
-                            location.reload();
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Ошибка',
-                            text: response.error || 'Произошла ошибка при создании брони'
-                        });
-                    }
-                },
-                error: function(xhr, status, error) {
+                if (!bookingType || !client || !duration) {
                     Swal.fire({
                         icon: 'error',
                         title: 'Ошибка',
-                        text: 'Произошла ошибка при отправке запроса'
+                        text: 'Заполните все обязательные поля'
                     });
-                    console.error('Error:', error);
+                    return false;
                 }
+
+                const fullDatetime = $('#fullDatetimeField').val();
+                if (!fullDatetime) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Ошибка',
+                        text: 'Не указано время начала брони'
+                    });
+                    return false;
+                }
+
+                Swal.fire({
+                    title: 'Создание брони...',
+                    text: 'Пожалуйста, подождите',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Собираем данные формы
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+                formData.append('bookingType', bookingType);
+                formData.append('client', client);
+                if (specialist) {
+                    formData.append('specialist', specialist);
+                }
+
+                // Добавляем ID группы, если включено групповое бронирование
+                const selectedClientData = cachedData.clients.find(c => c.id === parseInt(client));
+                const isGroupBooking = $('#groupBookingSwitch').is(':checked');
+                if (isGroupBooking && selectedClientData && selectedClientData.group) {
+                    formData.append('client_group', selectedClientData.group.id);
+                }
+
+                formData.append('bookingDuration', duration);
+                formData.append('full_datetime', fullDatetime);
+                formData.append('room_id', $('#roomIdField').val());
+                formData.append('comment', $('#comment').val());
+
+                // Добавляем стоимость брони
+                const bookingCost = $('#bookingCost').text();
+                if (bookingCost) {
+                    formData.append('total_cost', bookingCost);
+                }
+
+                // Добавляем выбранные услуги
+                const selectedServices = $('#scenarios').val();
+                if (selectedServices && selectedServices.length > 0) {
+                    selectedServices.forEach(service => {
+                        formData.append('scenarios', service);
+                    });
+                }
+
+                // Отправляем запрос
+                $.ajax({
+                    url: '{% url "create_booking" %}',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            // Закрываем модальное окно
+                            $('#createBookingModal').modal('hide');
+
+                            // Показываем сообщение об успехе
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Бронь создана успешно!',
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then(() => {
+                                // Обновляем страницу для отображения новой брони
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Ошибка',
+                                text: response.error || 'Произошла ошибка при создании брони'
+                            });
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Ошибка',
+                            text: 'Произошла ошибка при отправке запроса'
+                        });
+                        console.error('Error:', error);
+                    }
+                });
+
+                return false;
             });
 
-            return false;
-        });
+            // Обновление забронированных ячеек
+            var bookingsInRange = JSON.parse(document.getElementById('bookings_in_range').textContent);
 
-        // Обновление забронированных ячеек
-        var bookingsInRange = JSON.parse(document.getElementById('bookings_in_range').textContent);
+            function updateBookedCells() {
+                var cells = document.querySelectorAll('td[room_name]');
+                var bookingCellsArray = [];
 
-        function updateBookedCells() {
-            var cells = document.querySelectorAll('td[room_name]');
-            var bookingCellsArray = []; 
-            
-            // Сначала очищаем все ячейки
-            cells.forEach(function(cell) {
-                cell.classList.remove('highlight-cell', 'booked');
-                cell.classList.add('highlight-cell', 'available');
-                // Удаляем старые booking-block если есть
-                const oldBlock = cell.querySelector('.booking-block');
-                if (oldBlock) {
-                    oldBlock.remove();
-                }
-            });
+                // Сначала очищаем все ячейки
+                cells.forEach(function (cell) {
+                    cell.classList.remove('highlight-cell', 'booked');
+                    cell.classList.add('highlight-cell', 'available');
+                    // Удаляем старые booking-block если есть
+                    const oldBlock = cell.querySelector('.booking-block');
+                    if (oldBlock) {
+                        oldBlock.remove();
+                    }
+                });
 
-            // Обрабатываем бронирования
-            bookingsInRange.forEach(function(booking) {
-                var startTime = new Date(booking.blocks_datetime_range[0]);
-                var endTime = new Date(booking.blocks_datetime_range[booking.blocks_datetime_range.length - 1]);
-                
-                // Находим все ячейки для текущего бронирования
-                var bookingCells = [];
-                var firstCell = null;
-                var width = 0;
-                
-                cells.forEach(function(cell) {
-                    if (cell.getAttribute('room_name') === booking.room_name) {
-                        var cellTime = new Date(cell.getAttribute('full_datetime'));
-                        
-                        if (cellTime >= startTime && cellTime < endTime) {
-                            cell.classList.remove('available');
-                            cell.classList.add('booked');
-                            
-                            // Убираем атрибуты модального окна с ячейки
-                            cell.removeAttribute('data-bs-target');
-                            cell.removeAttribute('data-bs-toggle');
-                            cell.removeAttribute('data-booking-id');
-                            
+                // Обрабатываем бронирования
+                bookingsInRange.forEach(function (booking) {
+                    var startTime = new Date(booking.blocks_datetime_range[0]);
+                    var endTime = new Date(booking.blocks_datetime_range[booking.blocks_datetime_range.length - 1]);
 
-                            if (!firstCell) {
-                                firstCell = cell;
+                    // Находим все ячейки для текущего бронирования
+                    var bookingCells = [];
+                    var firstCell = null;
+                    var width = 0;
+
+                    cells.forEach(function (cell) {
+                        if (cell.getAttribute('room_name') === booking.room_name) {
+                            var cellTime = new Date(cell.getAttribute('full_datetime'));
+
+                            if (cellTime >= startTime && cellTime < endTime) {
+                                cell.classList.remove('available');
+                                cell.classList.add('booked');
+
+                                // Убираем атрибуты модального окна с ячейки
+                                cell.removeAttribute('data-bs-target');
+                                cell.removeAttribute('data-bs-toggle');
+                                cell.removeAttribute('data-booking-id');
+
+
+                                if (!firstCell) {
+                                    firstCell = cell;
+                                }
+                                width += cell.offsetWidth;
+                                bookingCells.push(cell);
                             }
-                            width += cell.offsetWidth;
-                            bookingCells.push(cell);
+                        }
+                    });
+
+                    // Если нашли ячейки для бронирования
+                    if (firstCell && bookingCells.length > 0) {
+                        // Создаем один общий блок бронирования
+                        const bookingBlock = createBookingBlock(booking, width);
+                        firstCell.style.position = 'relative';
+
+                        // Добавляем блок в первую ячейку
+                        firstCell.appendChild(bookingBlock);
+
+                        // Делаем остальные ячейки прозрачными
+                        for (let i = 1; i < bookingCells.length; i++) {
+                            bookingCells[i].style.background = 'none';
+                            bookingCells[i].style.border = 'none';
                         }
                     }
                 });
-                
-                // Если нашли ячейки для бронирования
-                if (firstCell && bookingCells.length > 0) {
-                    // Создаем один общий блок бронирования
-                    const bookingBlock = createBookingBlock(booking, width);
-                    firstCell.style.position = 'relative';
-                    
-                    // Добавляем блок в первую ячейку
-                    firstCell.appendChild(bookingBlock);
-                    
-                    // Делаем остальные ячейки прозрачными
-                    for (let i = 1; i < bookingCells.length; i++) {
-                        bookingCells[i].style.background = 'none';
-                        bookingCells[i].style.border = 'none';
-                    }
-                }
-            });
-        }
+            }
 
-        function createBookingBlock(booking, cellWidth) {
-            const block = document.createElement('div');
-            block.className = `booking-block booking-status-${booking.status_id}`;
-            block.setAttribute('data-bs-toggle', 'modal');
-            block.setAttribute('data-bs-target', '#editBookingModal');
-            block.setAttribute('data-booking-id', booking.id);
-            block.style.cursor = 'pointer';
+            function createBookingBlock(booking, cellWidth) {
+                const block = document.createElement('div');
+                block.className = `booking-block booking-status-${booking.status_id}`;
+                block.setAttribute('data-bs-toggle', 'modal');
+                block.setAttribute('data-bs-target', '#editBookingModal');
+                block.setAttribute('data-booking-id', booking.id);
+                block.style.cursor = 'pointer';
 
-            const backgroundLayer = document.createElement('div');
-            backgroundLayer.className = 'background-layer';
+                const backgroundLayer = document.createElement('div');
+                backgroundLayer.className = 'background-layer';
 
-            const specialistColors = JSON.parse('{{ specialist_colors|safe }}');
-            const specialistId = booking.specialist_id;
-            const colors = specialistColors[specialistId] || {
-                primary: '#a960ee',
-                secondary: '#90a0f7'
-            };
-            
-            backgroundLayer.style.background = `linear-gradient(135deg, 
+                const specialistColors = JSON.parse('{{ specialist_colors|safe }}');
+                const specialistId = booking.specialist_id;
+                const colors = specialistColors[specialistId] || {
+                    primary: '#a960ee',
+                    secondary: '#90a0f7'
+                };
+
+                backgroundLayer.style.background = `linear-gradient(135deg, 
                 ${colors.primary}55 0%,
                 ${colors.primary}55 50%,
                 ${colors.secondary}55 100%
             )`;
-            
-            block.style.setProperty('--specialist-primary-color', colors.primary + '80');
-            block.style.setProperty('--specialist-secondary-color', colors.secondary + '80');
-            block.style.setProperty('--specialist-primary-color-solid', colors.primary);
-            block.style.setProperty('--specialist-secondary-color-solid', colors.secondary);
-            
-            const bookingInfo = document.createElement('div');
-            
-            const formatTime = (dateStr) => {
-                const date = new Date(dateStr);
-                return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-            };
 
-            const startTime = formatTime(booking.blocks_datetime_range[0]);
-            const endTime = formatTime(booking.blocks_datetime_range[booking.blocks_datetime_range.length - 1]);
-            const timeStr = `${startTime} - ${endTime}`;
-            
-            const commentText = booking.comment || '';
-            
-            bookingInfo.innerHTML = `
+                block.style.setProperty('--specialist-primary-color', colors.primary + '80');
+                block.style.setProperty('--specialist-secondary-color', colors.secondary + '80');
+                block.style.setProperty('--specialist-primary-color-solid', colors.primary);
+                block.style.setProperty('--specialist-secondary-color-solid', colors.secondary);
+
+                const bookingInfo = document.createElement('div');
+
+                const formatTime = (dateStr) => {
+                    const date = new Date(dateStr);
+                    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                };
+
+                const startTime = formatTime(booking.blocks_datetime_range[0]);
+                const endTime = formatTime(booking.blocks_datetime_range[booking.blocks_datetime_range.length - 1]);
+                const timeStr = `${startTime} - ${endTime}`;
+
+                const commentText = booking.comment || '';
+
+                bookingInfo.innerHTML = `
                 <div class="booking-content">
                     <span class="booking-client">${booking.client_name || 'Без имени'}</span>
                     <span class="booking-separator">·</span>
@@ -617,104 +619,105 @@
                     ${commentText ? `<span class="booking-separator">·</span><span class="booking-comment">${commentText}</span>` : ''}
                 </div>`;
 
-            const statusIndicator = document.createElement('div');
-            statusIndicator.className = 'booking-status-indicator';
-            
-            block.appendChild(backgroundLayer);
-            block.appendChild(statusIndicator);
-            block.appendChild(bookingInfo);
-            
-            block.style.width = (cellWidth - 2) + 'px';
-            return block;
-        }
+                const statusIndicator = document.createElement('div');
+                statusIndicator.className = 'booking-status-indicator';
 
-        function assignParentAttributes() {
-            var tables = document.querySelectorAll('table');
-            tables.forEach(function(table) {
-                var tableId = table.id;
-                var rows = table.querySelectorAll('tr');
-                rows.forEach(function(row) {
-                    row.setAttribute('parent_table_id', tableId);
-                    var cells = row.querySelectorAll('td');
-                    cells.forEach(function(cell) {
-                        cell.setAttribute('parent_table_id', tableId);
-                        cell.setAttribute('parent_row_id', row.id);
-                        var tableRowSelectors = `#${tableId} #${row.id} td`;
-                        cell.setAttribute('table_row_selectors', tableRowSelectors);
+                block.appendChild(backgroundLayer);
+                block.appendChild(statusIndicator);
+                block.appendChild(bookingInfo);
+
+                block.style.width = (cellWidth - 2) + 'px';
+                return block;
+            }
+
+            function assignParentAttributes() {
+                var tables = document.querySelectorAll('table');
+                tables.forEach(function (table) {
+                    var tableId = table.id;
+                    var rows = table.querySelectorAll('tr');
+                    rows.forEach(function (row) {
+                        row.setAttribute('parent_table_id', tableId);
+                        var cells = row.querySelectorAll('td');
+                        cells.forEach(function (cell) {
+                            cell.setAttribute('parent_table_id', tableId);
+                            cell.setAttribute('parent_row_id', row.id);
+                            var tableRowSelectors = `#${tableId} #${row.id} td`;
+                            cell.setAttribute('table_row_selectors', tableRowSelectors);
+                        });
                     });
                 });
+            }
+
+            updateBookedCells();
+            assignParentAttributes();
+        });
+    </script>
+
+    <script>
+        function checkBlockOverflow(block) {
+            const content = block.querySelector('.booking-content');
+            if (content && content.scrollWidth > block.offsetWidth) {
+                block.classList.add('needs-expand');
+            }
+        }
+
+        // Проверяем существующие блоки
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.booking-block').forEach(checkBlockOverflow);
+        });
+
+        // Следим за изменениями в DOM
+        const observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                mutation.addedNodes.forEach(function (node) {
+                    if (node.classList && node.classList.contains('booking-block')) {
+                        // Даем время на рендеринг
+                        setTimeout(() => checkBlockOverflow(node), 100);
+                    }
+                });
             });
-        }
+        });
 
-        updateBookedCells();
-        assignParentAttributes();
-    });
-</script>
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    </script>
 
-<script>
-    function checkBlockOverflow(block) {
-        const content = block.querySelector('.booking-content');
-        if (content && content.scrollWidth > block.offsetWidth) {
-            block.classList.add('needs-expand');
-        }
-    }
+    <script>
+        // Поведение выпадающих списков
+        const customSelects = document.querySelectorAll('.custom-select');
 
-    // Проверяем существующие блоки
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.booking-block').forEach(checkBlockOverflow);
-    });
+        customSelects.forEach(select => {
+            const selected = select.querySelector('.selected');
+            const optionsContainer = select.querySelector('.options');
+            const optionsList = optionsContainer.querySelectorAll('li');
 
-    // Следим за изменениями в DOM
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            mutation.addedNodes.forEach(function(node) {
-                if (node.classList && node.classList.contains('booking-block')) {
-                    // Даем время на рендеринг
-                    setTimeout(() => checkBlockOverflow(node), 100);
+            // событие на весь div
+            select.addEventListener('click', () => {
+                select.classList.toggle('open');
+            });
+
+            optionsList.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // убрать выделение со всех
+                    optionsList.forEach(opt => opt.classList.remove('selected'));
+                    // добавить выбранному
+                    option.classList.add('selected');
+                    selected.textContent = option.textContent;
+                    select.classList.remove('open');
+                });
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!select.contains(e.target)) {
+                    select.classList.remove('open');
                 }
             });
         });
-    });
-
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-</script>
-
-<script>
-    // Поведение выпадающих списков
-    const customSelects = document.querySelectorAll('.custom-select');
-
-    customSelects.forEach(select => {
-        const selected = select.querySelector('.selected');
-        const optionsContainer = select.querySelector('.options');
-        const optionsList = optionsContainer.querySelectorAll('li');
-
-        // событие на весь div
-        select.addEventListener('click', () => {
-            select.classList.toggle('open');
-        });
-
-        optionsList.forEach(option => {
-            option.addEventListener('click', (e) => {
-                e.stopPropagation();
-                // убрать выделение со всех
-                optionsList.forEach(opt => opt.classList.remove('selected'));
-                // добавить выбранному
-                option.classList.add('selected');
-                selected.textContent = option.textContent;
-                select.classList.remove('open');
-            });
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!select.contains(e.target)) {
-            select.classList.remove('open');
-            }
-        });
-    });
- </script>
+    </script>
 
 </body>
+
 </html>
