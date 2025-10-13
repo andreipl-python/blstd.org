@@ -4,14 +4,14 @@
     font-weight: 400;
     font-style: normal;
   }
-  
+
   @font-face {
     font-family: 'Manrope';
     src: url('../fonts/Manrope-Medium.ttf') format('truetype');
     font-weight: 500;
     font-style: normal;
   }
-  
+
   @font-face {
     font-family: 'Manrope';
     src: url('../fonts/Manrope-SemiBold.ttf') format('truetype');
@@ -19,59 +19,72 @@
     font-style: normal;
   }
 
-@font-face {
+  @font-face {
     font-family: 'Manrope';
     src: url('../fonts/Manrope-Bold.ttf') format('truetype');
     font-weight: 700;
     font-style: normal;
   }
 
-html, body {
+  html,
+  body {
     scrollbar-width: none;
     -ms-overflow-style: none;
-}
-  
-html::-webkit-scrollbar, body::-webkit-scrollbar {
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
     display: none;
- }
+  }
 
-body {
+  body {
     background: #F9F9F9;
-}
+  }
 
-h1 {
-  font-family: 'Manrope';
-  font-style: normal;
-  font-weight: 700 !important;
-  font-size: 26px !important;
-  line-height: 120%;
-  letter-spacing: -0.04em;
-  color: #181B22;
-}
+  h1 {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 700 !important;
+    font-size: 26px !important;
+    line-height: 120% !important;
+    letter-spacing: -0.04em !important;
+    color: #181B22 !important;
+  }
 
-h3 {
-  font-family: 'Manrope';
-  font-style: normal;
-  font-weight: 700 !important;
-  font-size: 18px !important;
-  line-height: 120%;
-  letter-spacing: -0.008em;
-  color: #181B22;
-}
+  h2 {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 700 !important;
+    font-size: 26px !important;
+    line-height: 120% !important;
+    letter-spacing: -0.04em !important;
+    color: #181B22 !important;
+  }
 
-h6 {
+  h3 {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 700 !important;
+    font-size: 18px !important;
+    line-height: 120% !important;
+    letter-spacing: -0.008em !important;
+    color: #181B22 !important;
+  }
+
+  h6 {
     font-family: 'Manrope';
     font-style: normal;
     font-weight: 400 !important;
     font-size: 16px !important;
-    line-height: 128%;
-    letter-spacing: -0.008em;
-    color: #181B22;
-}
+    line-height: 128% !important;
+    letter-spacing: -0.008em !important;
+    color: #181B22 !important;
+  }
 
-/*Меню*/
+  /*Меню*/
 
-#main-menu, #main-menu-name {
+  #main-menu,
+  #main-menu-name {
     display: flex;
     align-items: center;
     justify-content: left;
@@ -83,9 +96,9 @@ h6 {
     line-height: 128%;
     letter-spacing: -0.008em;
     color: #4F4F57;
-}
+  }
 
-#alert-count {
+  #alert-count {
     width: 36px;
     height: 25px;
     background: #FF8522;
@@ -99,9 +112,9 @@ h6 {
     font-size: 12px !important;
     line-height: 144%;
     color: #181B22;
-}
+  }
 
-#ring-dot {
+  #ring-dot {
     position: absolute;
     width: 8px;
     height: 8px;
@@ -109,9 +122,9 @@ h6 {
     right: -4px;
     background: #FF8522;
     border-radius: 50%;
-}
+  }
 
-#booking-filters {
+  #booking-filters {
     display: flex;
     align-items: center;
   }
@@ -149,8 +162,8 @@ h6 {
     align-items: center;
     transition: transform 0.3s ease;
   }
-  
-  .custom-select.open .chevron svg{
+
+  .custom-select.open .chevron svg {
     transform: rotate(180deg);
   }
 
@@ -206,6 +219,14 @@ h6 {
     border-bottom-right-radius: 16px;
   }
 
+  /* Кастомный select: отключить hover для поиска */
+  .custom-select .search-option:hover,
+  .custom-select .search-option.selected {
+    background: none !important;
+    color: inherit !important;
+    cursor: text !important;
+  }
+
   .custom-select .options li.selected {
     background-color: #7C3AED;
     color: #ffffff;
@@ -221,7 +242,7 @@ h6 {
     display: block;
   }
 
-  /* Календарь */   
+  /* Календарь */
   .calendar-period {
     display: flex;
     align-items: center;
@@ -264,7 +285,7 @@ h6 {
   }
 
   /*Сетка броней*/
-   /*Дата/день недели*/
+  /*Дата/день недели*/
   #day-header {
     display: flex;
     align-items: center;
@@ -287,7 +308,7 @@ h6 {
     line-height: 1;
   }
 
-    /*Специалисты*/
+  /*Специалисты*/
   #hide-specialists {
     display: flex;
     align-items: center;
@@ -306,14 +327,14 @@ h6 {
     display: flex;
     gap: 1px;
   }
-  
+
   .time-cell {
     background-color: #CCFF00;
     height: 8px;
     flex: 1;
     position: relative;
   }
-  
+
   .time-cell:nth-child(4n):not(:last-child)::after {
     content: '';
     position: absolute;
@@ -334,7 +355,7 @@ h6 {
     color: #4F4F57;
   }
 
-    /* Таблица броней */
+  /* Таблица броней */
   table th:first-child,
   table td:first-child {
     width: 112px !important;
@@ -376,11 +397,36 @@ h6 {
   .table-bordered tbody tr:first-child td {
     border-top: none !important;
   }
-    
+
   .table-bordered tbody td {
     border: 1px solid #EBEBEC !important;
   }
 
   .table-bordered tbody td:nth-child(4n+1):not(:last-child) {
     border-right: 1px solid #818EA2 !important;
+  }
+
+  /*Модальные окна*/
+  .modal-content {
+    border-radius: 16px !important;
+  }
+
+  /* Модальное окно создания брони*/
+  #roomNameContainer {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400 !important;
+    font-size: 14px !important;
+    line-height: 144% !important;
+    color: #4F4F57 !important;
+  }
+
+  .form-label {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    line-height: 128% !important;
+    letter-spacing: -0.008em !important;
+    color: #181B22 !important;
   }
