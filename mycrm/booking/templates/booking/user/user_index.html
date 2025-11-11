@@ -348,8 +348,7 @@
 
                         <td class="highlight-cell available" full_datetime="{{ full_datetime|date:'Y-m-d H:i:s' }}"
                             room_name="{{ room.name }}" room_id="{{ room.id }}"
-                            title="{{ block.time|time_add:forloop.counter0 }}" data-bs-toggle="modal"
-                            data-bs-target="#createBookingModal" onclick="openModal(
+                            title="{{ block.time|time_add:forloop.counter0 }}" onclick="openInfoModal(
                     `{{ day.date|date:'d E Y' }}`,
                     `{{ block.time|time_add:forloop.counter0 }}`,
                     `{{ room.name }}`,
@@ -717,6 +716,31 @@
                 }
             });
         });
+    </script>
+
+    <script>
+        // Универсальная очистка backdrop и modal-open после закрытия любой модалки
+        function clearAllBackdrops() {
+            document.body.classList.remove('modal-open');
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        }
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('hidden.bs.modal', function () {
+                if (!document.querySelector('.modal.show')) {
+                    clearAllBackdrops();
+                }
+            });
+            modal.addEventListener('show.bs.modal', function () {
+                clearAllBackdrops();
+            });
+        });
+    </script>
+
+    <script>
+        function openInfoModal(date, time, roomName, roomId, mode, scenarios, specialists, element) {
+            const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
+            infoModal.show();
+        }
     </script>
 
 </body>

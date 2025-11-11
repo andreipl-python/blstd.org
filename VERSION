@@ -1,1 +1,1 @@
-1.2.19  # info-модалка: новый шаблон, новые блоки, улучшения стилей и верстки; фиксы modal_create_booking, user_index и temp.css
+1.2.20  # улучшена логика модалок, универсальная очистка backdrop, фиксы user_index, modal_info_booking, modal_payment_booking, стили

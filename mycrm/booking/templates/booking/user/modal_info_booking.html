@@ -29,7 +29,10 @@
                     <!--Кнопки "Внести оплату", "Редактировать", "Удалить"-->
                     <div class="row mb-5 d-flex align-items-center">
                         <div class="col-md-8">
-                            <button type="button" class="button-primary" style="height: 48px;">Внести оплату</button>
+                            <button type="button" class="button-primary" style="height: 48px;"
+                                onclick="switchToPaymentModal()">
+                                Внести оплату
+                            </button>
                         </div>
                         <div class="col-md-4 d-flex justify-content-end gap-3">
                             <!--"Редактировать"-->
@@ -260,3 +263,16 @@
         </div>
     </div>
 </div>
+
+<script>
+    //Закрытие модального окна информации и открытие модального окна оплаты
+    function switchToPaymentModal() {
+        const infoModal = bootstrap.Modal.getInstance(document.getElementById('infoBookingModal'));
+        infoModal.hide();
+
+        setTimeout(() => {
+            const paymentModal = new bootstrap.Modal(document.getElementById('paymentBookingModal'));
+            paymentModal.show();
+        }, 50);
+    }
+</script>

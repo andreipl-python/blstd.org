@@ -1,0 +1,714 @@
+{% load custom_filters %}
+{% load static %}
+
+<style>
+    /* Скрываем стрелки для Chrome, Safari, Edge, Opera */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    /* Скрываем стрелки для Firefox */
+    input[type=number] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+</style>
+
+<div class="modal fade" id="paymentBookingModal" tabindex="-1" aria-labelledby="paymentBookingModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="d-flex flex-column w-100">
+                    <div class="d-flex align-items-center mb-2">
+                        <h5 class="modal-title me-3 mb-0" id="paymentBookingModalLabel">Оплата брони #<span id="paymentBookingId"></span></h5>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-secondary position-relative" title="Стоимость аренды">
+                                <i class="fas fa-home me-1"></i>
+                                <span id="scenarioCost"></span>
+                                <div class="dot-container-payment" title="">
+                                    <div id="balanceDot" class="balance-dot"></div>
+                                </div>
+                            </span>
+                            <span class="badge bg-primary" title="Стоимость услуг">
+                                <i class="fas fa-concierge-bell me-1"></i>
+                                <span id="serviceCost"></span>
+                            </span>
+                            <span class="badge bg-success" title="Общая стоимость">
+                                <i class="fas fa-equals me-1"></i>
+                                <span id="bookingTotalCost"></span>
+                            </span>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted">Оплачено:</span>
+                            <span class="badge bg-primary fs-6" id="paidAmount"></span>
+                        </div>
+                        <div>
+                            <span class="text-muted">Осталось оплатить:</span>
+                            <span class="badge bg-warning text-dark fs-6" id="remainingAmount"></span>
+                        </div>
+                    </div>
+                </div>
+                <form id="paymentBookingForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Способ оплаты</label>
+                        <div class="d-flex gap-3 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="regularPayment" value="regular" checked>
+                                <label class="form-check-label" for="regularPayment">
+                                    Обычная оплата
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="unitsPayment" value="units">
+                                <label class="form-check-label" for="unitsPayment">
+                                    Оплата тарифными единицами
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="regularPaymentBlock">
+                        <div class="mb-3">
+                            <label for="paymentType" class="form-label">Тип оплаты</label>
+                            <select class="form-select" id="paymentType" name="payment_type" required>
+                                {% for payment_type in payment_types %}
+                                    <option value="{{ payment_type.id }}">{{ payment_type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="paymentAmount" class="form-label">Сумма</label>
+                            <input type="number" class="form-control" id="paymentAmount" name="amount" required 
+                                   min="0" step="0.01" pattern="\d+(\.\d{2})?" placeholder="0.00">
+                            <div class="invalid-feedback" id="paymentAmountError"></div>
+                        </div>
+                    </div>
+
+                    <div id="unitsPaymentBlock" style="display: none;">
+                        <div class="mb-3">
+                            <label for="unitsAmount" class="form-label">Количество тарифных единиц</label>
+                            <input type="number" class="form-control" id="unitsAmount" name="units_amount" 
+                                   min="1" step="1" pattern="\d+" inputmode="numeric" required>
+                            <div class="invalid-feedback" id="unitsAmountError"></div>
+                            <div class="alert alert-info mt-2 py-2">
+                                <div class="d-flex align-items-center mb-1">
+                                    <i class="fas fa-wallet me-2"></i>
+                                    <span>Доступно: <span id="availableUnits">0</span> ед.</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-coins me-2"></i>
+                                    <span>Осталось оплатить: <span id="requiredUnits">0</span> ед.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="paymentComment" class="form-label">Комментарий</label>
+                        <textarea class="form-control" id="paymentComment" name="comment" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="submitPaymentBtn">Оплатить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Используем window для глобальных переменных
+    if (typeof window.bookingData === 'undefined') {
+        window.bookingData = null;
+    }
+    if (typeof window.currentBookingId === 'undefined') {
+        window.currentBookingId = null;
+    }
+    
+    // Функция очистки модального окна
+    function cleanupModal() {
+        // Даем Bootstrap завершить анимацию
+        setTimeout(() => {
+            document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+                backdrop.remove();
+            });
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+            
+            const paymentModal = document.getElementById('paymentBookingModal');
+            const bsModal = bootstrap.Modal.getInstance(paymentModal);
+            if (bsModal) {
+                bsModal.dispose();
+            }
+        }, 150);
+    }
+
+    // Функция для закрытия всех модальных окон Bootstrap
+    function closeAllModals() {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) {
+                bsModal.hide();
+            }
+        });
+        // Удаляем backdrop и очищаем стили body
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+            backdrop.remove();
+        });
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('paymentBookingModal');
+        
+        if (modal) {
+            // Обработчик закрытия модального окна оплаты
+            modal.addEventListener('hidden.bs.modal', function (e) {
+                cleanupModal();
+                // Открываем окно редактирования только если не было успешной оплаты
+                const editModal = document.getElementById('editBookingModal');
+                if (editModal && window.bookingData) {
+                    const bsModal = new bootstrap.Modal(editModal);
+                    bsModal.show();
+                    
+                    // Восстанавливаем данные брони
+                    document.getElementById('modalBookingId').textContent = window.bookingData.id;
+                    document.getElementById('modalDate').textContent = window.bookingData.date;
+                    document.getElementById('modalTime').textContent = window.bookingData.time;
+                    document.getElementById('modalDuration').textContent = window.bookingData.duration;
+                    document.getElementById('modalRoomName').textContent = window.bookingData.room_name;
+                    document.getElementById('modalBookingType').textContent = window.bookingData.scenario;
+                    document.getElementById('modalSpecialistInfo').textContent = window.bookingData.specialist_name || 'Не назначен';
+                    document.getElementById('modalClientInfo').textContent = window.bookingData.client_name || 'Не указан';
+                    document.getElementById('modalClientPhone').textContent = window.bookingData.client_phone || 'Не указан';
+                    
+                    // Отображаем email только если он есть
+                    const emailBlock = document.getElementById('emailBlock');
+                    if (emailBlock) {
+                        const emailText = window.bookingData.client_email || '';
+                        document.getElementById('modalClientEmail').textContent = emailText;
+                        emailBlock.style.display = emailText ? 'block' : 'none';
+                    }
+
+                    // Отображаем комментарий только если он есть
+                    const commentBlock = document.getElementById('commentBlock');
+                    if (commentBlock) {
+                        const commentText = window.bookingData.comment || '';
+                        document.getElementById('modalComment').textContent = commentText;
+                        commentBlock.style.display = commentText ? 'block' : 'none';
+                    }
+
+                    // Восстанавливаем список услуг
+                    const servicesContainer = document.getElementById('modalServicesByType');
+                    if (servicesContainer && window.bookingData.services_by_group) {
+                        servicesContainer.innerHTML = '';
+                        for (const [groupName, services] of Object.entries(window.bookingData.services_by_group)) {
+                            const typeDiv = document.createElement('div');
+                            typeDiv.classList.add('mb-3');
+                            
+                            const typeHeader = document.createElement('div');
+                            typeHeader.classList.add('neon-service-type');
+                            typeHeader.textContent = groupName;
+                            typeDiv.appendChild(typeHeader);
+                            
+                            services.forEach(service => {
+                                const serviceDiv = document.createElement('div');
+                                serviceDiv.classList.add('neon-service-item');
+                                
+                                const nameSpan = document.createElement('span');
+                                nameSpan.classList.add('neon-service-name');
+                                nameSpan.textContent = service.name;
+                                
+                                const costSpan = document.createElement('span');
+                                costSpan.classList.add('neon-service-cost');
+                                costSpan.textContent = `${service.cost} руб.`;
+                                
+                                serviceDiv.appendChild(nameSpan);
+                                serviceDiv.appendChild(costSpan);
+                                typeDiv.appendChild(serviceDiv);
+                            });
+                            
+                            servicesContainer.appendChild(typeDiv);
+                        }
+                    }
+
+                    // Обновляем статус и его цвет
+                    const statusBadge = document.getElementById('modalBookingStatus');
+                    if (statusBadge) {
+                        statusBadge.textContent = window.bookingData.status_name;
+                        statusBadge.className = 'badge ' + getStatusColor(window.bookingData.status);
+                    }
+
+                    // Обновляем общую стоимость
+                    document.getElementById('modalTotalCost').textContent = `${window.bookingData.total_cost} руб.`;
+                }
+            });
+
+            modal.addEventListener('show.bs.modal', function (e) {
+                // Получаем ID брони из окна редактирования
+                window.currentBookingId = document.getElementById('modalBookingId').textContent;
+                if (!window.currentBookingId) return;
+                
+                fetch(`/booking/get-booking-details/${window.currentBookingId}/`)
+                    .then(response => response.json())
+                    .then(response => {
+                        if (response.success) {
+                            window.bookingData = response.booking;
+                            
+                            document.getElementById('paymentBookingId').textContent = window.currentBookingId;
+
+                            // Получаем данные о брони для заполнения типов платежей
+                            const paymentTypeSelect = document.getElementById('paymentType');
+                            paymentTypeSelect.innerHTML = ''; 
+                            
+                            if (response.booking.payment_types) {
+                                response.booking.payment_types.forEach(type => {
+                                    const option = document.createElement('option');
+                                    option.value = type.id;
+                                    option.textContent = type.name;
+                                    paymentTypeSelect.appendChild(option);
+                                });
+                            }
+
+                            // Обновляем суммы
+                            const paidAmount = parseFloat(response.booking.paid_amount) || 0;
+                            const remainingAmount = parseFloat(response.booking.remaining_amount) || 0;
+                            document.getElementById('paidAmount').textContent = paidAmount.toFixed(2) + ' BYN';
+                            document.getElementById('remainingAmount').textContent = remainingAmount.toFixed(2) + ' BYN';
+                            document.getElementById('scenarioCost').textContent = response.booking.scenario_cost + ' BYN';
+                            document.getElementById('serviceCost').textContent = response.booking.total_services_cost + ' BYN';
+                            document.getElementById('bookingTotalCost').textContent = response.booking.total_cost + ' BYN';
+
+                            // Обновляем информацию о тарифных единицах
+                            const availableUnits = parseInt(response.booking.available_units) || 0;
+                            document.getElementById('availableUnits').textContent = availableUnits;
+                            
+                            // Вычисляем оставшиеся единицы для оплаты
+                            const totalRentalCost = parseFloat(response.booking.scenario_cost) || 0;
+                            const remainingRentalCost = parseFloat(response.booking.remaining_rental_cost) || 0;
+                            const paidRentalCost = totalRentalCost - remainingRentalCost;
+                            const maxUnitsAllowed = parseInt(response.booking.max_units_allowed) || 0;
+                            
+                            // Если есть max_units_allowed, значит есть и tariff_unit_cost
+                            const tariffUnitCost = maxUnitsAllowed > 0 ? totalRentalCost / response.booking.required_units : 0;
+                            const paidUnits = Math.round(paidRentalCost / tariffUnitCost);
+                            const remainingUnits = response.booking.required_units - paidUnits;
+                            
+                            document.getElementById('requiredUnits').textContent = remainingUnits;
+
+                            // Проверяем возможность оплаты тарифными единицами
+                            const unitsPaymentRadio = document.getElementById('unitsPayment');
+                            const clientBalance = response.booking.client_balance;
+                            const canUseUnits = remainingUnits > 0 && 
+                                              clientBalance !== undefined && 
+                                              clientBalance !== null && 
+                                              clientBalance > 0;
+
+                            unitsPaymentRadio.disabled = !canUseUnits;
+                            
+                            // Если оплата единицами недоступна, переключаем на обычную оплату
+                            if (!canUseUnits && unitsPaymentRadio.checked) {
+                                document.getElementById('regularPayment').checked = true;
+                                document.getElementById('regularPaymentBlock').style.display = 'block';
+                                document.getElementById('unitsPaymentBlock').style.display = 'none';
+                            }
+
+                            // Обновляем индикатор баланса
+                            const balanceDot = document.getElementById('balanceDot');
+                            const container = balanceDot.parentElement;
+                            
+                            if (response.booking.client_balance === null || response.booking.client_balance === undefined) {
+                                balanceDot.className = 'balance-dot grey';
+                                container.title = 'Нет данных о балансе';
+                            } else if (response.booking.client_balance === 0) {
+                                balanceDot.className = 'balance-dot red-dot';
+                                container.title = 'Баланс: 0 единиц';
+                            } else if (response.booking.client_balance < response.booking.required_units) {
+                                balanceDot.className = 'balance-dot yellow-dot';
+                                container.title = `Баланс: ${response.booking.client_balance} единиц (требуется ${response.booking.required_units})`;
+                            } else {
+                                balanceDot.className = 'balance-dot green-dot blink';
+                                container.title = `Баланс: ${response.booking.client_balance} единиц`;
+                            }
+
+                            // Устанавливаем оставшуюся сумму в поле ввода
+                            const paymentAmount = document.getElementById('paymentAmount');
+                            paymentAmount.value = parseFloat(response.booking.remaining_amount).toFixed(2);
+                            paymentAmount.setAttribute('max', response.booking.remaining_amount);
+
+                            // Устанавливаем максимальное значение для поля ввода единиц
+                            const unitsAmount = document.getElementById('unitsAmount');
+                            unitsAmount.setAttribute('max', response.booking.max_units_allowed);
+                            unitsAmount.setAttribute('title', `Максимум: ${response.booking.max_units_allowed} единиц`);
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Ошибка',
+                                text: 'Не удалось загрузить данные брони'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Ошибка',
+                            text: 'Не удалось загрузить данные брони'
+                        });
+                    });
+            });
+        }
+
+        // Обработчик изменения способа оплаты
+        document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const method = this.value;
+                if (method === 'regular') {
+                    document.getElementById('regularPaymentBlock').style.display = 'block';
+                    document.getElementById('unitsPaymentBlock').style.display = 'none';
+                    // Устанавливаем оставшуюся сумму в поле ввода
+                    const paymentAmount = document.getElementById('paymentAmount');
+                    paymentAmount.value = parseFloat(window.bookingData.remaining_amount).toFixed(2);
+                    validatePaymentAmount(paymentAmount);
+                } else {
+                    document.getElementById('regularPaymentBlock').style.display = 'none';
+                    document.getElementById('unitsPaymentBlock').style.display = 'block';
+                    // Вычисляем и устанавливаем количество единиц
+                    const remainingRentalCost = parseFloat(window.bookingData.remaining_rental_cost) || 0;
+                    const tariffUnitCost = remainingRentalCost / window.bookingData.max_units_allowed;
+                    const remainingUnits = Math.ceil(remainingRentalCost / tariffUnitCost);
+                    const unitsAmount = document.getElementById('unitsAmount');
+                    unitsAmount.value = remainingUnits;
+                    validateUnitsAmount(unitsAmount);
+                }
+            });
+        });
+
+        // Функция для обработки нажатия Enter
+        function handleEnterPress(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const submitBtn = document.getElementById('submitPaymentBtn');
+                if (!submitBtn.disabled) {
+                    submitBtn.click();
+                }
+            }
+        }
+
+        // Добавляем обработчики событий для полей ввода
+        const paymentAmount = document.getElementById('paymentAmount');
+        const unitsAmount = document.getElementById('unitsAmount');
+        
+        paymentAmount.addEventListener('keydown', handleEnterPress);
+        unitsAmount.addEventListener('keydown', handleEnterPress);
+        
+        paymentAmount.addEventListener('input', function() {
+            validatePaymentAmount(this);
+        });
+        
+        unitsAmount.addEventListener('input', function() {
+            validateUnitsAmount(this);
+        });
+
+        // Функция валидации суммы платежа
+        function validatePaymentAmount(input) {
+            let value = input.value;
+            
+            // Проверяем количество знаков после запятой
+            if (value.includes('.')) {
+                const decimals = value.split('.')[1];
+                if (decimals && decimals.length > 2) {
+                    value = parseFloat(value).toFixed(2);
+                    input.value = value;
+                }
+            }
+            
+            const amount = parseFloat(value) || 0;
+            const maxAmount = parseFloat(input.getAttribute('max')) || 0;
+            const errorDiv = document.getElementById('paymentAmountError');
+            const submitBtn = document.getElementById('submitPaymentBtn');
+            
+            if (amount <= 0) {
+                input.classList.add('is-invalid');
+                errorDiv.textContent = 'Сумма должна быть больше 0';
+                submitBtn.disabled = true;
+                return false;
+            }
+            
+            if (amount > maxAmount) {
+                input.classList.add('is-invalid');
+                errorDiv.textContent = `Максимальная сумма: ${maxAmount.toFixed(2)} BYN`;
+                input.value = maxAmount.toFixed(2);
+                submitBtn.disabled = true;
+                return false;
+            }
+            
+            input.classList.remove('is-invalid');
+            errorDiv.textContent = '';
+            submitBtn.disabled = false;
+            return true;
+        }
+        
+        // Функция валидации количества единиц
+        function validateUnitsAmount(input) {
+            const units = parseFloat(input.value) || 0;
+            const maxUnits = parseInt(input.getAttribute('max')) || 0;
+            const errorDiv = document.getElementById('unitsAmountError');
+            const submitBtn = document.getElementById('submitPaymentBtn');
+            
+            // Проверяем, является ли число целым
+            if (!Number.isInteger(units)) {
+                input.classList.add('is-invalid');
+                errorDiv.textContent = 'Количество единиц должно быть целым числом';
+                submitBtn.disabled = true;
+                return false;
+            }
+            
+            if (units <= 0) {
+                input.classList.add('is-invalid');
+                errorDiv.textContent = 'Количество единиц должно быть больше 0';
+                submitBtn.disabled = true;
+                return false;
+            }
+            
+            if (units > maxUnits) {
+                input.value = maxUnits;
+                input.classList.remove('is-invalid');
+                errorDiv.textContent = '';
+                submitBtn.disabled = false;
+                return true;
+            }
+            
+            input.classList.remove('is-invalid');
+            errorDiv.textContent = '';
+            submitBtn.disabled = false;
+            return true;
+        }
+
+        // Добавляем обработчик для кнопки оплаты
+        const submitBtn = document.getElementById('submitPaymentBtn');
+        submitBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+            let confirmationText;
+            
+            if (paymentMethod === 'regular') {
+                const amount = parseFloat(document.getElementById('paymentAmount').value).toFixed(2);
+                confirmationText = `Вы уверены, что хотите произвести оплату на сумму ${amount} BYN?`;
+            } else {
+                const units = document.getElementById('unitsAmount').value;
+                confirmationText = `Вы уверены, что хотите оплатить ${units} ед.?`;
+            }
+            
+            // Закрываем окно оплаты
+            const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentBookingModal'));
+            paymentModal.hide();
+            
+            // Ждем пока откроется и закроется окно редактирования
+            setTimeout(() => {
+                const editModal = document.getElementById('editBookingModal');
+                if (editModal) {
+                    const bsEditModal = bootstrap.Modal.getInstance(editModal);
+                    if (bsEditModal) {
+                        bsEditModal.hide();
+                    }
+                    
+                    // Ждем закрытия окна редактирования и показываем SweetAlert
+                    setTimeout(() => {
+                        Swal.fire({
+                            title: 'Подтверждение оплаты',
+                            text: confirmationText,
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: 'Подтвердить',
+                            cancelButtonText: 'Отменить',
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            allowEnterKey: true,
+                            allowEscapeKey: true,
+                            focusConfirm: true
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                const form = document.getElementById('paymentBookingForm');
+                                const formData = new FormData(form);
+                                const data = {
+                                    payment_method: formData.get('paymentMethod'),
+                                    payment_type: formData.get('payment_type'),
+                                    amount: formData.get('amount'),
+                                    units_amount: formData.get('units_amount'),
+                                    comment: formData.get('comment')
+                                };
+
+                                fetch(`/booking/process-payment/${window.bookingData.id}/`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                                    },
+                                    body: JSON.stringify(data)
+                                })
+                                .then(response => response.json())
+                                .then(response => {
+                                    if (response.success) {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Успешно',
+                                            text: 'Оплата успешно произведена'
+                                        }).then(() => {
+                                            location.reload();
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Ошибка',
+                                            text: response.error || 'Произошла ошибка при обработке платежа'
+                                        }).then(() => {
+                                            // Показываем окно оплаты обратно при ошибке
+                                            const bsModal = new bootstrap.Modal(document.getElementById('paymentBookingModal'));
+                                            bsModal.show();
+                                        });
+                                    }
+                                })
+                                .catch(() => {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Ошибка',
+                                        text: 'Произошла ошибка при обработке платежа'
+                                    }).then(() => {
+                                        // Показываем окно оплаты обратно при ошибке
+                                        const bsModal = new bootstrap.Modal(document.getElementById('paymentBookingModal'));
+                                        bsModal.show();
+                                    });
+                                });
+                            } else {
+                                // Если нажали "Отменить" - показываем окно оплаты обратно
+                                const bsModal = new bootstrap.Modal(document.getElementById('paymentBookingModal'));
+                                bsModal.show();
+                            }
+                        });
+                    }, 50); // Ждем 50мс после закрытия окна редактирования
+                }
+            }, 50); // Ждем 50мс после закрытия окна оплаты
+        });
+
+        // Обработчик отправки формы
+        document.getElementById('paymentBookingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
+            if (!paymentMethod) {
+                return;
+            }
+            
+            if (paymentMethod.value === 'units') {
+                const units = parseInt(document.getElementById('unitsAmount').value);
+                if (units > window.bookingData.max_units_allowed) {
+                    document.getElementById('unitsAmount').value = window.bookingData.max_units_allowed;
+                    validateUnitsAmount(document.getElementById('unitsAmount'));
+                    return;
+                }
+            }
+            
+            // Закрываем все модальные окна перед показом SweetAlert
+            closeAllModals();
+            
+            Swal.fire({
+                title: 'Подтверждение',
+                text: `Вы уверены, что хотите произвести оплату на сумму ${parseFloat(window.bookingData.remaining_amount).toFixed(2)} BYN?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Подтвердить',
+                cancelButtonText: 'Отменить',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                allowEnterKey: true,
+                allowEscapeKey: true,
+                willOpen: (popup) => {
+                    popup.addEventListener('mouseenter', () => {
+                        const confirmButton = Swal.getConfirmButton();
+                        confirmButton.focus();
+                    });
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const form = document.getElementById('paymentBookingForm');
+                    const formData = new FormData(form);
+                    const data = {
+                        payment_method: formData.get('paymentMethod'),
+                        payment_type: formData.get('payment_type'),
+                        amount: formData.get('amount'),
+                        units_amount: formData.get('units_amount'),
+                        comment: formData.get('comment')
+                    };
+
+                    fetch(`/booking/process-payment/${window.bookingData.id}/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => response.json())
+                    .then(response => {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Успешно',
+                                text: 'Оплата успешно произведена'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Ошибка',
+                                text: response.error || 'Произошла ошибка при обработке платежа'
+                            }).then(() => {
+                                // Показываем окно оплаты обратно при ошибке
+                                const paymentModal = document.getElementById('paymentBookingModal');
+                                const bsModal = new bootstrap.Modal(paymentModal);
+                                bsModal.show();
+                            });
+                        }
+                    })
+                    .catch(() => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Ошибка',
+                            text: 'Произошла ошибка при обработке платежа'
+                        }).then(() => {
+                            // Показываем окно оплаты обратно при ошибке
+                            const paymentModal = document.getElementById('paymentBookingModal');
+                            const bsModal = new bootstrap.Modal(paymentModal);
+                            bsModal.show();
+                        });
+                    });
+                } else {
+                    // Если нажали "Отменить" - показываем окно оплаты обратно
+                    const paymentModal = document.getElementById('paymentBookingModal');
+                    const bsModal = new bootstrap.Modal(paymentModal);
+                    bsModal.show();
+                }
+            });
+        });
+    });
+</script>
