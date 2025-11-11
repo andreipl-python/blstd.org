@@ -374,6 +374,7 @@
 
     {% include "booking/user/modal_create_booking.html" %}
     {% include "booking/user/modal_edit_booking.html" %}
+    {% include "booking/user/modal_info_booking.html" %}
     {% include "booking/user/modal_payment_booking.html" %}
 
     {% include 'booking/add/scripts.html' %}
@@ -573,7 +574,7 @@
                 const block = document.createElement('div');
                 block.className = `booking-block booking-status-${booking.status_id}`;
                 block.setAttribute('data-bs-toggle', 'modal');
-                block.setAttribute('data-bs-target', '#editBookingModal');
+                block.setAttribute('data-bs-target', '#infoBookingModal');
                 block.setAttribute('data-booking-id', booking.id);
                 block.style.cursor = 'pointer';
 

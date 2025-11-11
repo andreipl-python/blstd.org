@@ -71,6 +71,16 @@
     color: #181B22 !important;
   }
 
+  h5 {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    line-height: 128% !important;
+    letter-spacing: -0.008em !important;
+    color: #181B22;
+  }
+
   h6 {
     font-family: 'Manrope';
     font-style: normal;
@@ -78,7 +88,7 @@
     font-size: 16px !important;
     line-height: 128% !important;
     letter-spacing: -0.008em !important;
-    color: #181B22 !important;
+    color: #181B22;
   }
 
   /*Меню*/
@@ -326,6 +336,18 @@
     color: #7A52FF;
   }
 
+  .button-third {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    outline: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+  }
+
   /*Сетка броней*/
   /*Дата/день недели*/
   #day-header {
@@ -454,7 +476,8 @@
   }
 
   /* Модальное окно создания брони*/
-  #roomNameContainer {
+  #roomNameContainer,
+  #publicIdContainer {
     font-family: 'Manrope';
     font-style: normal;
     font-weight: 400 !important;

@@ -11,21 +11,30 @@
 
 <div class="modal fade" id="createBookingModal" tabindex="-1" aria-labelledby="createBookingModalLabel"
     aria-hidden="true">
-    <div class="modal-dialog" style="min-width: 800px; max-width: 800px;">
+    <div class="modal-dialog" style="max-width:none; width: 63vw;">
         <div class="modal-content">
             <div class="modal-body">
                 <form id="bookingForm" action="javascript:void(0);" method="POST">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <div class="row mb-3">
-                            <div class="d-flex align-items-center">
-                                <h2>Новая бронь</h2>
+                        <div class="row d-flex align-items-center mb-1">
+                            <div class="col-md-12 d-flex justify-content-between align-items-center">
+                                <h2 class="mb-0">Новая бронь</h2>
+                                <!--
+                                <div class="d-flex align-items-center">
+                                    <span>ID:</span>
+                                    <span id="publicID" class="ms-2">123456</span>
+                                </div>
+                                -->
                             </div>
-                            <div id="roomNameContainer" class="d-flex align-items-center gap-1">
+                        </div>
+                        <div class="row mb-4">
+                            <div id="roomNameContainer" class="col-md-6 align-items-center justify-content-start">
                                 <span id="scenarioName">Название сценария</span> / <span id="roomName">Название
                                     комнаты</span>
                             </div>
                         </div>
+
                         <!--<div class="d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
                                 <div class="form-check form-switch" style="display: none; margin-left: 10px;">
@@ -253,7 +262,7 @@
                             <label for="bookingComment" class="form-label">Комментарий</label>
                             <textarea class="form-control" id="bookingComment" name="bookingComment" rows="3"
                                 placeholder="Добавьте комментарий" maxlength="1000"></textarea>
-                            <div class="char-counter" id="bookingCommentCounter">0 / 1000</div>
+                            <div class="char-counter" id="bookingCommentCounter">0/1000</div>
                         </div>
                     </div>
 

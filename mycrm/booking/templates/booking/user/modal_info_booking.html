@@ -1,0 +1,262 @@
+{% load static %}
+
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<!-- Модальное окно информации о брони -->
+<div class="modal fade" id="infoBookingModal" tabindex="-1" aria-labelledby="infoBookingModalLabel" aria-hidden="true">
+    <div class="modal-dialog" style="max-width:none; width: 31vw;">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="mb-3">
+                    <!--Заголовок и ID-->
+                    <div class="row d-flex align-items-center mb-1">
+                        <div class="col-md-12 d-flex justify-content-between align-items-end">
+                            <h2 class="mb-0">Детали по бронированию</h2>
+                            <div id="publicIdContainer" class="d-flex align-items-end">
+                                <span>ID:</span>
+                                <span id="publicID" class="ms-2">123456</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!--Сценарий и комната-->
+                    <div class="row mb-4">
+                        <div id="roomNameContainer" class="col-md-12 align-items-center justify-content-start">
+                            <span id="scenarioName">Название сценария</span> / <span id="roomName">Название
+                                комнаты</span>
+                        </div>
+                    </div>
+                    <!--Кнопки "Внести оплату", "Редактировать", "Удалить"-->
+                    <div class="row mb-5 d-flex align-items-center">
+                        <div class="col-md-8">
+                            <button type="button" class="button-primary" style="height: 48px;">Внести оплату</button>
+                        </div>
+                        <div class="col-md-4 d-flex justify-content-end gap-3">
+                            <!--"Редактировать"-->
+                            <button type="button" class="button-third">
+                                <svg width="48" height="48" viewBox="0 0 48 48" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="0.5" y="0.5" width="47" height="47" rx="15.5" fill="white" />
+                                    <rect x="0.5" y="0.5" width="47" height="47" rx="15.5" stroke="#7A52FF" />
+                                    <path
+                                        d="M33.1739 18.812C33.7026 18.2834 33.9997 17.5665 33.9998 16.8189C33.9999 16.0713 33.703 15.3542 33.1744 14.8255C32.6459 14.2968 31.9289 13.9997 31.1813 13.9996C30.4337 13.9995 29.7166 14.2964 29.1879 14.825L15.8419 28.174C15.6098 28.4055 15.438 28.6905 15.3419 29.004L14.0209 33.356C13.9951 33.4425 13.9931 33.5344 14.0153 33.6219C14.0374 33.7094 14.0829 33.7892 14.1467 33.853C14.2106 33.9168 14.2906 33.9621 14.3781 33.9841C14.4656 34.0061 14.5575 34.004 14.6439 33.978L18.9969 32.658C19.3101 32.5628 19.5951 32.3921 19.8269 32.161L33.1739 18.812Z"
+                                        stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M27 17L31 21" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </button>
+                            <!--"Удалить"-->
+                            <button type="button" class="button-third">
+                                <svg width="48" height="48" viewBox="0 0 48 48" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="0.5" y="0.5" width="47" height="47" rx="15.5" fill="white" />
+                                    <rect x="0.5" y="0.5" width="47" height="47" rx="15.5" stroke="#7A52FF" />
+                                    <path d="M15 18H33" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M31 18V32C31 33 30 34 29 34H19C18 34 17 33 17 32V18" stroke="#7A52FF"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M20 18V16C20 15 21 14 22 14H26C27 14 28 15 28 16V18" stroke="#7A52FF"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M22 23V29" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M26 23V29" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <!--Дата брони-->
+                    <div class="row mb-3">
+                        <div class="col-md-12 d-flex align-items-center gap-2">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M8 2V6" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M16 2V6" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path
+                                    d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z"
+                                    stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M3 10H21" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M8 14H8.01H8Z" fill="#818EA2" />
+                                <path d="M8 14H8.01" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M12 14H12.01" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M16 14H16.01" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M8 18H8.01" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M12 18H12.01" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M16 18H16.01" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                            <h5 class="mb-0 mt-0">18 сентября / четверг</h5>
+                        </div>
+                    </div>
+                    <!--Время брони / период-->
+                    <div class="row mb-3">
+                        <div class="col-md-12 d-flex align-items-center gap-2">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                                    stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M12 6V12L16 14" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                            <h5 class="mb-0 mt-0">14:45 - 15:30 / </h5>
+                            <h5 class="mb-0 mt-0">1 час</h5>
+                        </div>
+                    </div>
+                    <!--Направление / преподаватель-->
+                    <div class="row mb-3">
+                        <div class="col-md-12 d-flex align-items-center gap-4">
+                            <div class="d-flex align-items-center gap-2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 18V5L21 3V16" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path
+                                        d="M6 21C7.65685 21 9 19.6569 9 18C9 16.3431 7.65685 15 6 15C4.34315 15 3 16.3431 3 18C3 19.6569 4.34315 21 6 21Z"
+                                        stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path
+                                        d="M18 19C19.6569 19 21 17.6569 21 16C21 14.3431 19.6569 13 18 13C16.3431 13 15 14.3431 15 16C15 17.6569 16.3431 19 18 19Z"
+                                        stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                                <h5 class="mb-0 mt-0">Гитара</h5>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M14.3047 19.53L15.2277 19.148" stroke="#818EA2" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M15.2277 16.852L14.3047 16.469" stroke="#818EA2" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M16.8517 15.228L16.4688 14.305" stroke="#818EA2" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M16.8517 20.772L16.4688 21.696" stroke="#818EA2" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M19.1484 15.228L19.5314 14.305" stroke="#818EA2" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M19.5304 21.696L19.1484 20.772" stroke="#818EA2" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                    <path
+                                        d="M2 21C2.00012 19.741 2.29739 18.4997 2.86766 17.3773C3.43792 16.2548 4.26506 15.2827 5.28182 14.5402C6.29858 13.7976 7.47624 13.3056 8.71904 13.104C9.96183 12.9024 11.2347 12.9969 12.434 13.38"
+                                        stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M20.7725 16.852L21.6965 16.469" stroke="#818EA2" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M20.7725 19.148L21.6965 19.531" stroke="#818EA2" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                    <path
+                                        d="M10 13C12.7614 13 15 10.7614 15 8C15 5.23858 12.7614 3 10 3C7.23858 3 5 5.23858 5 8C5 10.7614 7.23858 13 10 13Z"
+                                        stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path
+                                        d="M18 21C19.6569 21 21 19.6569 21 18C21 16.3431 19.6569 15 18 15C16.3431 15 15 16.3431 15 18C15 19.6569 16.3431 21 18 21Z"
+                                        stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                                <h6 class="mb-0 mt-0" style="color: #4F4F57;">Ангелина Власова</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <!--Клиент / Телефон-->
+                    <div class="row mb-5">
+                        <div class="col-md-12 d-flex align-items-center gap-4">
+                            <div class="d-flex align-items-center gap-2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M19 21V19C19 17.9391 18.5786 16.9217 17.8284 16.1716C17.0783 15.4214 16.0609 15 15 15H9C7.93913 15 6.92172 15.4214 6.17157 16.1716C5.42143 16.9217 5 17.9391 5 19V21"
+                                        stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path
+                                        d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z"
+                                        stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                                <h5 class="mb-0 mt-0">Иван Орлин</h5>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M13.832 16.568C14.0385 16.6628 14.2712 16.6845 14.4917 16.6294C14.7122 16.5744 14.9073 16.4458 15.045 16.265L15.4 15.8C15.5863 15.5516 15.8279 15.35 16.1056 15.2111C16.3833 15.0723 16.6895 15 17 15H20C20.5304 15 21.0391 15.2107 21.4142 15.5858C21.7893 15.9609 22 16.4696 22 17V20C22 20.5304 21.7893 21.0391 21.4142 21.4142C21.0391 21.7893 20.5304 22 20 22C15.2261 22 10.6477 20.1036 7.27208 16.7279C3.89642 13.3523 2 8.7739 2 4C2 3.46957 2.21071 2.96086 2.58579 2.58579C2.96086 2.21071 3.46957 2 4 2H7C7.53043 2 8.03914 2.21071 8.41421 2.58579C8.78929 2.96086 9 3.46957 9 4V7C9 7.31049 8.92771 7.61672 8.78885 7.89443C8.65 8.17214 8.44839 8.41371 8.2 8.6L7.732 8.951C7.54842 9.09118 7.41902 9.29059 7.36579 9.51535C7.31256 9.74012 7.33878 9.97638 7.44 10.184C8.80668 12.9599 11.0544 15.2048 13.832 16.568Z"
+                                        stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                                <h6 class="mb-0 mt-0" style="color: #4F4F57;">+375 98 765 43 21</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <!--Блок абонемента-->
+                    <div class="col-md-12 d-flex flex-column gap-1">
+                        <h5>Абонемент</h5>
+                        <h6 style="color: #4F4F57;">Название абонемента</h6>
+                    </div>
+                    <div class="row mb-1">
+                        <div class="col-md-7">
+                            <h6 style="color: #4F4F57;">Количество занятий / осталось:</h6>
+                        </div>
+                        <div class="col-md-5 d-flex justify-content-end">
+                            <h5 style="color: #4F4F57;">16/4</h5>
+                        </div>
+                    </div>
+                    <div class="row mb-5">
+                        <div class="col-md-12 d-flex align-items-center gap-2">
+                            <h6 class="m-0" style="color:#4F4F57;">ID:</h6>
+                            <h6 class="m-0" style="color:#4F4F57;">123457894</h6>
+                            <h6 class="m-0 mx-2" style="color:#4F4F57;">/</h6>
+                            <h6 class="m-0" style="color:#4F4F57;">Действует до:</h6>
+                            <h6 class="m-0" style="color:#4F4F57;">7 октября</h6>
+                        </div>
+                    </div>
+                    <!--Комментарий к брони-->
+                    <div class="col-md-12 mb-5">
+                        <h6 style="color: #4F4F57;">Комментарий к брони</h6>
+                    </div>
+                    <!--Итого/внесено-->
+                    <div class="row mb-4 d-flex align-items-end">
+                        <div class="col-md-6 d-flex align-items-end">
+                            <h5 class="m-0">Итого/внесено:</h5>
+                        </div>
+                        <div class="col-md-6 d-flex justify-content-end align-items-end">
+                            <h5 class="m-0" style="color: #4F4F57;">0 BYN / 0 BYN</h5>
+                        </div>
+                    </div>
+                    <!--Маркер пробного занятия-->
+                    <div class="col-md-12 mb-4">
+                        <h5 style="color: #EB5757;">Пробное занятие</h5>
+                    </div>
+                    <!--Блок услуг-->
+                    <div class="col-md-12">
+                        <h5>Услуги</h5>
+                    </div>
+                    <div class="row mb-1 d-flex align-items-end">
+                        <div class="col-md-6 d-flex align-items-end">
+                            <h6 class="m-0" style="color: #4F4F57;">Самостоятельные занятия</h6>
+                        </div>
+                        <div class="col-md-6 d-flex justify-content-end align-items-end">
+                            <h5 class="m-0" style="color: #4F4F57;">0 BYN</h5>
+                        </div>
+                    </div>
+                    <div class="row mb-1 d-flex align-items-end">
+                        <div class="col-md-6 d-flex align-items-end">
+                            <h6 class="m-0" style="color: #4F4F57;">Акустическая гитара</h6>
+                        </div>
+                        <div class="col-md-6 d-flex justify-content-end align-items-end">
+                            <h5 class="m-0" style="color: #4F4F57;">20 BYN/т.е.</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
