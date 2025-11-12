@@ -24,6 +24,38 @@
                             <h2 class="mb-0">Внесение оплаты</h2>
                         </div>
                     </div>
+                    <!--Стоимость / Внесено-->
+                    <div class="col-md-12 d-flex align-items-center justify-content-center gap-1">
+                        <h4 class="mb-0">70 BYN</h4>
+                        <h4 class="mb-0">/</h4>
+                        <h4 class="mb-0">0 BYN</h4>
+                    </div>
+                    <div class="col-md-12 d-flex align-items-center justify-content-center mb-5"
+                        id="paymentTextContainer">
+                        <span>Стоимость / внесено</span>
+                    </div>
+                    <!--Блок внесения оплаты-->
+                    <div class="row mb-3">
+                        <div class="col-md-9">
+                            <label for="paymentMethod" class="form-label">Способ оплаты</label>
+                            <div class="custom-select" id="paymentMethod" name="paymentMethod">
+                                <span class="selected">Выберите способ</span>
+                                <span class="chevron">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                    </svg>
+                                </span>
+                                <ul class="options">
+                                    <li data-value="1">Наличные</li>
+                                    <li data-value="2">Карта</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="height: 200px;">
+                        
+                    </div>
                 </div>
             </div>
         </div>
@@ -42,10 +74,42 @@
         }, 50);
     }
 
-    // Закрытие модального окна оплаты и открытие модального окна информации по кнопке "Esc" или клику вне поля
+    // Обработчики для paymentBookingModal: закрытие и инициализация custom-select
     const paymentModal = document.getElementById('paymentBookingModal');
     paymentModal.addEventListener('hidden.bs.modal', function () {
         const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
         infoModal.show();
+    });
+    
+    paymentModal.addEventListener('shown.bs.modal', function () {
+        document.querySelectorAll('#paymentBookingModal .custom-select').forEach(select => {
+            const selected = select.querySelector('.selected');
+            const optionsContainer = select.querySelector('.options');
+            const optionsList = optionsContainer ? optionsContainer.querySelectorAll('li') : [];
+            if (!selected || !optionsContainer) return;
+
+            // Открытие/закрытие по клику
+            select.addEventListener('click', () => {
+                select.classList.toggle('open');
+            });
+
+            // Выбор опции
+            optionsList.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    optionsList.forEach(opt => opt.classList.remove('selected'));
+                    option.classList.add('selected');
+                    selected.textContent = option.textContent;
+                    select.classList.remove('open');
+                });
+            });
+
+            // Закрытие по клику вне select
+            document.addEventListener('click', (e) => {
+                if (!select.contains(e.target)) {
+                    select.classList.remove('open');
+                }
+            });
+        });
     });
 </script>

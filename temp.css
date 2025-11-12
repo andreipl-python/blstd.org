@@ -1,22 +1,21 @@
-/* Tips */
+/* Amount */
 
-width: 860px;
-height: 17px;
+width: 151px;
+height: 28px;
 
-/* Mobile/Body Small */
+/* Desktop/H3 */
 font-family: 'Manrope';
 font-style: normal;
-font-weight: 400;
-font-size: 12px;
-line-height: 144%;
-/* or 17px */
-text-align: right;
+font-weight: 700;
+font-size: 22px;
+line-height: 128%;
+/* or 28px */
+letter-spacing: -0.008em;
 
-color: #4F4F57;
+color: #181B22;
 
 
 /* Inside auto layout */
 flex: none;
-order: 2;
-align-self: stretch;
+order: 0;
 flex-grow: 0;
