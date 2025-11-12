@@ -348,7 +348,7 @@
 
                         <td class="highlight-cell available" full_datetime="{{ full_datetime|date:'Y-m-d H:i:s' }}"
                             room_name="{{ room.name }}" room_id="{{ room.id }}"
-                            title="{{ block.time|time_add:forloop.counter0 }}" onclick="openInfoModal(
+                            title="{{ block.time|time_add:forloop.counter0 }}" onclick="openCreateModal(
                     `{{ day.date|date:'d E Y' }}`,
                     `{{ block.time|time_add:forloop.counter0 }}`,
                     `{{ room.name }}`,
@@ -572,10 +572,13 @@
             function createBookingBlock(booking, cellWidth) {
                 const block = document.createElement('div');
                 block.className = `booking-block booking-status-${booking.status_id}`;
-                block.setAttribute('data-bs-toggle', 'modal');
-                block.setAttribute('data-bs-target', '#infoBookingModal');
                 block.setAttribute('data-booking-id', booking.id);
                 block.style.cursor = 'pointer';
+
+                block.onclick = function (event) {
+                    event.stopPropagation();
+                    openInfoModal();
+                };
 
                 const backgroundLayer = document.createElement('div');
                 backgroundLayer.className = 'background-layer';
@@ -737,7 +740,14 @@
     </script>
 
     <script>
-        function openInfoModal(date, time, roomName, roomId, mode, scenarios, specialists, element) {
+        function openCreateModal(date, time, roomName, roomId, mode, scenarios, specialists, element) {
+            const createModal = new bootstrap.Modal(document.getElementById('createBookingModal'));
+            createModal.show();
+        }
+    </script>
+
+    <script>
+        function openInfoModal() {
             const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
             infoModal.show();
         }
