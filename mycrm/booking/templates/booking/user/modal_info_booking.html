@@ -36,7 +36,7 @@
                         </div>
                         <div class="col-md-4 d-flex justify-content-end gap-3">
                             <!--"Редактировать"-->
-                            <button type="button" class="button-third">
+                            <button type="button" class="button-third" onclick="switchToEditModal()">
                                 <svg width="48" height="48" viewBox="0 0 48 48" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
                                     <rect x="0.5" y="0.5" width="47" height="47" rx="15.5" fill="white" />
@@ -273,6 +273,19 @@
         setTimeout(() => {
             const paymentModal = new bootstrap.Modal(document.getElementById('paymentBookingModal'));
             paymentModal.show();
+        }, 50);
+    }
+</script>
+
+<script>
+    //Закрытие модального окна информации и открытие модального окна редактирования
+    function switchToEditModal() {
+        const infoModal = bootstrap.Modal.getInstance(document.getElementById('infoBookingModal'));
+        infoModal.hide();
+
+        setTimeout(() => {
+            const editModal = new bootstrap.Modal(document.getElementById('editBookingModal'));
+            editModal.show();
         }, 50);
     }
 </script>

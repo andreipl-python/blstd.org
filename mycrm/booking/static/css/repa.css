@@ -506,13 +506,18 @@
 
   #roomNameContainer,
   #publicIdContainer,
-  #paymentTextContainer {
+  #paymentTextContainer,
+  #infoBookingContainer {
     font-family: 'Manrope';
     font-style: normal;
     font-weight: 400 !important;
     font-size: 14px !important;
     line-height: 144% !important;
     color: #4F4F57 !important;
+  }
+
+  #infoBookingContainer {
+    margin-left: 41px;
   }
 
   .form-label {
