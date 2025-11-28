@@ -44,6 +44,171 @@
                                 <span id="clientAbonement">Абонемент</span>
                             </div>
                         </div>
+
+                        <!--Направление и помещение-->
+                        <div class="row mb-4">
+                            <!-- Выпадающий список "Направление" -->
+                            <div class="col-md-6">
+                                <label for="edit-direction" class="form-label">Направление</label>
+                                <div class="custom-select" id="edit-direction" name="edit-direction">
+                                    <span class="selected">Выберите направление</span>
+                                    <span class="chevron">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                             xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                        </svg>
+                                    </span>
+                                    <ul class="options">
+                                        <li data-value="1">Гитара</li>
+                                        <li data-value="2">Фортепиано</li>
+                                        <li data-value="3">Бубен</li>
+                                        <li data-value="4">Контрабас</li>
+                                        <li data-value="5">Труба</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Выпадающий список "Помещение" -->
+                            <div class="col-md-6">
+                                <label for="edit-room" class="form-label">Помещение</label>
+                                <div class="custom-select" id="edit-room" name="edit-room">
+                                    <span class="selected">Выберите помещение</span>
+                                    <span class="chevron">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                             xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                        </svg>
+                                    </span>
+                                    <ul class="options">
+                                        <li data-value="1">Помещение 1</li>
+                                        <li data-value="2">Помещение 2</li>
+                                        <li data-value="3">Помещение 3</li>
+                                        <li data-value="4">Помещение 4</li>
+                                        <li data-value="5">Помещение 5</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!--Дата, время, длительность-->
+                        <div class="row mb-3">
+                            <!--Календарь дата-->
+                            <div class="col-md-3">
+                                <label for="edit-date" class="form-label">Дата</label>
+                                <div id="edit-date-field" style="padding: 0; border: none; background: none;">
+                                    <input type="date" id="edit-date" name="edit-date" class="form-control" />
+                                </div>
+                            </div>
+
+                            <!--Выпадающий список Время начала-->
+                            <div class="col-md-3">
+                                <label for="edit-start-time" class="form-label">Время начала</label>
+                                <div class="custom-select" id="edit-start-time" name="edit-start-time">
+                                    <span class="selected">9:00</span>
+                                    <span class="chevron">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                             xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                        </svg>
+                                    </span>
+                                    <ul class="options">
+                                        <li data-value="1">10:00</li>
+                                        <li data-value="2">11:00</li>
+                                        <li data-value="3">12:00</li>
+                                        <li data-value="4">13:00</li>
+                                        <li data-value="5">14:00</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!--Выпадающий список Время окончания-->
+                            <div class="col-md-3">
+                                <label for="edit-end-time" class="form-label">Время окончания</label>
+                                <div class="custom-select" id="edit-end-time" name="edit-end-time">
+                                    <span class="selected">10:00</span>
+                                    <span class="chevron">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                             xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                        </svg>
+                                    </span>
+                                    <ul class="options">
+                                        <li data-value="1">11:00</li>
+                                        <li data-value="2">12:00</li>
+                                        <li data-value="3">13:00</li>
+                                        <li data-value="4">14:00</li>
+                                        <li data-value="5">15:00</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!--Выпадающий список Длительность-->
+                            <div class="col-md-3">
+                                <label for="edit-duration" class="form-label">Длительность</label>
+                                <div class="custom-select" id="edit-duration" name="edit-duration">
+                                    <span class="selected">1 час</span>
+                                    <span class="chevron">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                             xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                        </svg>
+                                    </span>
+                                    <ul class="options">
+                                        <li data-value="1">2 часа</li>
+                                        <li data-value="2">3 часа</li>
+                                        <li data-value="3">4 часа</li>
+                                        <li data-value="4">5 часов</li>
+                                        <li data-value="5">6 часов</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!--Преподаватель и услуги-->
+                        <div class="row mb-3">
+                            <!--Выпадающий список Преподаватель-->
+                            <div class="col-md-6">
+                                <label for="edit-teacher" class="form-label">Преподаватель</label>
+                                <div class="custom-select" id="edit-teacher" name="edit-teacher">
+                                    <span class="selected">Выберите преподавателя</span>
+                                    <span class="chevron">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                             xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                        </svg>
+                                    </span>
+                                    <ul class="options">
+                                        <li data-value="1">Иван Иванов</li>
+                                        <li data-value="2">Пётр Петров</li>
+                                        <li data-value="3">Сергей Сергеев</li>
+                                        <li data-value="4">Анна Анновна</li>
+                                        <li data-value="5">Мария Мариновна</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!--Выпадающий список со множественным выбором Услуги-->
+                            <div class="col-md-6">
+                                <label for="edit-services" class="form-label">Услуги (необязательно)</label>
+                                <div class="custom-select" id="edit-services" name="edit-services">
+                                    <span class="selected">Выберите услугу</span>
+                                    <span class="chevron">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                             xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                        </svg>
+                                    </span>
+                                    <ul class="options">
+                                        <li data-value="1">Услуга 1</li>
+                                        <li data-value="2">Услуга 2</li>
+                                        <li data-value="3">Услуга 3</li>
+                                        <li data-value="4">Услуга 4</li>
+                                        <li data-value="5">Услуга 5</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </form>
             </div>
@@ -76,6 +241,58 @@
             const optionsContainer = select.querySelector('.options');
             const optionsList = optionsContainer ? optionsContainer.querySelectorAll('li') : [];
             if (!selected || !optionsContainer) return;
+
+            // Мультиселект "Услуги"
+            if (select.id === 'edit-services') {
+                const chevron = select.querySelector('.chevron');
+                const toggleOpen = () => select.classList.toggle('open');
+                let selectedOptions = new Set();
+
+                // Открытие/закрытие по клику вне опций
+                select.addEventListener('click', (e) => {
+                    if (e.target.tagName !== 'LI') {
+                        toggleOpen();
+                    }
+                });
+
+                [selected, chevron].forEach(el => {
+                    if (!el) return;
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleOpen();
+                    });
+                });
+
+                optionsList.forEach(option => {
+                    option.addEventListener('mousedown', (e) => e.stopPropagation());
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (option.classList.contains('selected')) {
+                            option.classList.remove('selected');
+                            selectedOptions.delete(option);
+                        } else {
+                            option.classList.add('selected');
+                            selectedOptions.add(option);
+                        }
+
+                        if (selectedOptions.size === 0) {
+                            selected.textContent = 'Выберите услугу';
+                        } else if (selectedOptions.size === 1) {
+                            selected.textContent = Array.from(selectedOptions)[0].textContent;
+                        } else {
+                            selected.textContent = `${selectedOptions.size} выбрано`;
+                        }
+                    });
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!select.contains(e.target)) {
+                        select.classList.remove('open');
+                    }
+                });
+
+                return;
+            }
 
             // Открытие/закрытие по клику
             select.addEventListener('click', () => {
