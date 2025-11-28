@@ -5,22 +5,29 @@
 </head>
 
 <div class="modal fade" id="confirmCancelActionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered confirm-cancel-dialog">
+    <div class="modal-dialog modal-dialog-centered confirm-cancel-dialog" style="max-width:none; width: 31vw;">
         <div class="modal-content confirm-cancel-modal">
             <div class="modal-body text-center">
                 <div class="confirm-cancel-icon mb-4">
                     <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect width="96" height="96" rx="48" fill="#FFE7D3" />
-                        <path d="M67.4599 58L51.4599 30C51.111 29.3844 50.6051 28.8724 49.9937 28.5161C49.3823 28.1599 48.6874 27.9722 47.9799 27.9722C47.2723 27.9722 46.5774 28.1599 45.966 28.5161C45.3547 28.8724 44.8487 29.3844 44.4999 30L28.4999 58C28.1472 58.6107 27.9623 59.3038 27.9639 60.009C27.9654 60.7142 28.1534 61.4065 28.5088 62.0156C28.8641 62.6248 29.3742 63.1292 29.9872 63.4777C30.6003 63.8261 31.2947 64.0063 31.9999 64H63.9999C64.7017 63.9993 65.3909 63.8139 65.9984 63.4626C66.6059 63.1112 67.1103 62.6062 67.4609 61.9982C67.8115 61.3903 67.9959 60.7008 67.9958 59.999C67.9956 59.2972 67.8108 58.6078 67.4599 58Z"
+                        <path
+                            d="M67.4599 58L51.4599 30C51.111 29.3844 50.6051 28.8724 49.9937 28.5161C49.3823 28.1599 48.6874 27.9722 47.9799 27.9722C47.2723 27.9722 46.5774 28.1599 45.966 28.5161C45.3547 28.8724 44.8487 29.3844 44.4999 30L28.4999 58C28.1472 58.6107 27.9623 59.3038 27.9639 60.009C27.9654 60.7142 28.1534 61.4065 28.5088 62.0156C28.8641 62.6248 29.3742 63.1292 29.9872 63.4777C30.6003 63.8261 31.2947 64.0063 31.9999 64H63.9999C64.7017 63.9993 65.3909 63.8139 65.9984 63.4626C66.6059 63.1112 67.1103 62.6062 67.4609 61.9982C67.8115 61.3903 67.9959 60.7008 67.9958 59.999C67.9956 59.2972 67.8108 58.6078 67.4599 58Z"
                             stroke="#EB5757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        <path d="M48 40V48" stroke="#EB5757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        <path d="M48 56H48.02" stroke="#EB5757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M48 40V48" stroke="#EB5757" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M48 56H48.02" stroke="#EB5757" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                 </div>
-                <div class="confirm-cancel-title mb-2">Внимание!</div>
+                <div class="confirm-cancel-title mb-2">
+                    <h1>Внимание!</h1>
+                </div>
                 <div class="confirm-cancel-text mb-4">
+                    <h6 style="color: #4F4F57;">
                     Если вы покинете форму, внесённые изменения не будут сохранены.<br />
                     Вы уверены, что хотите выйти?
+                    </h6>
                 </div>
                 <div class="d-flex gap-3 flex-column flex-md-row">
                     <button type="button" class="button-primary flex-fill" data-bs-dismiss="modal">
