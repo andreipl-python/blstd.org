@@ -377,6 +377,20 @@
     align-items: center;
   }
 
+  .modal-close-icon {
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    line-height: 0;
+    box-shadow: none;
+    outline: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   /*Сетка броней*/
   /*Дата/день недели*/
   #day-header {
