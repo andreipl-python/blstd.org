@@ -85,53 +85,115 @@
 </div>
 
 <script>
-    // Закрытие модального окна оплаты и открытие модального окна информации по кнопке "назад"
-    function switchToInfoFromPaymentModal() {
-        const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentBookingModal'));
-        paymentModal.hide();
+    const paymentModalElement = document.getElementById('paymentBookingModal');
+    let paymentModalForceClose = false;
 
-        setTimeout(() => {
-            const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
-            infoModal.show();
-        }, 50);
+    function getConfirmCancelModalElement() {
+        return document.getElementById('confirmCancelActionModal');
     }
 
-    // Обработчики для paymentBookingModal: закрытие и инициализация custom-select
-    const paymentModal = document.getElementById('paymentBookingModal');
-    paymentModal.addEventListener('hidden.bs.modal', function () {
-        const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
-        infoModal.show();
+    function setPaymentModalConfirmOverlay(active) {
+        if (!paymentModalElement) return;
+        paymentModalElement.classList.toggle('confirm-cancel-active', active);
+    }
+
+    function showConfirmCancelModal() {
+        const confirmCancelModalElement = getConfirmCancelModalElement();
+        if (!confirmCancelModalElement) return;
+        attachConfirmModalListeners();
+        setPaymentModalConfirmOverlay(true);
+        const confirmModal = bootstrap.Modal.getOrCreateInstance(confirmCancelModalElement);
+        confirmModal.show();
+    }
+
+    function hidePaymentModal() {
+        if (!paymentModalElement) return;
+        setPaymentModalConfirmOverlay(false);
+        const paymentInstance = bootstrap.Modal.getInstance(paymentModalElement);
+        if (paymentInstance) paymentInstance.hide();
+    }
+
+    function attachConfirmModalListeners() {
+        const confirmCancelModalElement = getConfirmCancelModalElement();
+        if (!confirmCancelModalElement || confirmCancelModalElement.dataset.confirmListenerAttached === 'true') return;
+
+        confirmCancelModalElement.addEventListener('hidden.bs.modal', function () {
+            if (!paymentModalForceClose) {
+                setPaymentModalConfirmOverlay(false);
+            }
+        });
+
+        confirmCancelModalElement.dataset.confirmListenerAttached = 'true';
+    }
+
+    // Закрытие модального окна оплаты и открытие модального окна информации по кнопке "назад"
+    function switchToInfoFromPaymentModal() {
+        showConfirmCancelModal();
+    }
+
+    // Позволяет сторонним сценариям (например, после успешной оплаты) закрыть модалку без подтверждения
+    window.paymentModalAllowClose = function () {
+        paymentModalForceClose = true;
+    };
+
+    document.addEventListener('booking:confirm-cancel-action', function () {
+        paymentModalForceClose = true;
+        const confirmCancelModalElement = getConfirmCancelModalElement();
+        if (confirmCancelModalElement) {
+            const confirmInstance = bootstrap.Modal.getInstance(confirmCancelModalElement);
+            if (confirmInstance) confirmInstance.hide();
+        }
+        hidePaymentModal();
     });
 
-    paymentModal.addEventListener('shown.bs.modal', function () {
-        document.querySelectorAll('#paymentBookingModal .custom-select').forEach(select => {
-            const selected = select.querySelector('.selected');
-            const optionsContainer = select.querySelector('.options');
-            const optionsList = optionsContainer ? optionsContainer.querySelectorAll('li') : [];
-            if (!selected || !optionsContainer) return;
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attachConfirmModalListeners);
+    } else {
+        attachConfirmModalListeners();
+    }
 
-            // Открытие/закрытие по клику
-            select.addEventListener('click', () => {
-                select.classList.toggle('open');
-            });
+    if (paymentModalElement) {
+        paymentModalElement.addEventListener('hide.bs.modal', function (event) {
+            if (!paymentModalForceClose) {
+                event.preventDefault();
+                showConfirmCancelModal();
+                return;
+            }
+            paymentModalForceClose = false;
+        });
 
-            // Выбор опции
-            optionsList.forEach(option => {
-                option.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    optionsList.forEach(opt => opt.classList.remove('selected'));
-                    option.classList.add('selected');
-                    selected.textContent = option.textContent;
-                    select.classList.remove('open');
+        paymentModalElement.addEventListener('hidden.bs.modal', function () {
+            const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
+            infoModal.show();
+        });
+
+        paymentModalElement.addEventListener('shown.bs.modal', function () {
+            document.querySelectorAll('#paymentBookingModal .custom-select').forEach(select => {
+                const selected = select.querySelector('.selected');
+                const optionsContainer = select.querySelector('.options');
+                const optionsList = optionsContainer ? optionsContainer.querySelectorAll('li') : [];
+                if (!selected || !optionsContainer) return;
+
+                select.addEventListener('click', () => {
+                    select.classList.toggle('open');
+                });
+
+                optionsList.forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        optionsList.forEach(opt => opt.classList.remove('selected'));
+                        option.classList.add('selected');
+                        selected.textContent = option.textContent;
+                        select.classList.remove('open');
+                    });
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!select.contains(e.target)) {
+                        select.classList.remove('open');
+                    }
                 });
             });
-
-            // Закрытие по клику вне select
-            document.addEventListener('click', (e) => {
-                if (!select.contains(e.target)) {
-                    select.classList.remove('open');
-                }
-            });
         });
-    });
+    }
 </script>

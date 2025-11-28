@@ -655,6 +655,12 @@
     margin-top: 2px !important;
   }
 
+  #paymentBookingModal.confirm-cancel-active .modal-content {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
   .service-badge {
     font-family: 'Manrope';
     font-style: normal;
