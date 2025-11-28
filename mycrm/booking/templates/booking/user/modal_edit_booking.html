@@ -54,7 +54,7 @@
                                     <span class="selected">Выберите направление</span>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                             xmlns="http://www.w3.org/2000/svg">
+                                            xmlns="http://www.w3.org/2000/svg">
                                             <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
                                         </svg>
                                     </span>
@@ -75,7 +75,7 @@
                                     <span class="selected">Выберите помещение</span>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                             xmlns="http://www.w3.org/2000/svg">
+                                            xmlns="http://www.w3.org/2000/svg">
                                             <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
                                         </svg>
                                     </span>
@@ -107,7 +107,7 @@
                                     <span class="selected">9:00</span>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                             xmlns="http://www.w3.org/2000/svg">
+                                            xmlns="http://www.w3.org/2000/svg">
                                             <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
                                         </svg>
                                     </span>
@@ -128,7 +128,7 @@
                                     <span class="selected">10:00</span>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                             xmlns="http://www.w3.org/2000/svg">
+                                            xmlns="http://www.w3.org/2000/svg">
                                             <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
                                         </svg>
                                     </span>
@@ -149,7 +149,7 @@
                                     <span class="selected">1 час</span>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                             xmlns="http://www.w3.org/2000/svg">
+                                            xmlns="http://www.w3.org/2000/svg">
                                             <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
                                         </svg>
                                     </span>
@@ -173,7 +173,7 @@
                                     <span class="selected">Выберите преподавателя</span>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                             xmlns="http://www.w3.org/2000/svg">
+                                            xmlns="http://www.w3.org/2000/svg">
                                             <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
                                         </svg>
                                     </span>
@@ -194,7 +194,7 @@
                                     <span class="selected">Выберите услугу</span>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                             xmlns="http://www.w3.org/2000/svg">
+                                            xmlns="http://www.w3.org/2000/svg">
                                             <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
                                         </svg>
                                     </span>
@@ -206,6 +206,79 @@
                                         <li data-value="5">Услуга 5</li>
                                     </ul>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!--Выбранные услуги и сброс-->
+                        <div class="row mb-3">
+                            <div class="col-md-12 d-flex align-items-center gap-3 flex-wrap">
+                                <div class="selected-services d-flex gap-2 flex-wrap">
+                                    <span class="service-badge">Самостоятельные занятия
+                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M15 5L5 15" stroke="#818EA2" stroke-width="1.5"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                            <path d="M5 5L15 15" stroke="#818EA2" stroke-width="1.5"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    </span>
+                                    <span class="service-badge">Акустическая гитара
+                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M15 5L5 15" stroke="#818EA2" stroke-width="1.5"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                            <path d="M5 5L15 15" stroke="#818EA2" stroke-width="1.5"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    </span>
+                                </div>
+                                <a href="#" id="reset-services">Сбросить всё</a>
+                            </div>
+                        </div>
+
+                        <!--Комментарий-->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="editBookingComment" class="form-label">Комментарий (необязательно)</label>
+                                <textarea class="form-control" id="editBookingComment" name="editBookingComment"
+                                    rows="3" placeholder="Комментарий к брони" maxlength="1000"></textarea>
+                                <div class="char-counter" id="editBookingCommentCounter">0/1000</div>
+                            </div>
+                        </div>
+
+                        <!--Чекбокс пробное занятие-->
+                        <div class="row mb-4">
+                            <div class="col-md-12 trial-checkbox-row">
+                                <input class="form-check-input" type="checkbox" id="editTrialLessonCheckbox"
+                                    name="edit-trial-lesson">
+                                <label class="form-check-label ms-2" for="editTrialLessonCheckbox"
+                                    id="editTrialLessonLabel">
+                                    Пробное занятие
+                                </label>
+                            </div>
+                        </div>
+
+                        <!--Расчетная стоимость-->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="d-flex align-items-end" style="height: 100%;">
+                                    <label for="editBookingCostValue" class="form-label mb-0">Расчётная стоимость:</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-flex align-items-end justify-content-end" style="height: 100%;">
+                                    <span id="editBookingCostValue">70 BYN</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!--Кнопки Сохранить и Отмена-->
+                        <div class="row mb-2">
+                            <div class="col-md-3">
+                                <button type="button" class="button-primary w-100">Сохранить</button>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" class="button-sec w-100">Отмена</button>
                             </div>
                         </div>
 
@@ -318,4 +391,31 @@
             });
         });
     });
+
+    // Счетчик символов для textarea 'Комментарий'
+    function initCommentCounter() {
+        const textarea = document.getElementById('editBookingComment');
+        const counter = document.getElementById('editBookingCommentCounter');
+
+        if (!textarea || !counter) return;
+
+        const updateCounter = () => {
+            let val = textarea.value.slice(0, 1000);
+            textarea.value = val;
+            counter.textContent = `${val.length}/1000`;
+            counter.style.color =
+                val.length >= 1000 ? '#FF0000' :
+                    val.length >= 900 ? '#FFA500' :
+                        '#818EA2';
+        };
+
+        textarea.addEventListener('input', updateCounter);
+        updateCounter();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCommentCounter);
+    } else {
+        initCommentCounter();
+    }
 </script>
