@@ -258,6 +258,60 @@
     letter-spacing: -0.008em;
   }
 
+  /* Блок "Стоимость / Внесено / Остаток" в модалке оплаты */
+  .payment-summary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    column-gap: 8px;
+    row-gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .payment-summary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 72px;
+  }
+
+  .payment-summary-item h4 {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 22px;
+    line-height: 120%;
+    letter-spacing: -0.008em;
+    color: #181B22;
+  }
+
+  .payment-summary-label {
+    margin-top: 4px;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400 !important;
+    font-size: 14px !important;
+    line-height: 120%;
+    letter-spacing: -0.01em;
+    color: #4F4F57;
+  }
+
+  .payment-summary-divider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 16px;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 18px;
+    line-height: 120%;
+    letter-spacing: -0.008em;
+    color: #818EA2;
+  }
+
   .custom-select.open .options {
     display: block !important;
   }
