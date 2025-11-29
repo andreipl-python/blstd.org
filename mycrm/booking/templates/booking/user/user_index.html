@@ -6,7 +6,6 @@
 <head>
     <title>CRM</title>
     <link rel="stylesheet" href="{% static 'css/repa.css' %}?v={% now 'U' %}">
-    <link rel="stylesheet" href="{% static 'css/status-indicators.css' %}?v={% now 'U' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.js"></script>
@@ -501,19 +500,32 @@
 
             // Обновление забронированных ячеек
             var bookingsInRange = JSON.parse(document.getElementById('bookings_in_range').textContent);
+            const roomCells = document.querySelectorAll('td[room_name]');
+
+            roomCells.forEach(function (cell) {
+                const initialOnclick = cell.getAttribute('onclick');
+                if (initialOnclick) {
+                    cell.dataset.originalOnclick = initialOnclick;
+                }
+            });
 
             function updateBookedCells() {
-                var cells = document.querySelectorAll('td[room_name]');
-                var bookingCellsArray = [];
-
                 // Сначала очищаем все ячейки
-                cells.forEach(function (cell) {
+                roomCells.forEach(function (cell) {
                     cell.classList.remove('highlight-cell', 'booked');
                     cell.classList.add('highlight-cell', 'available');
+                    cell.style.background = '';
+                    cell.style.border = '';
+                    cell.style.position = '';
+                    cell.style.zIndex = '';
                     // Удаляем старые booking-block если есть
                     const oldBlock = cell.querySelector('.booking-block');
                     if (oldBlock) {
                         oldBlock.remove();
+                    }
+
+                    if (cell.dataset.originalOnclick) {
+                        cell.setAttribute('onclick', cell.dataset.originalOnclick);
                     }
                 });
 
@@ -525,9 +537,8 @@
                     // Находим все ячейки для текущего бронирования
                     var bookingCells = [];
                     var firstCell = null;
-                    var width = 0;
 
-                    cells.forEach(function (cell) {
+                    roomCells.forEach(function (cell) {
                         if (cell.getAttribute('room_name') === booking.room_name) {
                             var cellTime = new Date(cell.getAttribute('full_datetime'));
 
@@ -535,16 +546,13 @@
                                 cell.classList.remove('available');
                                 cell.classList.add('booked');
 
-                                // Убираем атрибуты модального окна с ячейки
-                                cell.removeAttribute('data-bs-target');
-                                cell.removeAttribute('data-bs-toggle');
-                                cell.removeAttribute('data-booking-id');
+                                // Убираем обработчик открытия модалки с занятой ячейки
+                                cell.removeAttribute('onclick');
 
 
                                 if (!firstCell) {
                                     firstCell = cell;
                                 }
-                                width += cell.offsetWidth;
                                 bookingCells.push(cell);
                             }
                         }
@@ -552,83 +560,42 @@
 
                     // Если нашли ячейки для бронирования
                     if (firstCell && bookingCells.length > 0) {
+                        const lastCell = bookingCells[bookingCells.length - 1];
+                        const firstRect = firstCell.getBoundingClientRect();
+                        const lastRect = lastCell.getBoundingClientRect();
+                        // Реальная ширина от левого края первой до правого края последней ячейки минус отступы
+                        const fullWidth = lastRect.right - firstRect.left;
+                        // 7px для симметричных отступов (компенсация субпиксельного округления)
+                        const totalWidth = Math.max(fullWidth - 7, 0);
                         // Создаем один общий блок бронирования
-                        const bookingBlock = createBookingBlock(booking, width);
+                        const bookingBlock = createBookingBlock(booking, totalWidth, firstCell);
                         firstCell.style.position = 'relative';
+                        firstCell.style.zIndex = '1';
 
                         // Добавляем блок в первую ячейку
                         firstCell.appendChild(bookingBlock);
-
-                        // Делаем остальные ячейки прозрачными
-                        for (let i = 1; i < bookingCells.length; i++) {
-                            bookingCells[i].style.background = 'none';
-                            bookingCells[i].style.border = 'none';
-                        }
                     }
                 });
             }
 
-            function createBookingBlock(booking, cellWidth) {
+            function createBookingBlock(booking, blockWidth, firstCell) {
                 const block = document.createElement('div');
-                block.className = `booking-block booking-status-${booking.status_id}`;
+                block.className = 'booking-block';
                 block.setAttribute('data-booking-id', booking.id);
                 block.style.cursor = 'pointer';
-
+                
+                // Учитываем border ячейки: left отсчитывается от padding edge (внутри border)
+                const cellStyle = getComputedStyle(firstCell);
+                const borderLeft = parseFloat(cellStyle.borderLeftWidth) || 0;
+                
+                // Чтобы визуальный отступ от внешнего края был 3px, left = 3 - borderLeft
+                block.style.left = (3 - borderLeft) + 'px';
+                block.style.width = blockWidth + 'px';
                 block.onclick = function (event) {
                     event.stopPropagation();
                     openInfoModal();
                 };
 
-                const backgroundLayer = document.createElement('div');
-                backgroundLayer.className = 'background-layer';
-
-                const specialistColors = JSON.parse('{{ specialist_colors|safe }}');
-                const specialistId = booking.specialist_id;
-                const colors = specialistColors[specialistId] || {
-                    primary: '#a960ee',
-                    secondary: '#90a0f7'
-                };
-
-                backgroundLayer.style.background = `linear-gradient(135deg, 
-                ${colors.primary}55 0%,
-                ${colors.primary}55 50%,
-                ${colors.secondary}55 100%
-            )`;
-
-                block.style.setProperty('--specialist-primary-color', colors.primary + '80');
-                block.style.setProperty('--specialist-secondary-color', colors.secondary + '80');
-                block.style.setProperty('--specialist-primary-color-solid', colors.primary);
-                block.style.setProperty('--specialist-secondary-color-solid', colors.secondary);
-
-                const bookingInfo = document.createElement('div');
-
-                const formatTime = (dateStr) => {
-                    const date = new Date(dateStr);
-                    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-                };
-
-                const startTime = formatTime(booking.blocks_datetime_range[0]);
-                const endTime = formatTime(booking.blocks_datetime_range[booking.blocks_datetime_range.length - 1]);
-                const timeStr = `${startTime} - ${endTime}`;
-
-                const commentText = booking.comment || '';
-
-                bookingInfo.innerHTML = `
-                <div class="booking-content">
-                    <span class="booking-client">${booking.client_name || 'Без имени'}</span>
-                    <span class="booking-separator">·</span>
-                    <span class="booking-time">${timeStr}</span>
-                    ${commentText ? `<span class="booking-separator">·</span><span class="booking-comment">${commentText}</span>` : ''}
-                </div>`;
-
-                const statusIndicator = document.createElement('div');
-                statusIndicator.className = 'booking-status-indicator';
-
-                block.appendChild(backgroundLayer);
-                block.appendChild(statusIndicator);
-                block.appendChild(bookingInfo);
-
-                block.style.width = (cellWidth - 2) + 'px';
                 return block;
             }
 
@@ -650,39 +617,21 @@
                 });
             }
 
-            updateBookedCells();
-            assignParentAttributes();
-        });
-    </script>
+            // Задержка чтобы таблица успела отрендериться и размеры были корректны
+            setTimeout(function() {
+                updateBookedCells();
+                assignParentAttributes();
+            }, 50);
 
-    <script>
-        function checkBlockOverflow(block) {
-            const content = block.querySelector('.booking-content');
-            if (content && content.scrollWidth > block.offsetWidth) {
-                block.classList.add('needs-expand');
-            }
-        }
-
-        // Проверяем существующие блоки
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.booking-block').forEach(checkBlockOverflow);
-        });
-
-        // Следим за изменениями в DOM
-        const observer = new MutationObserver(function (mutations) {
-            mutations.forEach(function (mutation) {
-                mutation.addedNodes.forEach(function (node) {
-                    if (node.classList && node.classList.contains('booking-block')) {
-                        // Даем время на рендеринг
-                        setTimeout(() => checkBlockOverflow(node), 100);
-                    }
-                });
+            let resizeTimeout = null;
+            window.addEventListener('resize', function () {
+                if (resizeTimeout) {
+                    clearTimeout(resizeTimeout);
+                }
+                resizeTimeout = setTimeout(function () {
+                    updateBookedCells();
+                }, 150);
             });
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
         });
     </script>
 

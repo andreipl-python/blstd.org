@@ -353,6 +353,16 @@
     color: #7A52FF;
   }
 
+  /* Блоки бронирований в сетке календаря */
+  .booking-block {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    border-radius: 8px;
+    background: #E2B22E;
+    display: block;
+  }
+
   /*Кнопки*/
 
   .button-secondary {
