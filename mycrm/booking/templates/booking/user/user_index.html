@@ -670,17 +670,23 @@
     </script>
 
     <script>
-        // Универсальная очистка backdrop и modal-open после закрытия любой модалки
+        // Универсальная очистка backdrop, modal-open и инлайновых стилей body после закрытия любой модалки
         function clearAllBackdrops() {
             document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
             document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
         }
+
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('hidden.bs.modal', function () {
-                if (!document.querySelector('.modal.show')) {
-                    clearAllBackdrops();
-                }
+                setTimeout(() => {
+                    if (!document.querySelector('.modal.show')) {
+                        clearAllBackdrops();
+                    }
+                }, 50);
             });
+
             modal.addEventListener('show.bs.modal', function () {
                 clearAllBackdrops();
             });
