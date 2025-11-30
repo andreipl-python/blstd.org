@@ -367,6 +367,30 @@
     transition: border-color 0.2s;
   }
 
+  .add-payment-method-trigger {
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    line-height: 128% !important;
+    letter-spacing: -0.008em !important;
+    color: #7A52FF !important;
+  }
+
+  .add-payment-method-trigger svg path {
+    stroke: #7A52FF;
+  }
+
+  .add-payment-method-trigger:focus-visible {
+    outline: 2px solid rgba(122, 82, 255, 0.4);
+    border-radius: 8px;
+  }
+
   /* Календарь */
   .calendar-period {
     display: flex;

@@ -67,34 +67,58 @@
                     </div>
                     <!--Блок внесения оплаты-->
                     <div class="row mb-3">
-                        <div class="col-md-9">
-                            <label for="paymentMethod" class="form-label">Способ оплаты</label>
-                            <div class="custom-select" id="paymentMethod" name="paymentMethod">
-                                <span class="selected">Выберите способ</span>
-                                <span class="chevron">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                        xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
-                                    </svg>
-                                </span>
-                                <ul class="options"></ul>
+                        <div class="col-12" id="paymentMethodsContainer"></div>
+                        <div class="col-12 mb-4">
+                            <button type="button"
+                                class="button-third add-payment-method-trigger d-inline-flex align-items-center gap-2"
+                                id="addPaymentMethodButton">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M5 12H19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M12 5V19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                                <span class="add-payment-method-text">Добавить способ оплаты</span>
+                            </button>
+                        </div>
+
+                        <template id="paymentMethodBlockTemplate">
+                            <div class="payment-method-card mb-4" data-payment-method-block>
+                                <div class="row g-4 align-items-end payment-method-row">
+                                    <div class="col-lg-9 col-md-8">
+                                        <label class="form-label">Способ оплаты</label>
+                                        <div class="custom-select payment-method-select" data-payment-select>
+                                            <span class="selected">Выберите способ</span>
+                                            <span class="chevron">
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                                    xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                                </svg>
+                                            </span>
+                                            <ul class="options"></ul>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <label class="form-label mb-0">Сумма, BYN</label>
+                                            <button type="button" class="payment-method-remove button-third" data-remove-block
+                                                aria-label="Удалить способ оплаты">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                                    xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M18 6L6 18" stroke="#7A52FF" stroke-width="2"
+                                                        stroke-linecap="round" stroke-linejoin="round" />
+                                                    <path d="M6 6L18 18" stroke="#7A52FF" stroke-width="2"
+                                                        stroke-linecap="round" stroke-linejoin="round" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <input type="text" class="payment-value-input" data-payment-value
+                                            placeholder="99" inputmode="decimal" autocomplete="off" />
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-3 mb-5">
-                            <label for="paymentValue" class="form-label">Сумма, BYN</label>
-                            <input type="text" class="payment-value-input" id="paymentValue" name="paymentValue"
-                                placeholder="99" inputmode="decimal" autocomplete="off" />
-                        </div>
-                        <div class="col-md-12 d-flex align-items-center justify-content-start gap-2 mb-4">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path d="M5 12H19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                                <path d="M12 5V19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                            </svg>
-                            <h5 class="mb-0" style="color: #7A52FF">Добавить способ оплаты</h5>
-                        </div>
+                        </template>
 
                         <!--Блок Итого-->
                         <div class="col-12 mb-4">
@@ -116,11 +140,18 @@
 </div>
 
 <script>
+    // === DOM-узлы и состояние модалки оплаты ===
     const paymentModalElement = document.getElementById('paymentBookingModal');
-    const paymentValueInput = document.getElementById('paymentValue');
+    const paymentMethodsContainer = document.getElementById('paymentMethodsContainer');
+    const addPaymentMethodButton = document.getElementById('addPaymentMethodButton');
+    const paymentMethodTemplate = document.getElementById('paymentMethodBlockTemplate');
     const MAX_PAYMENT_AMOUNT = 99999.99;
     let paymentModalForceClose = false;
+    let paymentMethodBlocks = [];
+    let paymentMethodBlockIdCounter = 0;
+    let paymentSelectCloseListenerAttached = false;
 
+    // === Хелперы работы с суммой оплаты ===
     // Очищает ввод до корректного десятичного формата с двумя знаками после разделителя
     function sanitizePaymentValue(value, options = {}) {
         const { preserveSeparator = false } = options;
@@ -163,32 +194,273 @@
     }
 
     // Подписывает поле ввода на очистку, доводку формата и блокировку стрелок
-    function initPaymentValueValidation() {
-        if (!paymentValueInput) return;
+    function initPaymentValueValidation(input) {
+        if (!input || input.dataset.validationAttached === 'true') return;
 
-        paymentValueInput.addEventListener('input', function () {
-            const formatted = sanitizePaymentValue(paymentValueInput.value, { preserveSeparator: true });
-            paymentValueInput.value = formatted;
+        input.addEventListener('input', function () {
+            const formatted = sanitizePaymentValue(input.value, { preserveSeparator: true });
+            input.value = formatted;
         });
 
-        paymentValueInput.addEventListener('blur', function () {
-            if (!paymentValueInput.value) return;
+        input.addEventListener('blur', function () {
+            if (!input.value) return;
 
-            let formatted = sanitizePaymentValue(paymentValueInput.value);
+            let formatted = sanitizePaymentValue(input.value);
             if (formatted.startsWith('.')) {
                 formatted = `0${formatted}`;
             }
             if (formatted.endsWith('.')) {
                 formatted = formatted.slice(0, -1);
             }
-            paymentValueInput.value = formatted;
+            input.value = formatted;
         });
 
-        paymentValueInput.addEventListener('keydown', function (event) {
+        input.addEventListener('keydown', function (event) {
             if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
                 event.preventDefault();
             }
         });
+
+        input.dataset.validationAttached = 'true';
+    }
+
+    // === Работа со списком типов оплаты ===
+    function getPaymentTypes() {
+        return Array.isArray(window.PAYMENT_TYPES) ? window.PAYMENT_TYPES : [];
+    }
+
+    // Следим за кликом вне кастомных селектов, чтобы закрывать их
+    function ensurePaymentSelectCloseListener() {
+        if (paymentSelectCloseListenerAttached) return;
+        document.addEventListener('click', function (event) {
+            document.querySelectorAll('#paymentBookingModal .custom-select.open').forEach(select => {
+                if (!select.contains(event.target)) {
+                    select.classList.remove('open');
+                }
+            });
+        });
+        paymentSelectCloseListenerAttached = true;
+    }
+
+    // Текущие выбранные типы (нужно для исключения дубликатов)
+    function getSelectedPaymentTypeIds(excludeBlockId = null) {
+        return paymentMethodBlocks
+            .filter(block => block.id !== excludeBlockId && block.selectedPaymentTypeId)
+            .map(block => block.selectedPaymentTypeId);
+    }
+
+    function setBlockSelectedPaymentType(block, type) {
+        if (!block || !type) return;
+        block.selectedPaymentTypeId = String(type.id);
+        if (block.selectedDisplay) {
+            block.selectedDisplay.textContent = type.name;
+        }
+        if (block.selectElement) {
+            block.selectElement.classList.remove('open');
+        }
+        refreshAllSelectOptions(block.id);
+        updateAddButtonState();
+    }
+
+    // Перестраивает список опций конкретного блока с учётом занятых типов
+    function renderPaymentSelectOptions(block) {
+        if (!block || !block.optionsContainer || !block.selectedDisplay) return;
+
+        const paymentTypes = getPaymentTypes();
+        const selectedIds = getSelectedPaymentTypeIds(block.id);
+        const currentSelectedId = block.selectedPaymentTypeId;
+
+        block.optionsContainer.innerHTML = '';
+
+        if (!paymentTypes.length) {
+            block.selectedDisplay.textContent = 'Нет доступных способов';
+            block.selectElement?.classList.add('disabled');
+            return;
+        }
+
+        const availableTypes = paymentTypes.filter(type => {
+            const typeId = String(type.id);
+            return typeId === currentSelectedId || !selectedIds.includes(typeId);
+        });
+
+        if (!availableTypes.length && !currentSelectedId) {
+            block.selectedDisplay.textContent = 'Нет доступных способов';
+            block.selectElement?.classList.add('disabled');
+            return;
+        }
+
+        block.selectElement?.classList.remove('disabled');
+
+        availableTypes.forEach(type => {
+            const option = document.createElement('li');
+            option.dataset.value = String(type.id);
+            option.textContent = type.name;
+            if (String(type.id) === currentSelectedId) {
+                option.classList.add('selected');
+            }
+            option.addEventListener('click', (event) => {
+                event.stopPropagation();
+                setBlockSelectedPaymentType(block, type);
+            });
+            block.optionsContainer.appendChild(option);
+        });
+
+        if (currentSelectedId) {
+            const currentType = paymentTypes.find(type => String(type.id) === currentSelectedId);
+            block.selectedDisplay.textContent = currentType ? currentType.name : 'Выберите способ';
+        } else {
+            block.selectedDisplay.textContent = 'Выберите способ';
+        }
+    }
+
+    // Синхронизирует все выпадающие списки при выборе/удалении типов
+    function refreshAllSelectOptions(skipBlockId = null) {
+        paymentMethodBlocks.forEach(block => {
+            if (skipBlockId && block.id === skipBlockId) return;
+            renderPaymentSelectOptions(block);
+        });
+    }
+
+    // Актуализирует показ крестиков удаления: скрыт только на первом блоке
+    function updateRemoveButtonsState() {
+        paymentMethodBlocks.forEach((block, index) => {
+            if (!block.removeButton) return;
+            if (index === 0) {
+                block.removeButton.classList.add('d-none');
+            } else {
+                block.removeButton.classList.remove('d-none');
+            }
+        });
+    }
+
+    // Можно ли добавить ещё блоков (ограничение = количество PaymentType)
+    function canAddMorePaymentBlocks() {
+        const paymentTypes = getPaymentTypes();
+        return paymentTypes.length > 0 && paymentMethodBlocks.length < paymentTypes.length;
+    }
+
+    // Прячет/показывает кнопку "Добавить способ" в зависимости от лимита
+    function updateAddButtonState() {
+        if (!addPaymentMethodButton) return;
+        const canAdd = canAddMorePaymentBlocks();
+        const allBlocksHaveSelection = paymentMethodBlocks.length > 0 && paymentMethodBlocks.every(block => !!block.selectedPaymentTypeId);
+        const shouldShowButton = canAdd && allBlocksHaveSelection;
+
+        addPaymentMethodButton.classList.toggle('d-none', !shouldShowButton);
+        addPaymentMethodButton.setAttribute('aria-disabled', shouldShowButton ? 'false' : 'true');
+        if (!shouldShowButton) {
+            addPaymentMethodButton.blur();
+        }
+    }
+
+    // Удаление блока + перерасчёт доступных опций
+    function removePaymentMethodBlock(blockId) {
+        const blockIndex = paymentMethodBlocks.findIndex(block => block.id === blockId);
+        if (blockIndex === -1) return;
+        const [block] = paymentMethodBlocks.splice(blockIndex, 1);
+        if (block?.element && block.element.parentNode) {
+            block.element.parentNode.removeChild(block.element);
+        }
+
+        if (!paymentMethodBlocks.length) {
+            addPaymentMethodBlock();
+        } else {
+            updateRemoveButtonsState();
+            refreshAllSelectOptions();
+        }
+
+        updateAddButtonState();
+    }
+
+    // Создание нового блока "способ + сумма" из template
+    function createPaymentMethodBlock() {
+        if (!paymentMethodsContainer || !paymentMethodTemplate) return null;
+        const fragment = paymentMethodTemplate.content.cloneNode(true);
+        const blockElement = fragment.querySelector('[data-payment-method-block]');
+        if (!blockElement) return null;
+
+        const selectElement = blockElement.querySelector('[data-payment-select]');
+        const selectedDisplay = selectElement ? selectElement.querySelector('.selected') : null;
+        const optionsContainer = selectElement ? selectElement.querySelector('.options') : null;
+        const removeButton = blockElement.querySelector('[data-remove-block]');
+        const paymentInput = blockElement.querySelector('[data-payment-value]');
+
+        const blockId = `payment-method-${++paymentMethodBlockIdCounter}`;
+        blockElement.dataset.paymentMethodBlockId = blockId;
+
+        const blockData = {
+            id: blockId,
+            element: blockElement,
+            selectElement,
+            selectedDisplay,
+            optionsContainer,
+            removeButton,
+            paymentInput,
+            selectedPaymentTypeId: null,
+        };
+
+        if (removeButton) {
+            removeButton.addEventListener('click', () => removePaymentMethodBlock(blockId));
+        }
+
+        if (selectElement) {
+            selectElement.addEventListener('click', (event) => {
+                event.stopPropagation();
+                if (!selectElement.classList.contains('disabled')) {
+                    selectElement.classList.toggle('open');
+                }
+            });
+        }
+
+        if (paymentInput) {
+            initPaymentValueValidation(paymentInput);
+        }
+
+        paymentMethodsContainer.appendChild(blockElement);
+        paymentMethodBlocks.push(blockData);
+        renderPaymentSelectOptions(blockData);
+        updateRemoveButtonsState();
+        updateAddButtonState();
+
+        return blockData;
+    }
+
+    // Обработчик кнопки "Добавить способ"
+    function addPaymentMethodBlock() {
+        if (!canAddMorePaymentBlocks()) return;
+        createPaymentMethodBlock();
+    }
+
+    function handleAddPaymentMethod(event) {
+        if (event) {
+            event.preventDefault();
+        }
+        addPaymentMethodBlock();
+    }
+
+    // Первичная инициализация блоков при открытии модалки
+    function initializePaymentMethodsUI() {
+        if (!paymentMethodsContainer) return;
+
+        paymentMethodsContainer.innerHTML = '';
+        paymentMethodBlocks = [];
+        paymentMethodBlockIdCounter = 0;
+
+        const paymentTypes = getPaymentTypes();
+
+        if (!paymentTypes.length) {
+            paymentMethodsContainer.innerHTML = '<div class="payment-methods-empty">Нет доступных способов оплаты</div>';
+            if (addPaymentMethodButton) {
+                addPaymentMethodButton.classList.add('d-none');
+            }
+            return;
+        }
+
+        const block = createPaymentMethodBlock();
+        if (block) {
+            block.element.classList.add('mb-4');
+        }
+        updateAddButtonState();
     }
 
     function getConfirmCancelModalElement() {
@@ -252,7 +524,18 @@
     // Инициализация логики модалки оплаты
     function initPaymentModalScripts() {
         attachConfirmModalListeners();
-        initPaymentValueValidation();
+        ensurePaymentSelectCloseListener();
+
+        if (addPaymentMethodButton && addPaymentMethodButton.dataset.listenerAttached !== 'true') {
+            addPaymentMethodButton.addEventListener('click', handleAddPaymentMethod);
+            addPaymentMethodButton.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleAddPaymentMethod();
+                }
+            });
+            addPaymentMethodButton.dataset.listenerAttached = 'true';
+        }
     }
 
     if (document.readyState === 'loading') {
@@ -277,57 +560,7 @@
         });
 
         paymentModalElement.addEventListener('shown.bs.modal', function () {
-            document.querySelectorAll('#paymentBookingModal .custom-select').forEach(select => {
-                const selected = select.querySelector('.selected');
-                const optionsContainer = select.querySelector('.options');
-                if (!selected || !optionsContainer) return;
-
-                // Для paymentMethod каждый раз пересоздаём список опций из PAYMENT_TYPES
-                if (select.id === 'paymentMethod') {
-                    const paymentTypes = Array.isArray(window.PAYMENT_TYPES) ? window.PAYMENT_TYPES : [];
-                    optionsContainer.innerHTML = '';
-
-                    if (!paymentTypes.length) {
-                        selected.textContent = 'Нет доступных способов';
-                    } else {
-                        selected.textContent = 'Выберите способ';
-                        paymentTypes.forEach(type => {
-                            const option = document.createElement('li');
-                            option.dataset.value = type.id;
-                            option.textContent = type.name;
-                            optionsContainer.appendChild(option);
-                        });
-                    }
-                }
-
-                const optionsList = optionsContainer.querySelectorAll('li');
-
-                // Обработчики открытия/закрытия навешиваем один раз на элемент select
-                if (select.dataset.initialized !== 'true') {
-                    select.addEventListener('click', () => {
-                        select.classList.toggle('open');
-                    });
-
-                    document.addEventListener('click', (e) => {
-                        if (!select.contains(e.target)) {
-                            select.classList.remove('open');
-                        }
-                    });
-
-                    select.dataset.initialized = 'true';
-                }
-
-                // Обработчики выбора опций навешиваем заново после пересоздания списка
-                optionsList.forEach(option => {
-                    option.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        optionsList.forEach(opt => opt.classList.remove('selected'));
-                        option.classList.add('selected');
-                        selected.textContent = option.textContent;
-                        select.classList.remove('open');
-                    });
-                });
-            });
+            initializePaymentMethodsUI();
         });
     }
 </script>
