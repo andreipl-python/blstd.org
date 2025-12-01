@@ -20,6 +20,10 @@
         window.SCENARIOS = JSON.parse('{{ scenarios_json|escapejs }}');
         window.SPECIALISTS = JSON.parse('{{ specialists_json|escapejs }}');
         window.PAYMENT_TYPES = JSON.parse('{{ payment_types_json|escapejs }}');
+
+        // Диапазон дат, для которого сейчас отрисован календарь
+        window.SHOW_DATE_FROM = '{{ show_datefrom }}';
+        window.SHOW_DATE_TO = '{{ show_dateto }}';
     </script>
 
     <p id="bookings_in_range" style="display: none;">{{ bookings_in_range }}</p>
@@ -378,6 +382,9 @@
     {% include 'booking/add/scripts.html' %}
 
     <script>
+        // Глобальный массив броней для сетки календаря
+        var bookingsInRange = [];
+
         $(document).ready(function () {
             // Обработка формы создания брони
             $('#bookingForm').on('submit', function (e) {
@@ -475,8 +482,10 @@
                                 showConfirmButton: false,
                                 timer: 1500
                             }).then(() => {
-                                // Обновляем страницу для отображения новой брони
-                                location.reload();
+                                // Обновляем сетку броней без перезагрузки страницы
+                                if (typeof refreshBookingsGrid === 'function') {
+                                    refreshBookingsGrid({ silent: false });
+                                }
                             });
                         } else {
                             Swal.fire({
@@ -500,7 +509,7 @@
             });
 
             // Обновление забронированных ячеек
-            var bookingsInRange = JSON.parse(document.getElementById('bookings_in_range').textContent);
+            bookingsInRange = JSON.parse(document.getElementById('bookings_in_range').textContent);
             const roomCells = document.querySelectorAll('td[room_name]');
 
             roomCells.forEach(function (cell) {
@@ -634,6 +643,42 @@
                     updateBookedCells();
                 }, 150);
             });
+
+            // Периодическое обновление сетки календаря (пуллинг раз в 5 секунд)
+            async function refreshBookingsGrid(options) {
+                const opts = options || {};
+
+                const params = new URLSearchParams({
+                    date_from: window.SHOW_DATE_FROM,
+                    date_to: window.SHOW_DATE_TO,
+                });
+
+                try {
+                    const response = await fetch(`/booking/bookings-grid/?${params.toString()}`);
+                    if (!response.ok) {
+                        console.error('Ошибка обновления сетки бронирований:', response.status);
+                        return;
+                    }
+
+                    const data = await response.json();
+                    if (!data.success || !Array.isArray(data.bookings_in_range)) {
+                        console.error('Некорректный ответ при обновлении сетки бронирований:', data);
+                        return;
+                    }
+
+                    bookingsInRange = data.bookings_in_range;
+                    updateBookedCells();
+                } catch (error) {
+                    console.error('Сетевая ошибка при обновлении сетки бронирований:', error);
+                }
+            }
+
+            // Экспортируем функцию в глобальное пространство имён, чтобы вызывать из других скриптов
+            window.refreshBookingsGrid = refreshBookingsGrid;
+
+            setInterval(function () {
+                refreshBookingsGrid({ silent: true });
+            }, 5000);
         });
     </script>
 
