@@ -130,7 +130,7 @@
 
                         <!--Кнопка оплатить-->
                         <div class="col-md-12 d-flex align-items-center justify-content-center">
-                            <button type="button" class="button-primary">Оплатить</button>
+                            <button type="button" class="button-primary d-none" id="paymentSubmitButton">Оплатить</button>
                         </div>
                     </div>
                 </div>
@@ -144,6 +144,7 @@
     const paymentModalElement = document.getElementById('paymentBookingModal');
     const paymentMethodsContainer = document.getElementById('paymentMethodsContainer');
     const addPaymentMethodButton = document.getElementById('addPaymentMethodButton');
+    const paymentSubmitButton = document.getElementById('paymentSubmitButton');
     const paymentMethodTemplate = document.getElementById('paymentMethodBlockTemplate');
     const MAX_PAYMENT_AMOUNT = 99999.99;
     let paymentModalForceClose = false;
@@ -193,6 +194,13 @@
         return decimalPart ? `${integerPart}${visibleSeparator}${decimalPart}` : integerPart;
     }
 
+    function parsePaymentNumericValue(value) {
+        if (!value && value !== 0) return NaN;
+        const normalized = String(value).replace(',', '.');
+        const numeric = parseFloat(normalized);
+        return Number.isFinite(numeric) ? numeric : NaN;
+    }
+
     // Подписывает поле ввода на очистку, доводку формата и блокировку стрелок
     function initPaymentValueValidation(input) {
         if (!input || input.dataset.validationAttached === 'true') return;
@@ -200,6 +208,7 @@
         input.addEventListener('input', function () {
             const formatted = sanitizePaymentValue(input.value, { preserveSeparator: true });
             input.value = formatted;
+            updateSubmitButtonState();
         });
 
         input.addEventListener('blur', function () {
@@ -212,7 +221,15 @@
             if (formatted.endsWith('.')) {
                 formatted = formatted.slice(0, -1);
             }
+            const numericValue = parsePaymentNumericValue(formatted);
+            if (!numericValue || numericValue <= 0) {
+                input.value = '';
+                updateSubmitButtonState();
+                return;
+            }
+
             input.value = formatted;
+            updateSubmitButtonState();
         });
 
         input.addEventListener('keydown', function (event) {
@@ -222,6 +239,24 @@
         });
 
         input.dataset.validationAttached = 'true';
+    }
+
+    function isPaymentBlockValueValid(block) {
+        if (!block || !block.paymentInput) return false;
+        const numericValue = parsePaymentNumericValue(block.paymentInput.value);
+        return Number.isFinite(numericValue) && numericValue > 0;
+    }
+
+    function allPaymentBlocksValid() {
+        if (!paymentMethodBlocks.length) return false;
+        return paymentMethodBlocks.every(block => isPaymentBlockValueValid(block));
+    }
+
+    function updateSubmitButtonState() {
+        if (!paymentSubmitButton) return;
+        const shouldShow = allPaymentBlocksValid();
+        paymentSubmitButton.classList.toggle('d-none', !shouldShow);
+        paymentSubmitButton.disabled = !shouldShow;
     }
 
     // === Работа со списком типов оплаты ===
@@ -260,6 +295,7 @@
         }
         refreshAllSelectOptions(block.id);
         updateAddButtonState();
+        updateSubmitButtonState();
     }
 
     // Перестраивает список опций конкретного блока с учётом занятых типов
@@ -370,6 +406,7 @@
         }
 
         updateAddButtonState();
+        updateSubmitButtonState();
     }
 
     // Создание нового блока "способ + сумма" из template
@@ -421,6 +458,7 @@
         renderPaymentSelectOptions(blockData);
         updateRemoveButtonsState();
         updateAddButtonState();
+        updateSubmitButtonState();
 
         return blockData;
     }
@@ -461,6 +499,7 @@
             block.element.classList.add('mb-4');
         }
         updateAddButtonState();
+        updateSubmitButtonState();
     }
 
     function getConfirmCancelModalElement() {
@@ -536,6 +575,8 @@
             });
             addPaymentMethodButton.dataset.listenerAttached = 'true';
         }
+
+        updateSubmitButtonState();
     }
 
     if (document.readyState === 'loading') {

@@ -9,8 +9,16 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 
 from ..models import (
-    Reservation, Service, Specialist, ReservationStatusType, PaymentType, Payment, CancellationReason, Subscription,
-    TariffUnit, Client
+    Reservation,
+    Service,
+    Specialist,
+    ReservationStatusType,
+    PaymentType,
+    Payment,
+    CancellationReason,
+    Subscription,
+    TariffUnit,
+    Client,
 )
 
 
@@ -18,28 +26,32 @@ def get_booking_details(request, booking_id):
     """Получение детальной информации о брони"""
     try:
         booking = get_object_or_404(Reservation, id=booking_id)
-        
-        payment_types = PaymentType.objects.exclude(name='Тарифные единицы')
-        
+
+        payment_types = PaymentType.objects.exclude(name="Тарифные единицы")
+
         start_datetime = booking.datetimestart
         end_datetime = booking.datetimeend
-        
+
         weekdays = {
-            0: 'Понедельник',
-            1: 'Вторник',
-            2: 'Среда',
-            3: 'Четверг',
-            4: 'Пятница',
-            5: 'Суббота',
-            6: 'Воскресенье'
+            0: "Понедельник",
+            1: "Вторник",
+            2: "Среда",
+            3: "Четверг",
+            4: "Пятница",
+            5: "Суббота",
+            6: "Воскресенье",
         }
-        
+
         date_str = f"{start_datetime.strftime('%d-%m-%Y')}, {weekdays[start_datetime.weekday()]}"
-        time_str = f"{start_datetime.strftime('%H:%M')} - {end_datetime.strftime('%H:%M')}"
-        
+        time_str = (
+            f"{start_datetime.strftime('%H:%M')} - {end_datetime.strftime('%H:%M')}"
+        )
+
         duration_hours = (booking.datetimeend - booking.datetimestart).seconds // 3600
-        duration_minutes = ((booking.datetimeend - booking.datetimestart).seconds % 3600) // 60
-        
+        duration_minutes = (
+            (booking.datetimeend - booking.datetimestart).seconds % 3600
+        ) // 60
+
         duration_str = ""
         if duration_hours > 0:
             duration_str += f"{duration_hours} {'час' if duration_hours == 1 else 'часа' if 2 <= duration_hours <= 4 else 'часов'}"
@@ -53,22 +65,29 @@ def get_booking_details(request, booking_id):
         total_rental_cost = booking.total_cost - service_cost
 
         # Получаем сумму платежей тарифными единицами
-        rental_payments = Payment.objects.filter(
-            reservation=booking,
-            payment_type__name='Тарифные единицы'
-        ).aggregate(total=Sum('amount'))['total'] or 0
+        rental_payments = (
+            Payment.objects.filter(
+                reservation=booking, payment_type__name="Тарифные единицы"
+            ).aggregate(total=Sum("amount"))["total"]
+            or 0
+        )
 
         # Вычисляем оставшуюся стоимость аренды
         remaining_rental_cost = total_rental_cost - rental_payments
 
         # Получаем сумму всех платежей для данной брони
-        total_payments = Payment.objects.filter(
-            reservation=booking
-        ).aggregate(total=Sum('amount'))['total'] or 0
+        total_payments = (
+            Payment.objects.filter(reservation=booking).aggregate(total=Sum("amount"))[
+                "total"
+            ]
+            or 0
+        )
 
         # Вычисляем оставшуюся сумму
-        remaining_amount = booking.total_cost - total_payments if booking.total_cost else 0
-        
+        remaining_amount = (
+            booking.total_cost - total_payments if booking.total_cost else 0
+        )
+
         # Получаем подписку клиента для данного типа брони
         subscription = None
         available_units = 0
@@ -79,8 +98,7 @@ def get_booking_details(request, booking_id):
 
         if booking.client and booking.reservation_type:
             subscription = Subscription.objects.filter(
-                client=booking.client,
-                reservation_type=booking.reservation_type
+                client=booking.client, reservation_type=booking.reservation_type
             ).first()
 
             if subscription:
@@ -94,176 +112,205 @@ def get_booking_details(request, booking_id):
 
                 if tariff_unit:
                     # Вычисляем продолжительность брони в минутах
-                    duration_minutes = (booking.datetimeend - booking.datetimestart).seconds // 60
-                    required_units = duration_minutes // (tariff_unit.min_reservation_time.hour * 60 + tariff_unit.min_reservation_time.minute)
+                    duration_minutes = (
+                        booking.datetimeend - booking.datetimestart
+                    ).seconds // 60
+                    required_units = duration_minutes // (
+                        tariff_unit.min_reservation_time.hour * 60
+                        + tariff_unit.min_reservation_time.minute
+                    )
                     can_use_units = available_units >= required_units
 
                     # Вычисляем максимальное количество доступных единиц
                     if tariff_unit.tariff_unit_cost > 0:
                         max_units_allowed = min(
                             int(remaining_rental_cost / tariff_unit.tariff_unit_cost),
-                            available_units
+                            available_units,
                         )
 
         # Группируем услуги по группам
         services_by_group = {}
-        total_services_cost = Decimal('0')
-        
-        for service in booking.services.select_related('group').all():
-            group_name = service.group.name if service.group else 'Другое'
+        total_services_cost = Decimal("0")
+
+        for service in booking.services.select_related("group").all():
+            group_name = service.group.name if service.group else "Другое"
             if group_name not in services_by_group:
                 services_by_group[group_name] = []
-            services_by_group[group_name].append({
-                'id': service.id,
-                'name': service.name,
-                'cost': str(service.cost if service.cost else '0')
-            })
+            services_by_group[group_name].append(
+                {
+                    "id": service.id,
+                    "name": service.name,
+                    "cost": str(service.cost if service.cost else "0"),
+                }
+            )
             if service.cost:
                 total_services_cost += service.cost
 
         # Получаем все платежи для данной брони
-        payments = Payment.objects.filter(reservation=booking).select_related('payment_type').order_by('-created_at')
+        payments = (
+            Payment.objects.filter(reservation=booking)
+            .select_related("payment_type")
+            .order_by("-created_at")
+        )
         payments_history = []
         for payment in payments:
-            payments_history.append({
-                'date': payment.created_at.strftime('%d.%m.%Y %H:%M'),
-                'type': payment.payment_type.name,
-                'amount': str(payment.amount)
-            })
+            payments_history.append(
+                {
+                    "date": payment.created_at.strftime("%d.%m.%Y %H:%M"),
+                    "type": payment.payment_type.name,
+                    "amount": str(payment.amount),
+                }
+            )
 
         booking_data = {
-            'id': booking.id,
-            'date': date_str,
-            'time': time_str,
-            'duration': duration_str,
-            'room_id': booking.room.id if booking.room else None,
-            'room_name': booking.room.name if booking.room else 'Не указано',
-            'client_id': booking.client.id if booking.client else None,
-            'client_name': str(booking.client) if booking.client else 'Не указан',
-            'client_phone': booking.client.phone if booking.client and booking.client.phone else None,
-            'client_email': booking.client.email if booking.client and booking.client.email else None,
-            'specialist_id': booking.specialist.id if booking.specialist else None,
-            'specialist_name': str(booking.specialist) if booking.specialist else None,
-            'services_by_group': services_by_group,
-            'total_services_cost': str(total_services_cost),
-            'total_cost': str(booking.total_cost) if booking.total_cost else '0',
-            'paid_amount': str(total_payments),
-            'remaining_amount': str(remaining_amount),
-            'reservation_cost': str(total_rental_cost),
-            'remaining_rental_cost': str(remaining_rental_cost),
-            'max_units_allowed': max_units_allowed,
-            'status': booking.status.id if booking.status else None,
-            'status_name': booking.status.name if booking.status else 'Не указан',
-            'comment': booking.comment,
-            'payment_types': [{'id': pt.id, 'name': pt.name} for pt in payment_types],
-            'can_use_units': can_use_units,
-            'available_units': available_units,
-            'required_units': required_units,
-            'client_balance': client_balance,
-            'reservation_type': booking.reservation_type.name if booking.reservation_type else 'Не указан',
-            'payments_history': payments_history,
+            "id": booking.id,
+            "date": date_str,
+            "time": time_str,
+            "duration": duration_str,
+            "room_id": booking.room.id if booking.room else None,
+            "room_name": booking.room.name if booking.room else "Не указано",
+            "client_id": booking.client.id if booking.client else None,
+            "client_name": str(booking.client) if booking.client else "Не указан",
+            "client_phone": (
+                booking.client.phone
+                if booking.client and booking.client.phone
+                else None
+            ),
+            "client_email": (
+                booking.client.email
+                if booking.client and booking.client.email
+                else None
+            ),
+            "specialist_id": booking.specialist.id if booking.specialist else None,
+            "specialist_name": str(booking.specialist) if booking.specialist else None,
+            "services_by_group": services_by_group,
+            "total_services_cost": str(total_services_cost),
+            "total_cost": str(booking.total_cost) if booking.total_cost else "0",
+            "paid_amount": str(total_payments),
+            "remaining_amount": str(remaining_amount),
+            "reservation_cost": str(total_rental_cost),
+            "remaining_rental_cost": str(remaining_rental_cost),
+            "max_units_allowed": max_units_allowed,
+            "status": booking.status.id if booking.status else None,
+            "status_name": booking.status.name if booking.status else "Не указан",
+            "comment": booking.comment,
+            "payment_types": [{"id": pt.id, "name": pt.name} for pt in payment_types],
+            "can_use_units": can_use_units,
+            "available_units": available_units,
+            "required_units": required_units,
+            "client_balance": client_balance,
+            "reservation_type": (
+                booking.reservation_type.name
+                if booking.reservation_type
+                else "Не указан"
+            ),
+            "payments_history": payments_history,
         }
 
-        return JsonResponse({
-            'success': True, 
-            'booking': booking_data
-        })
-        
+        return JsonResponse({"success": True, "booking": booking_data})
+
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=400)
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
 
 @csrf_exempt
 def edit_booking_view(request, booking_id):
     """Редактирование брони"""
     try:
-        if request.method != 'POST':
-            return JsonResponse({'success': False, 'error': 'Метод не поддерживается'}, status=405)
-            
+        if request.method != "POST":
+            return JsonResponse(
+                {"success": False, "error": "Метод не поддерживается"}, status=405
+            )
+
         # Получаем данные из запроса
         data = json.loads(request.body)
-        specialist_id = data.get('specialist_id')
-        
+        specialist_id = data.get("specialist_id")
+
         # Получаем бронь
         booking = get_object_or_404(Reservation, id=booking_id)
-        
+
         if specialist_id:
             # Проверяем существование специалиста
             specialist = get_object_or_404(Specialist, id=specialist_id)
-            
+
             # Проверяем, активен ли специалист
             if not specialist.active:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Выбранный специалист неактивен'
-                }, status=400)
-            
+                return JsonResponse(
+                    {"success": False, "error": "Выбранный специалист неактивен"},
+                    status=400,
+                )
+
             # Проверяем, может ли специалист работать с данным типом брони
-            if not specialist.reservation_type.filter(id=booking.reservation_type.id).exists():
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Специалист не может работать с данным типом брони'
-                }, status=400)
-            
+            if not specialist.reservation_type.filter(
+                id=booking.reservation_type.id
+            ).exists():
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Специалист не может работать с данным типом брони",
+                    },
+                    status=400,
+                )
+
             # Проверяем, не занят ли специалист в это время
             conflicting_bookings = Reservation.objects.filter(
                 specialist=specialist,
                 datetimestart__lt=booking.datetimeend,
-                datetimeend__gt=booking.datetimestart
+                datetimeend__gt=booking.datetimestart,
             ).exclude(id=booking_id)
-            
+
             if conflicting_bookings.exists():
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Специалист занят в выбранное время'
-                }, status=400)
-            
+                return JsonResponse(
+                    {"success": False, "error": "Специалист занят в выбранное время"},
+                    status=400,
+                )
+
             # Обновляем специалиста
             booking.specialist = specialist
         else:
             # Если specialist_id не указан, убираем специалиста
             booking.specialist = None
-            
+
         booking.save()
-        
-        return JsonResponse({
-            'success': True,
-            'specialist_name': booking.specialist.name if booking.specialist else None
-        })
-            
+
+        return JsonResponse(
+            {
+                "success": True,
+                "specialist_name": (
+                    booking.specialist.name if booking.specialist else None
+                ),
+            }
+        )
+
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=400)
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
 
 @csrf_exempt
 def cancel_booking_view(request, booking_id):
     """Отмена брони"""
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Метод не поддерживается'})
-    
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Метод не поддерживается"})
+
     try:
         data = json.loads(request.body)
         booking = get_object_or_404(Reservation, id=booking_id)
-        
-        cancellation_reason_id = data.get('cancellation_reason_id')
+
+        cancellation_reason_id = data.get("cancellation_reason_id")
         if not cancellation_reason_id:
-            return JsonResponse({
-                'success': False,
-                'error': 'Не указана причина отмены'
-            })
-        
-        cancellation_reason = get_object_or_404(CancellationReason, id=cancellation_reason_id)
-        
+            return JsonResponse(
+                {"success": False, "error": "Не указана причина отмены"}
+            )
+
+        cancellation_reason = get_object_or_404(
+            CancellationReason, id=cancellation_reason_id
+        )
+
         with transaction.atomic():
             # Находим платежи тарифными единицами для этой брони
             tariff_units_payments = Payment.objects.filter(
-                reservation=booking,
-                payment_type__name='Тарифные единицы'
-            ).select_related('payment_type')
+                reservation=booking, payment_type__name="Тарифные единицы"
+            ).select_related("payment_type")
 
             # Если есть платежи тарифными единицами
             if tariff_units_payments.exists():
@@ -271,35 +318,34 @@ def cancel_booking_view(request, booking_id):
                 tariff_unit = TariffUnit.objects.get(
                     reservation_type=booking.reservation_type
                 )
-                
+
                 # Получаем абонемент клиента для данного типа брони
                 subscription = Subscription.objects.get(
-                    client=booking.client,
-                    reservation_type=booking.reservation_type
+                    client=booking.client, reservation_type=booking.reservation_type
                 )
-                
-                total_amount = Decimal('0')
+
+                total_amount = Decimal("0")
                 total_units = 0
-                
+
                 # Для каждого платежа тарифными единицами
                 for payment in tariff_units_payments:
                     amount = Decimal(str(payment.amount))
                     units = int(amount / tariff_unit.tariff_unit_cost)
                     total_amount += amount
                     total_units += units
-                
+
                 # Возвращаем единицы на баланс абонемента
                 subscription.balance += total_units
                 subscription.save()
-                
+
                 # Создаем запись о возврате в payments
                 Payment.objects.create(
                     reservation=booking,
                     payment_type=tariff_units_payments.first().payment_type,
                     amount=-total_amount,
-                    comment=f'Возврат при отмене брони ({total_units} тарифных единиц)'
+                    comment=f"Возврат при отмене брони ({total_units} тарифных единиц)",
                 )
-                
+
                 # Добавляем информацию о возврате в комментарий
                 refund_comment = f"\n\nВозвращено тарифных единиц: {total_units} (сумма: {total_amount} руб.)"
                 if booking.comment:
@@ -311,30 +357,29 @@ def cancel_booking_view(request, booking_id):
             cancelled_status = ReservationStatusType.objects.get(id=4)
             booking.status = cancelled_status
             booking.cancellation_reason = cancellation_reason
-            
-            if comment := data.get('comment'):
+
+            if comment := data.get("comment"):
                 if booking.comment:
                     booking.comment += f"\n\nПричина отмены: {comment}"
                 else:
                     booking.comment = f"Причина отмены: {comment}"
-            
+
             booking.save()
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Бронь успешно отменена'
-        })
-        
+
+        return JsonResponse({"success": True, "message": "Бронь успешно отменена"})
+
     except (Subscription.DoesNotExist, TariffUnit.DoesNotExist):
-        return JsonResponse({
-            'success': False,
-            'error': 'Не найден абонемент клиента или тарифная единица для возврата'
-        })
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Не найден абонемент клиента или тарифная единица для возврата",
+            }
+        )
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Произошла ошибка при отмене брони: {str(e)}'
-        })
+        return JsonResponse(
+            {"success": False, "error": f"Произошла ошибка при отмене брони: {str(e)}"}
+        )
+
 
 @csrf_exempt
 def confirm_booking_view(request, booking_id):
@@ -347,10 +392,10 @@ def confirm_booking_view(request, booking_id):
         booking.save()
         return JsonResponse({"success": True})
     except Exception as e:
-        return JsonResponse({
-            "success": False,
-            "error": f"Ошибка при подтверждении брони: {str(e)}"
-        })
+        return JsonResponse(
+            {"success": False, "error": f"Ошибка при подтверждении брони: {str(e)}"}
+        )
+
 
 @csrf_exempt
 def process_payment_view(request, booking_id):
@@ -358,142 +403,149 @@ def process_payment_view(request, booking_id):
     try:
         booking = get_object_or_404(Reservation, id=booking_id)
         data = json.loads(request.body)
-        
-        payment_method = data.get('payment_method')
-        
-        if payment_method == 'units':
-            units_amount = int(data.get('units_amount', 0))
-            
+
+        payment_method = data.get("payment_method")
+
+        if payment_method == "units":
+            units_amount = int(data.get("units_amount", 0))
+
             # Получаем тарифную единицу для типа брони
             tariff_unit = TariffUnit.objects.filter(
                 reservation_type=booking.reservation_type
             ).first()
-            
+
             if not tariff_unit:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Тарифные единицы недоступны для данного типа брони'
-                })
-            
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Тарифные единицы недоступны для данного типа брони",
+                    }
+                )
+
             # Получаем подписку клиента
             subscription = Subscription.objects.filter(
-                client=booking.client,
-                reservation_type=booking.reservation_type
+                client=booking.client, reservation_type=booking.reservation_type
             ).first()
-            
+
             if not subscription:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'У клиента нет активной подписки'
-                })
-            
+                return JsonResponse(
+                    {"success": False, "error": "У клиента нет активной подписки"}
+                )
+
             if subscription.balance < units_amount:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Недостаточно единиц. Доступно: {subscription.balance}'
-                })
-            
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": f"Недостаточно единиц. Доступно: {subscription.balance}",
+                    }
+                )
+
             # Вычисляем стоимость аренды и услуг
             service_cost = sum(service.cost for service in booking.services.all())
             total_rental_cost = booking.total_cost - service_cost
-            
+
             # Получаем сумму платежей тарифными единицами
-            rental_payments = Payment.objects.filter(
-                reservation=booking,
-                payment_type__name='Тарифные единицы'
-            ).aggregate(total=Sum('amount'))['total'] or 0
-            
+            rental_payments = (
+                Payment.objects.filter(
+                    reservation=booking, payment_type__name="Тарифные единицы"
+                ).aggregate(total=Sum("amount"))["total"]
+                or 0
+            )
+
             # Вычисляем оставшуюся стоимость аренды
             remaining_rental_cost = total_rental_cost - rental_payments
-            
+
             # Вычисляем максимальное количество доступных единиц
             max_units_allowed = min(
                 int(remaining_rental_cost / tariff_unit.tariff_unit_cost),
-                subscription.balance
+                subscription.balance,
             )
-            
+
             if units_amount > max_units_allowed:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Превышено максимальное количество единиц ({max_units_allowed})'
-                })
-            
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": f"Превышено максимальное количество единиц ({max_units_allowed})",
+                    }
+                )
+
             # Вычисляем сумму платежа
             payment_amount = units_amount * tariff_unit.tariff_unit_cost
-            
+
             # Создаем платеж
-            payment_type = PaymentType.objects.get(name='Тарифные единицы')
+            payment_type = PaymentType.objects.get(name="Тарифные единицы")
             payment = Payment.objects.create(
                 reservation=booking,
                 payment_type=payment_type,
                 amount=payment_amount,
-                comment=data.get('comment', '')
+                comment=data.get("comment", ""),
             )
-            
+
             # Списываем единицы с подписки
             subscription.balance -= units_amount
             subscription.save()
-            
+
         else:  # regular payment
-            payment_type_id = data.get('payment_type')
-            amount = data.get('amount')
-            
+            payment_type_id = data.get("payment_type")
+            amount = data.get("amount")
+
             if not payment_type_id or not amount:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Не указан тип платежа или сумма'
-                })
-            
+                return JsonResponse(
+                    {"success": False, "error": "Не указан тип платежа или сумма"}
+                )
+
             try:
                 payment_type = PaymentType.objects.get(id=payment_type_id)
             except PaymentType.DoesNotExist:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Неверный тип платежа'
-                })
-            
+                return JsonResponse({"success": False, "error": "Неверный тип платежа"})
+
             # Проверяем, не превышает ли сумма платежа оставшуюся сумму
-            total_payments = Payment.objects.filter(
-                reservation=booking
-            ).aggregate(total=Sum('amount'))['total'] or 0
-            
+            total_payments = (
+                Payment.objects.filter(reservation=booking).aggregate(
+                    total=Sum("amount")
+                )["total"]
+                or 0
+            )
+
             remaining_amount = booking.total_cost - total_payments
-            
+
             if float(amount) > remaining_amount:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Сумма платежа превышает оставшуюся сумму ({remaining_amount} BYN)'
-                })
-            
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": f"Сумма платежа превышает оставшуюся сумму ({remaining_amount} BYN)",
+                    }
+                )
+
             # Создаем платеж
             payment = Payment.objects.create(
                 reservation=booking,
                 payment_type=payment_type,
                 amount=amount,
-                comment=data.get('comment', '')
+                comment=data.get("comment", ""),
             )
-        
+
         # Проверяем, полностью ли оплачена бронь
-        total_payments = Payment.objects.filter(
-            reservation=booking
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        
+        total_payments = (
+            Payment.objects.filter(reservation=booking).aggregate(total=Sum("amount"))[
+                "total"
+            ]
+            or 0
+        )
+
         if total_payments >= booking.total_cost:
             # Если бронь полностью оплачена, меняем статус на "Подтверждена"
-            confirmed_status = ReservationStatusType.objects.get(name='Подтверждена и оплачена')
+            confirmed_status = ReservationStatusType.objects.get(
+                name="Подтверждена и оплачена"
+            )
             booking.status = confirmed_status
             booking.save()
-        
-        return JsonResponse({
-            'success': True,
-            'payment_id': payment.id
-        })
-        
+
+        return JsonResponse({"success": True, "payment_id": payment.id})
+
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=400)
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
 
 @csrf_exempt
 def get_available_specialists(request, booking_id):
@@ -501,198 +553,187 @@ def get_available_specialists(request, booking_id):
     try:
         # Получаем бронь
         booking = get_object_or_404(Reservation, id=booking_id)
-        
+
         # Получаем всех активных специалистов, которые могут работать с данным типом брони
         specialists = Specialist.objects.filter(
-            active=True,
-            reservation_type__id=booking.reservation_type.id
+            active=True, reservation_type__id=booking.reservation_type.id
         )
-        
+
         # Исключаем специалистов, у которых есть пересекающиеся брони
-        busy_specialists = Reservation.objects.filter(
-            specialist__isnull=False,
-            datetimestart__lt=booking.datetimeend,
-            datetimeend__gt=booking.datetimestart
-        ).exclude(id=booking_id).values_list('specialist_id', flat=True)
-        
+        busy_specialists = (
+            Reservation.objects.filter(
+                specialist__isnull=False,
+                datetimestart__lt=booking.datetimeend,
+                datetimeend__gt=booking.datetimestart,
+            )
+            .exclude(id=booking_id)
+            .values_list("specialist_id", flat=True)
+        )
+
         specialists = specialists.exclude(id__in=busy_specialists)
-        
+
         # Формируем список специалистов
         specialists_data = []
         for specialist in specialists:
-            specialists_data.append({
-                'id': specialist.id,
-                'name': specialist.name,
-                'current': specialist.id == booking.specialist_id if booking.specialist else False
-            })
-        
-        return JsonResponse({
-            'success': True,
-            'specialists': specialists_data
-        })
-        
+            specialists_data.append(
+                {
+                    "id": specialist.id,
+                    "name": specialist.name,
+                    "current": (
+                        specialist.id == booking.specialist_id
+                        if booking.specialist
+                        else False
+                    ),
+                }
+            )
+
+        return JsonResponse({"success": True, "specialists": specialists_data})
+
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=400)
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
 
 def get_cancellation_reasons(request):
     """Получение списка активных причин отмены"""
-    reasons = CancellationReason.objects.filter(is_active=True).order_by('order', 'name')
-    return JsonResponse({
-        'success': True,
-        'reasons': [{'id': reason.id, 'name': reason.name} for reason in reasons]
-    })
+    reasons = CancellationReason.objects.filter(is_active=True).order_by(
+        "order", "name"
+    )
+    return JsonResponse(
+        {
+            "success": True,
+            "reasons": [{"id": reason.id, "name": reason.name} for reason in reasons],
+        }
+    )
+
 
 def get_clients(request):
     """Получение списка клиентов"""
     try:
-        clients = Client.objects.all().values('id', 'name')
-        return JsonResponse({
-            'success': True,
-            'clients': list(clients)
-        })
+        clients = Client.objects.all().values("id", "name")
+        return JsonResponse({"success": True, "clients": list(clients)})
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
+        return JsonResponse({"success": False, "error": str(e)})
+
 
 def update_booking_client(request, booking_id):
     """Обновление клиента для брони"""
     try:
         booking = get_object_or_404(Reservation, id=booking_id)
         data = json.loads(request.body)
-        client_id = data.get('client_id')
-        
+        client_id = data.get("client_id")
+
         if client_id:
             client = get_object_or_404(Client, id=client_id)
             booking.client = client
         else:
             booking.client = None
-            
+
         booking.save()
-        
-        return JsonResponse({
-            'success': True,
-            'client_name': booking.client.name if booking.client else None,
-            'client_phone': booking.client.phone if booking.client else None,
-            'client_email': booking.client.email if booking.client else None
-        })
+
+        return JsonResponse(
+            {
+                "success": True,
+                "client_name": booking.client.name if booking.client else None,
+                "client_phone": booking.client.phone if booking.client else None,
+                "client_email": booking.client.email if booking.client else None,
+            }
+        )
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
+        return JsonResponse({"success": False, "error": str(e)})
+
 
 def get_services(request):
     """Получение списка услуг"""
     try:
-        booking_id = request.GET.get('booking_id')
+        booking_id = request.GET.get("booking_id")
         current_services = []
-        
+
         if booking_id:
             booking = get_object_or_404(Reservation, id=booking_id)
-            current_services = list(booking.services.values_list('id', flat=True))
-        
-        services = Service.objects.filter(active=True).select_related('group').order_by('group__name', 'name')
+            current_services = list(booking.services.values_list("id", flat=True))
+
+        services = (
+            Service.objects.filter(active=True)
+            .select_related("group")
+            .order_by("group__name", "name")
+        )
         services_data = []
-        
+
         for service in services:
-            services_data.append({
-                'id': service.id,
-                'name': service.name,
-                'cost': float(service.cost),
-                'group': service.group.name if service.group else 'Без группы'
-            })
-        
-        return JsonResponse({
-            'success': True,
-            'services': services_data,
-            'current_services': current_services
-        })
+            services_data.append(
+                {
+                    "id": service.id,
+                    "name": service.name,
+                    "cost": float(service.cost),
+                    "group": service.group.name if service.group else "Без группы",
+                }
+            )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "services": services_data,
+                "current_services": current_services,
+            }
+        )
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
+        return JsonResponse({"success": False, "error": str(e)})
+
 
 @csrf_exempt
 def update_booking_services(request, booking_id):
     """Добавление услуги в бронь"""
-    if request.method != 'POST':
-        return JsonResponse({
-            'success': False,
-            'error': 'Метод не поддерживается'
-        })
-    
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Метод не поддерживается"})
+
     try:
         data = json.loads(request.body)
-        service_ids = data.get('service_ids', [])
-        
+        service_ids = data.get("service_ids", [])
+
         if not service_ids or len(service_ids) != 1:
-            return JsonResponse({
-                'success': False,
-                'error': 'Требуется один ID услуги'
-            })
-            
+            return JsonResponse({"success": False, "error": "Требуется один ID услуги"})
+
         service_id = service_ids[0]
         booking = get_object_or_404(Reservation, id=booking_id)
         service = get_object_or_404(Service, id=service_id)
-        
+
         # Добавляем услугу к брони
         booking.services.add(service)
-        
+
         # Увеличиваем общую стоимость на стоимость услуги
         if service.cost:
             booking.total_cost = booking.total_cost + service.cost
             booking.save()
-        
-        return JsonResponse({
-            'success': True
-        })
+
+        return JsonResponse({"success": True})
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
+        return JsonResponse({"success": False, "error": str(e)})
+
 
 @csrf_exempt
 def delete_booking_service(request, booking_id):
     """Удаление услуги из брони"""
-    if request.method != 'POST':
-        return JsonResponse({
-            'success': False,
-            'error': 'Метод не поддерживается'
-        })
-    
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Метод не поддерживается"})
+
     try:
         data = json.loads(request.body)
-        service_id = data.get('service_id')
-        
+        service_id = data.get("service_id")
+
         if not service_id:
-            return JsonResponse({
-                'success': False,
-                'error': 'Требуется ID услуги'
-            })
-            
+            return JsonResponse({"success": False, "error": "Требуется ID услуги"})
+
         booking = get_object_or_404(Reservation, id=booking_id)
         service = get_object_or_404(Service, id=service_id)
-        
+
         # Удаляем услугу из брони
         booking.services.remove(service)
-        
+
         # Уменьшаем общую стоимость на стоимость услуги
         if service.cost:
             booking.total_cost = booking.total_cost - service.cost
             booking.save()
-        
-        return JsonResponse({
-            'success': True
-        })
+
+        return JsonResponse({"success": True})
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
+        return JsonResponse({"success": False, "error": str(e)})
