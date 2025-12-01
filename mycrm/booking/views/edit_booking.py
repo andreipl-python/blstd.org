@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 
 from django.db.models import Sum
 from django.http import JsonResponse
@@ -58,32 +59,27 @@ def get_booking_details(request, booking_id):
             duration_str += f"{duration_minutes} {'минута' if duration_minutes == 1 else 'минуты' if 2 <= duration_minutes <= 4 else 'минут'}"
 
         # Вычисляем стоимость аренды и услуг
-        service_cost = sum(service.cost for service in booking.services.all())
-        total_rental_cost = booking.total_cost - service_cost
+        total_cost = booking.total_cost or Decimal("0")
+        service_cost = sum(
+            (service.cost or Decimal("0")) for service in booking.services.all()
+        )
+        total_rental_cost = total_cost - service_cost
 
         # Получаем сумму платежей тарифными единицами
-        rental_payments = (
-            Payment.objects.filter(
-                reservation=booking, payment_type__name="Тарифные единицы"
-            ).aggregate(total=Sum("amount"))["total"]
-            or 0
-        )
+        rental_payments = Payment.objects.filter(
+            reservation=booking, payment_type__name="Тарифные единицы"
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
         # Вычисляем оставшуюся стоимость аренды
-        remaining_rental_cost = total_rental_cost - rental_payments
+        remaining_rental_cost = (total_rental_cost or Decimal("0")) - rental_payments
 
         # Получаем сумму всех платежей для данной брони
-        total_payments = (
-            Payment.objects.filter(reservation=booking).aggregate(total=Sum("amount"))[
-                "total"
-            ]
-            or 0
-        )
+        total_payments = Payment.objects.filter(reservation=booking).aggregate(
+            total=Sum("amount")
+        )["total"] or Decimal("0")
 
         # Вычисляем оставшуюся сумму
-        remaining_amount = (
-            booking.total_cost - total_payments if booking.total_cost else 0
-        )
+        remaining_amount = (total_cost or Decimal("0")) - total_payments
 
         # Получаем подписку клиента для данного типа брони
         subscription = None
@@ -93,9 +89,9 @@ def get_booking_details(request, booking_id):
         client_balance = None
         max_units_allowed = 0
 
-        if booking.client and booking.reservation_type:
+        if booking.client and booking.scenario_id:
             subscription = Subscription.objects.filter(
-                client=booking.client, reservation_type=booking.reservation_type
+                client=booking.client, scenario=booking.scenario
             ).first()
 
             if subscription:
@@ -104,7 +100,7 @@ def get_booking_details(request, booking_id):
 
                 # Получаем тарифную единицу для типа брони
                 tariff_unit = TariffUnit.objects.filter(
-                    reservation_type=booking.reservation_type
+                    scenario=booking.scenario
                 ).first()
 
                 if tariff_unit:
@@ -197,9 +193,7 @@ def get_booking_details(request, booking_id):
             "required_units": required_units,
             "client_balance": client_balance,
             "reservation_type": (
-                booking.reservation_type.name
-                if booking.reservation_type
-                else "Не указан"
+                booking.scenario.name if booking.scenario_id else "Не указан"
             ),
             "payments_history": payments_history,
         }
@@ -237,10 +231,8 @@ def edit_booking_view(request, booking_id):
                     status=400,
                 )
 
-            # Проверяем, может ли специалист работать с данным типом брони
-            if not specialist.reservation_type.filter(
-                id=booking.reservation_type.id
-            ).exists():
+            # Проверяем, может ли специалист работать с данным сценарием бронирования
+            if not specialist.scenario.filter(id=booking.scenario_id).exists():
                 return JsonResponse(
                     {
                         "success": False,
@@ -311,14 +303,12 @@ def cancel_booking_view(request, booking_id):
 
             # Если есть платежи тарифными единицами
             if tariff_units_payments.exists():
-                # Получаем тарифную единицу для данного типа брони
-                tariff_unit = TariffUnit.objects.get(
-                    reservation_type=booking.reservation_type
-                )
+                # Получаем тарифную единицу для данного сценария бронирования
+                tariff_unit = TariffUnit.objects.get(scenario=booking.scenario)
 
-                # Получаем абонемент клиента для данного типа брони
+                # Получаем абонемент клиента для данного сценария бронирования
                 subscription = Subscription.objects.get(
-                    client=booking.client, reservation_type=booking.reservation_type
+                    client=booking.client, scenario=booking.scenario
                 )
 
                 total_amount = Decimal("0")
@@ -401,9 +391,9 @@ def get_available_specialists(request, booking_id):
         # Получаем бронь
         booking = get_object_or_404(Reservation, id=booking_id)
 
-        # Получаем всех активных специалистов, которые могут работать с данным типом брони
+        # Получаем всех активных специалистов, которые могут работать с данным сценарием бронирования
         specialists = Specialist.objects.filter(
-            active=True, reservation_type__id=booking.reservation_type.id
+            active=True, scenario__id=booking.scenario_id
         )
 
         # Исключаем специалистов, у которых есть пересекающиеся брони

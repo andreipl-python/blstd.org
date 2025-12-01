@@ -45,7 +45,7 @@
                     <!--Стоимость / Внесено / Остаток-->
                     <div class="col-md-12 payment-summary mb-5" id="paymentTextContainer">
                         <div class="payment-summary-item">
-                            <h4 class="mb-0">70 BYN</h4>
+                            <h4 class="mb-0" id="paymentSummaryTotal">70 BYN</h4>
                             <span class="payment-summary-label">Стоимость</span>
                         </div>
                         <div class="payment-summary-item payment-summary-divider">
@@ -53,7 +53,7 @@
                             <span class="payment-summary-label"></span>
                         </div>
                         <div class="payment-summary-item">
-                            <h4 class="mb-0">0 BYN</h4>
+                            <h4 class="mb-0" id="paymentSummaryPaid">0 BYN</h4>
                             <span class="payment-summary-label">Внесено</span>
                         </div>
                         <div class="payment-summary-item payment-summary-divider">
@@ -61,7 +61,7 @@
                             <span class="payment-summary-label"></span>
                         </div>
                         <div class="payment-summary-item">
-                            <h4 class="mb-0">70 BYN</h4>
+                            <h4 class="mb-0" id="paymentSummaryRemaining">70 BYN</h4>
                             <span class="payment-summary-label">Остаток</span>
                         </div>
                     </div>
@@ -147,6 +147,10 @@
     const paymentSubmitButton = document.getElementById('paymentSubmitButton');
     const paymentTotalWrapper = document.getElementById('paymentTotalWrapper');
     const paymentTotalAmount = document.getElementById('paymentTotalAmount');
+    // Элементы блока "Стоимость / Внесено / Остаток"
+    const paymentSummaryTotalElement = document.getElementById('paymentSummaryTotal');
+    const paymentSummaryPaidElement = document.getElementById('paymentSummaryPaid');
+    const paymentSummaryRemainingElement = document.getElementById('paymentSummaryRemaining');
     const paymentMethodTemplate = document.getElementById('paymentMethodBlockTemplate');
     const MAX_PAYMENT_AMOUNT = 99999.99;
     let paymentModalForceClose = false;
@@ -299,6 +303,60 @@
 
         const formatted = total.toFixed(2);
         paymentTotalAmount.textContent = `${formatted} BYN`;
+    }
+
+    // Форматирует числовое значение в строку вида "70" или "70.50 BYN"
+    function formatAmountByn(value) {
+        const numeric = parsePaymentNumericValue(value);
+        if (!Number.isFinite(numeric) || numeric < 0) {
+            return '0 BYN';
+        }
+
+        const isInteger = Number.isInteger(numeric);
+        const formatted = isInteger ? numeric.toFixed(0) : numeric.toFixed(2);
+        return `${formatted} BYN`;
+    }
+
+    // Обновляет блок "Стоимость / Внесено / Остаток" по данным брони с сервера
+    function updatePaymentSummaryFromBookingData(bookingData) {
+        if (!bookingData) return;
+
+        if (paymentSummaryTotalElement) {
+            paymentSummaryTotalElement.textContent = formatAmountByn(bookingData.total_cost);
+        }
+        if (paymentSummaryPaidElement) {
+            paymentSummaryPaidElement.textContent = formatAmountByn(bookingData.paid_amount);
+        }
+        if (paymentSummaryRemainingElement) {
+            paymentSummaryRemainingElement.textContent = formatAmountByn(bookingData.remaining_amount);
+        }
+    }
+
+    // Загружает детали брони по текущему bookingId и обновляет блок "Стоимость / Внесено / Остаток"
+    async function loadPaymentSummaryForCurrentBooking() {
+        const bookingId = window.currentBookingId;
+        if (!bookingId) {
+            console.warn('Не удалось загрузить данные оплаты: не задан currentBookingId');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/booking/get-booking-details/${bookingId}/`);
+            if (!response.ok) {
+                console.error('Не удалось получить детали брони для оплаты:', response.status);
+                return;
+            }
+
+            const data = await response.json();
+            if (!data.success || !data.booking) {
+                console.error('Некорректный ответ при загрузке деталей брони для оплаты:', data);
+                return;
+            }
+
+            updatePaymentSummaryFromBookingData(data.booking);
+        } catch (error) {
+            console.error('Ошибка при загрузке деталей брони для оплаты:', error);
+        }
     }
 
     // Возвращает текст кнопки "Оплатить" в исходное состояние
@@ -731,6 +789,7 @@
 
         paymentModalElement.addEventListener('shown.bs.modal', function () {
             initializePaymentMethodsUI();
+            loadPaymentSummaryForCurrentBooking();
         });
     }
 </script>
