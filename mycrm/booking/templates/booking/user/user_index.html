@@ -703,8 +703,69 @@
     </script>
 
     <script>
-        function openInfoModal() {
-            const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
+        function isBookingFullyPaid(bookingData) {
+            if (!bookingData || bookingData.remaining_amount === undefined || bookingData.remaining_amount === null) {
+                return false;
+            }
+
+            var remainingRaw = String(bookingData.remaining_amount);
+            var remaining = parseFloat(remainingRaw.replace(',', '.'));
+            if (isNaN(remaining)) {
+                return false;
+            }
+
+            return remaining <= 0;
+        }
+
+        function updateInfoModalPaymentButtonState(bookingData) {
+            var paymentButton = document.getElementById('infoPaymentButton');
+            if (!paymentButton) {
+                return;
+            }
+
+            if (isBookingFullyPaid(bookingData)) {
+                paymentButton.textContent = 'Оплачено';
+                paymentButton.classList.remove('button-primary');
+                paymentButton.classList.add('button-sec');
+                paymentButton.disabled = true;
+                paymentButton.setAttribute('aria-disabled', 'true');
+                paymentButton.onclick = null;
+            } else {
+                paymentButton.textContent = 'Внести оплату';
+                paymentButton.classList.remove('button-sec');
+                paymentButton.classList.add('button-primary');
+                paymentButton.disabled = false;
+                paymentButton.removeAttribute('aria-disabled');
+                paymentButton.onclick = function () {
+                    switchToPaymentModal();
+                };
+            }
+        }
+
+        async function openInfoModal() {
+            var infoModalElement = document.getElementById('infoBookingModal');
+            if (!infoModalElement) {
+                return;
+            }
+
+            var bookingId = window.currentBookingId;
+            if (bookingId) {
+                try {
+                    var response = await fetch(`/booking/get-booking-details/${bookingId}/`);
+                    if (response.ok) {
+                        var data = await response.json();
+                        if (data.success && data.booking) {
+                            updateInfoModalPaymentButtonState(data.booking);
+                        }
+                    } else {
+                        console.error('Не удалось получить детали брони для info-модалки:', response.status);
+                    }
+                } catch (error) {
+                    console.error('Ошибка при загрузке деталей брони для info-модалки:', error);
+                }
+            }
+
+            var infoModal = new bootstrap.Modal(infoModalElement);
             infoModal.show();
         }
     </script>

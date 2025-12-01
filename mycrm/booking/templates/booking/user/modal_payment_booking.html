@@ -783,8 +783,12 @@
         });
 
         paymentModalElement.addEventListener('hidden.bs.modal', function () {
-            const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
-            infoModal.show();
+            if (typeof openInfoModal === 'function') {
+                openInfoModal();
+            } else {
+                const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
+                infoModal.show();
+            }
         });
 
         paymentModalElement.addEventListener('shown.bs.modal', function () {

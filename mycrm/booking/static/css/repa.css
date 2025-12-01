@@ -485,6 +485,12 @@
     color: #7A52FF;
   }
 
+  .button-primary:disabled,
+  .button-sec:disabled,
+  .button-secondary:disabled {
+    cursor: default;
+  }
+
   .button-third {
     background: transparent;
     border: none;
