@@ -247,9 +247,13 @@
         return Number.isFinite(numericValue) && numericValue > 0;
     }
 
+    function isPaymentBlockComplete(block) {
+        return block.selectedPaymentTypeId && isPaymentBlockValueValid(block);
+    }
+
     function allPaymentBlocksValid() {
         if (!paymentMethodBlocks.length) return false;
-        return paymentMethodBlocks.every(block => isPaymentBlockValueValid(block));
+        return paymentMethodBlocks.every(block => isPaymentBlockComplete(block));
     }
 
     function updateSubmitButtonState() {
@@ -257,6 +261,67 @@
         const shouldShow = allPaymentBlocksValid();
         paymentSubmitButton.classList.toggle('d-none', !shouldShow);
         paymentSubmitButton.disabled = !shouldShow;
+    }
+
+    function resetSubmitButtonLabel() {
+        if (!paymentSubmitButton) return;
+        paymentSubmitButton.textContent = 'Оплатить';
+    }
+
+    // === Сбор и отправка платежей ===
+    function collectPaymentsData() {
+        return paymentMethodBlocks
+            .filter(block => block.selectedPaymentTypeId && isPaymentBlockValueValid(block))
+            .map(block => ({
+                payment_type_id: parseInt(block.selectedPaymentTypeId, 10),
+                amount: parsePaymentNumericValue(block.paymentInput.value),
+            }));
+    }
+
+    async function submitPayments() {
+        const bookingId = window.currentBookingId;
+        if (!bookingId) {
+            console.error('Не задан ID брони');
+            alert('Ошибка: не удалось определить бронь');
+            return;
+        }
+
+        const paymentsData = collectPaymentsData();
+        if (!paymentsData.length) {
+            alert('Нет данных для оплаты');
+            return;
+        }
+
+        paymentSubmitButton.disabled = true;
+        paymentSubmitButton.textContent = 'Сохранение...';
+
+        try {
+            const response = await fetch(`/booking/process-batch-payments/${bookingId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ payments: paymentsData }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Закрываем модалку оплаты без подтверждения и переходим в инфо-модалку
+                resetSubmitButtonLabel();
+                paymentModalForceClose = true;
+                hidePaymentModal();
+            } else {
+                alert(result.error || 'Ошибка при сохранении платежей');
+                paymentSubmitButton.disabled = false;
+                paymentSubmitButton.textContent = 'Оплатить';
+            }
+        } catch (error) {
+            console.error('Ошибка при отправке платежей:', error);
+            alert('Ошибка сети при сохранении платежей');
+            paymentSubmitButton.disabled = false;
+            paymentSubmitButton.textContent = 'Оплатить';
+        }
     }
 
     // === Работа со списком типов оплаты ===
@@ -500,6 +565,7 @@
         }
         updateAddButtonState();
         updateSubmitButtonState();
+        resetSubmitButtonLabel();
     }
 
     function getConfirmCancelModalElement() {
@@ -574,6 +640,12 @@
                 }
             });
             addPaymentMethodButton.dataset.listenerAttached = 'true';
+        }
+
+        // Обработчик кнопки «Оплатить»
+        if (paymentSubmitButton && paymentSubmitButton.dataset.listenerAttached !== 'true') {
+            paymentSubmitButton.addEventListener('click', submitPayments);
+            paymentSubmitButton.dataset.listenerAttached = 'true';
         }
 
         updateSubmitButtonState();

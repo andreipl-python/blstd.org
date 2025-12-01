@@ -594,6 +594,7 @@
                 block.style.width = blockWidth + 'px';
                 block.onclick = function (event) {
                     event.stopPropagation();
+                    window.currentBookingId = booking.id;
                     openInfoModal();
                 };
 
