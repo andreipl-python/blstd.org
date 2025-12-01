@@ -122,9 +122,9 @@
 
                         <!--Блок Итого-->
                         <div class="col-12 mb-4">
-                            <div class="payment-total-wrapper">
+                            <div class="payment-total-wrapper" id="paymentTotalWrapper">
                                 <div class="payment-total-text">Итого</div>
-                                <div class="payment-total-amount">120 BYN</div>
+                                <div class="payment-total-amount" id="paymentTotalAmount">120 BYN</div>
                             </div>
                         </div>
 
@@ -145,6 +145,8 @@
     const paymentMethodsContainer = document.getElementById('paymentMethodsContainer');
     const addPaymentMethodButton = document.getElementById('addPaymentMethodButton');
     const paymentSubmitButton = document.getElementById('paymentSubmitButton');
+    const paymentTotalWrapper = document.getElementById('paymentTotalWrapper');
+    const paymentTotalAmount = document.getElementById('paymentTotalAmount');
     const paymentMethodTemplate = document.getElementById('paymentMethodBlockTemplate');
     const MAX_PAYMENT_AMOUNT = 99999.99;
     let paymentModalForceClose = false;
@@ -194,6 +196,7 @@
         return decimalPart ? `${integerPart}${visibleSeparator}${decimalPart}` : integerPart;
     }
 
+    // Преобразует строковое значение суммы в числовой формат (поддерживает точку и запятую)
     function parsePaymentNumericValue(value) {
         if (!value && value !== 0) return NaN;
         const normalized = String(value).replace(',', '.');
@@ -201,7 +204,7 @@
         return Number.isFinite(numeric) ? numeric : NaN;
     }
 
-    // Подписывает поле ввода на очистку, доводку формата и блокировку стрелок
+    // Подписывает поле ввода на очистку, доводку формата, пересчёт суммы и блокировку стрелок
     function initPaymentValueValidation(input) {
         if (!input || input.dataset.validationAttached === 'true') return;
 
@@ -209,10 +212,15 @@
             const formatted = sanitizePaymentValue(input.value, { preserveSeparator: true });
             input.value = formatted;
             updateSubmitButtonState();
+            updateTotalAmount();
         });
 
         input.addEventListener('blur', function () {
-            if (!input.value) return;
+            if (!input.value) {
+                updateSubmitButtonState();
+                updateTotalAmount();
+                return;
+            }
 
             let formatted = sanitizePaymentValue(input.value);
             if (formatted.startsWith('.')) {
@@ -225,11 +233,13 @@
             if (!numericValue || numericValue <= 0) {
                 input.value = '';
                 updateSubmitButtonState();
+                updateTotalAmount();
                 return;
             }
 
             input.value = formatted;
             updateSubmitButtonState();
+            updateTotalAmount();
         });
 
         input.addEventListener('keydown', function (event) {
@@ -241,21 +251,25 @@
         input.dataset.validationAttached = 'true';
     }
 
+    // Проверяет, что в блоке оплаты введена корректная положительная сумма
     function isPaymentBlockValueValid(block) {
         if (!block || !block.paymentInput) return false;
         const numericValue = parsePaymentNumericValue(block.paymentInput.value);
         return Number.isFinite(numericValue) && numericValue > 0;
     }
 
+    // Блок считается заполненным, если выбран тип оплаты и введена валидная сумма
     function isPaymentBlockComplete(block) {
         return block.selectedPaymentTypeId && isPaymentBlockValueValid(block);
     }
 
+    // Все ли блоки оплаты заполнены полностью
     function allPaymentBlocksValid() {
         if (!paymentMethodBlocks.length) return false;
         return paymentMethodBlocks.every(block => isPaymentBlockComplete(block));
     }
 
+    // Управляет видимостью и доступностью кнопки "Оплатить" в зависимости от валидности блоков
     function updateSubmitButtonState() {
         if (!paymentSubmitButton) return;
         const shouldShow = allPaymentBlocksValid();
@@ -263,12 +277,38 @@
         paymentSubmitButton.disabled = !shouldShow;
     }
 
+    // Показывает/скрывает блок "Итого" в зависимости от количества способов оплаты
+    function updateTotalBlockVisibility() {
+        if (!paymentTotalWrapper) return;
+        const shouldShow = paymentMethodBlocks.length > 1;
+        paymentTotalWrapper.classList.toggle('d-none', !shouldShow);
+    }
+
+    // Пересчитывает общую сумму по всем блокам и обновляет значение в блоке "Итого"
+    function updateTotalAmount() {
+        if (!paymentTotalAmount) return;
+
+        let total = 0;
+        paymentMethodBlocks.forEach(block => {
+            if (!block || !block.paymentInput) return;
+            const value = parsePaymentNumericValue(block.paymentInput.value);
+            if (Number.isFinite(value) && value > 0) {
+                total += value;
+            }
+        });
+
+        const formatted = total.toFixed(2);
+        paymentTotalAmount.textContent = `${formatted} BYN`;
+    }
+
+    // Возвращает текст кнопки "Оплатить" в исходное состояние
     function resetSubmitButtonLabel() {
         if (!paymentSubmitButton) return;
         paymentSubmitButton.textContent = 'Оплатить';
     }
 
     // === Сбор и отправка платежей ===
+    // Собирает данные по всем заполненным блокам для отправки на сервер
     function collectPaymentsData() {
         return paymentMethodBlocks
             .filter(block => block.selectedPaymentTypeId && isPaymentBlockValueValid(block))
@@ -278,6 +318,7 @@
             }));
     }
 
+    // Отправляет платежи на сервер и управляет состоянием UI во время/после запроса
     async function submitPayments() {
         const bookingId = window.currentBookingId;
         if (!bookingId) {
@@ -325,11 +366,12 @@
     }
 
     // === Работа со списком типов оплаты ===
+    // Возвращает список доступных типов оплаты из глобальной переменной
     function getPaymentTypes() {
         return Array.isArray(window.PAYMENT_TYPES) ? window.PAYMENT_TYPES : [];
     }
 
-    // Следим за кликом вне кастомных селектов, чтобы закрывать их
+    // Следит за кликом вне кастомных селектов, чтобы закрывать открытые выпадающие списки
     function ensurePaymentSelectCloseListener() {
         if (paymentSelectCloseListenerAttached) return;
         document.addEventListener('click', function (event) {
@@ -342,13 +384,14 @@
         paymentSelectCloseListenerAttached = true;
     }
 
-    // Текущие выбранные типы (нужно для исключения дубликатов)
+    // Возвращает id уже выбранных типов оплаты (для исключения дубликатов в других блоках)
     function getSelectedPaymentTypeIds(excludeBlockId = null) {
         return paymentMethodBlocks
             .filter(block => block.id !== excludeBlockId && block.selectedPaymentTypeId)
             .map(block => block.selectedPaymentTypeId);
     }
 
+    // Устанавливает выбранный тип оплаты для конкретного блока и пересчитывает связанные элементы
     function setBlockSelectedPaymentType(block, type) {
         if (!block || !type) return;
         block.selectedPaymentTypeId = String(type.id);
@@ -363,7 +406,7 @@
         updateSubmitButtonState();
     }
 
-    // Перестраивает список опций конкретного блока с учётом занятых типов
+    // Перестраивает список опций конкретного блока с учётом уже занятых типов в других блоках
     function renderPaymentSelectOptions(block) {
         if (!block || !block.optionsContainer || !block.selectedDisplay) return;
 
@@ -414,7 +457,7 @@
         }
     }
 
-    // Синхронизирует все выпадающие списки при выборе/удалении типов
+    // Синхронизирует все выпадающие списки при выборе/удалении типов оплаты
     function refreshAllSelectOptions(skipBlockId = null) {
         paymentMethodBlocks.forEach(block => {
             if (skipBlockId && block.id === skipBlockId) return;
@@ -422,7 +465,7 @@
         });
     }
 
-    // Актуализирует показ крестиков удаления: скрыт только на первом блоке
+    // Управляет отображением крестиков удаления: скрыт только на первом блоке
     function updateRemoveButtonsState() {
         paymentMethodBlocks.forEach((block, index) => {
             if (!block.removeButton) return;
@@ -434,13 +477,13 @@
         });
     }
 
-    // Можно ли добавить ещё блоков (ограничение = количество PaymentType)
+    // Проверяет, можно ли добавить ещё блоков (ограничение = количество PaymentType)
     function canAddMorePaymentBlocks() {
         const paymentTypes = getPaymentTypes();
         return paymentTypes.length > 0 && paymentMethodBlocks.length < paymentTypes.length;
     }
 
-    // Прячет/показывает кнопку "Добавить способ" в зависимости от лимита
+    // Прячет/показывает кнопку "Добавить способ" в зависимости от лимита и заполненности блоков
     function updateAddButtonState() {
         if (!addPaymentMethodButton) return;
         const canAdd = canAddMorePaymentBlocks();
@@ -454,7 +497,7 @@
         }
     }
 
-    // Удаление блока + перерасчёт доступных опций
+    // Удаляет блок оплаты и пересчитывает доступные опции/кнопки/итого
     function removePaymentMethodBlock(blockId) {
         const blockIndex = paymentMethodBlocks.findIndex(block => block.id === blockId);
         if (blockIndex === -1) return;
@@ -472,9 +515,11 @@
 
         updateAddButtonState();
         updateSubmitButtonState();
+        updateTotalBlockVisibility();
+        updateTotalAmount();
     }
 
-    // Создание нового блока "способ + сумма" из template
+    // Создаёт новый блок "способ + сумма" из template и подключает все обработчики
     function createPaymentMethodBlock() {
         if (!paymentMethodsContainer || !paymentMethodTemplate) return null;
         const fragment = paymentMethodTemplate.content.cloneNode(true);
@@ -524,16 +569,19 @@
         updateRemoveButtonsState();
         updateAddButtonState();
         updateSubmitButtonState();
+        updateTotalBlockVisibility();
+        updateTotalAmount();
 
         return blockData;
     }
 
-    // Обработчик кнопки "Добавить способ"
+    // Обработчик добавления нового блока оплаты по кнопке "Добавить способ"
     function addPaymentMethodBlock() {
         if (!canAddMorePaymentBlocks()) return;
         createPaymentMethodBlock();
     }
 
+    // Поддерживает добавление блока оплаты по клику и по клавиатуре
     function handleAddPaymentMethod(event) {
         if (event) {
             event.preventDefault();
@@ -541,7 +589,7 @@
         addPaymentMethodBlock();
     }
 
-    // Первичная инициализация блоков при открытии модалки
+    // Первичная инициализация блоков при открытии модалки (очистка и создание первого блока)
     function initializePaymentMethodsUI() {
         if (!paymentMethodsContainer) return;
 
@@ -556,6 +604,8 @@
             if (addPaymentMethodButton) {
                 addPaymentMethodButton.classList.add('d-none');
             }
+            updateTotalBlockVisibility();
+            updateTotalAmount();
             return;
         }
 
@@ -566,17 +616,21 @@
         updateAddButtonState();
         updateSubmitButtonState();
         resetSubmitButtonLabel();
+        updateTotalAmount();
     }
 
+    // Возвращает DOM-элемент модалки подтверждения отмены действий в оплате
     function getConfirmCancelModalElement() {
         return document.getElementById('confirmCancelActionModal');
     }
 
+    // Включает/выключает оверлей подтверждения для модалки оплаты
     function setPaymentModalConfirmOverlay(active) {
         if (!paymentModalElement) return;
         paymentModalElement.classList.toggle('confirm-cancel-active', active);
     }
 
+    // Показывает модалку подтверждения отмены из модалки оплаты
     function showConfirmCancelModal() {
         const confirmCancelModalElement = getConfirmCancelModalElement();
         if (!confirmCancelModalElement) return;
@@ -586,6 +640,7 @@
         confirmModal.show();
     }
 
+    // Закрывает модалку оплаты (без показа модалки подтверждения)
     function hidePaymentModal() {
         if (!paymentModalElement) return;
         setPaymentModalConfirmOverlay(false);
@@ -593,6 +648,7 @@
         if (paymentInstance) paymentInstance.hide();
     }
 
+    // Однократно навешивает обработчики на модалку подтверждения отмены
     function attachConfirmModalListeners() {
         const confirmCancelModalElement = getConfirmCancelModalElement();
         if (!confirmCancelModalElement || confirmCancelModalElement.dataset.confirmListenerAttached === 'true') return;
@@ -616,6 +672,7 @@
         paymentModalForceClose = true;
     };
 
+    // Реагирует на внешнее событие подтверждения отмены и закрывает модалку оплаты
     document.addEventListener('booking:confirm-cancel-action', function () {
         paymentModalForceClose = true;
         const confirmCancelModalElement = getConfirmCancelModalElement();
