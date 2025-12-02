@@ -22,7 +22,7 @@ jobs:
           # Put known hosts (we stored earlier)
           echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
-          # show a short verify
+          # show a short verify!
           ls -la ~/.ssh
           echo "Key head:"
           head -n 1 ~/.ssh/id_rsa || true
