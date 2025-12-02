@@ -10,24 +10,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Prepare SSH (decode base64 key)
+      - name: Prepare SSH (decode base64 key & known hosts)
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
           # Decode private key from base64 secret
           echo "${{ secrets.SSH_PRIVATE_KEY_B64 }}" | base64 --decode > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          # Put known hosts (we stored earlier)
+
+          # Add known hosts for GitHub
           echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
-          # show a short verify!
-          ls -la ~/.ssh
-          echo "Key head:"
-          head -n 1 ~/.ssh/id_rsa || true
+
+          # Проверка
+          echo "SSH key head:"
+          head -n 1 ~/.ssh/id_rsa
+          echo "Known hosts:"
+          cat ~/.ssh/known_hosts
 
       - name: Deploy to server
         run: |
-          ssh -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=yes -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
           "bash /home/deploy/deploy_bookingcrm.sh"
