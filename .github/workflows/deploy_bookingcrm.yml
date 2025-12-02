@@ -13,13 +13,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare SSH
+      - name: Prepare SSH (decode base64 key)
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          # Decode private key from base64 secret
+          echo "${{ secrets.SSH_PRIVATE_KEY_B64 }}" | base64 --decode > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          # Put known hosts (we stored earlier)
           echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
+          # show a short verify
+          ls -la ~/.ssh
+          echo "Key head:"
+          head -n 1 ~/.ssh/id_rsa || true
 
       - name: Deploy to server
         run: |
