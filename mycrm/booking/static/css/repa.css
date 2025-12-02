@@ -144,6 +144,17 @@
     border-radius: 50%;
   }
 
+  .app-version-label {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400 !important;
+    font-size: 12px !important;
+    line-height: 144% !important;
+    letter-spacing: -0.008em;
+    color: #818EA2;
+    margin-right: 16px;
+  }
+
   #booking-filters {
     display: flex;
     align-items: center;

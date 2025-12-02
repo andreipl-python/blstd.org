@@ -31,6 +31,9 @@
                 </svg>
                 <span id="ring-dot"></span>
             </div>
+            {% if app_version %}
+            <span class="app-version-label">v{{ app_version }}</span>
+            {% endif %}
         
             <!-- Фото пользователя -->
             <img src="{% static 'image/image.png' %}" alt="Описание картинки" width="32" height="32" style="margin-right: 20px;">

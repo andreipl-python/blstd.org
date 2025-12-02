@@ -1,6 +1,7 @@
 import json
 from calendar import monthrange
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from booking.models import (
@@ -15,6 +16,7 @@ from booking.models import (
     PaymentType,
     Area,
 )
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.serializers import serialize
 from django.db.models import QuerySet, Q, Case, When, Value, IntegerField
@@ -275,6 +277,14 @@ def user_index_view(request):
     scenarios = Scenario.objects.all()
     scenarios_json = serialize("json", scenarios, use_natural_primary_keys=True)
 
+    version_value = ""
+    version_file = Path(settings.BASE_DIR).parent / "VERSION"
+    try:
+        with version_file.open(encoding="utf-8") as f:
+            version_value = f.read().strip()
+    except OSError:
+        version_value = ""
+
     context = {
         **menu2_context,
         "days_of_month": days_of_month,
@@ -300,6 +310,7 @@ def user_index_view(request):
         "payment_types": payment_types,
         "payment_types_json": payment_types_json,
         "time_cells": range(96),
+        "app_version": version_value,
     }
 
     return render(request, "booking/user/user_index.html", context)
