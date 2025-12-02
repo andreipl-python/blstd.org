@@ -69,6 +69,33 @@ def process_batch_payments_view(request, booking_id):
                 status=400,
             )
 
+        total_cost = booking.total_cost or Decimal("0")
+        existing_payments = Payment.objects.filter(reservation=booking)
+        existing_total = sum(
+            (payment.amount for payment in existing_payments), Decimal("0")
+        )
+        remaining = total_cost - existing_total
+        if remaining < Decimal("0"):
+            remaining = Decimal("0")
+
+        new_total = Decimal("0")
+        for payment_info in payments_data:
+            amount = payment_info.get("amount")
+            if amount is None:
+                raise ValueError(
+                    "payment_type_id и amount обязательны для каждого платежа"
+                )
+            new_total += Decimal(str(amount))
+
+        if new_total > remaining:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Суммарная сумма оплат превышает остаток к оплате по брони",
+                },
+                status=400,
+            )
+
         created_payments = save_payments_for_booking(booking, payments_data)
 
         return JsonResponse({"success": True, "payment_ids": created_payments})

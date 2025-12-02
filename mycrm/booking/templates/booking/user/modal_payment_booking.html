@@ -152,26 +152,33 @@
     const paymentSummaryPaidElement = document.getElementById('paymentSummaryPaid');
     const paymentSummaryRemainingElement = document.getElementById('paymentSummaryRemaining');
     const paymentMethodTemplate = document.getElementById('paymentMethodBlockTemplate');
-    const MAX_PAYMENT_AMOUNT = 99999.99;
     let paymentModalForceClose = false;
     let paymentMethodBlocks = [];
     let paymentMethodBlockIdCounter = 0;
     let paymentSelectCloseListenerAttached = false;
+    // Остаток к оплате по текущей брони (число), используется как верхний лимит для суммарной оплаты
+    let bookingRemainingAmount = null;
 
     // === Хелперы работы с суммой оплаты ===
     // Очищает ввод до корректного десятичного формата с двумя знаками после разделителя
+    // и, при необходимости, ограничивает значение верхней границей maxValue
     function sanitizePaymentValue(value, options = {}) {
-        const { preserveSeparator = false } = options;
+        const { preserveSeparator = false, maxValue = null } = options;
         if (!value) return '';
 
         let sanitized = value.replace(/[^0-9.,]/g, '');
         if (!sanitized) return '';
 
         const separatorMatch = sanitized.match(/[.,]/);
+
+        const numericMax = typeof maxValue === 'number' ? maxValue : parseFloat(maxValue);
+        const hasMax = Number.isFinite(numericMax);
+        const effectiveMax = hasMax ? Math.max(0, numericMax) : null;
+
         if (!separatorMatch) {
             const numericValue = parseFloat(sanitized);
-            if (!isNaN(numericValue) && numericValue > MAX_PAYMENT_AMOUNT) {
-                return MAX_PAYMENT_AMOUNT.toFixed(2);
+            if (!isNaN(numericValue) && effectiveMax !== null && numericValue > effectiveMax) {
+                return effectiveMax.toFixed(2);
             }
             return sanitized;
         }
@@ -188,8 +195,8 @@
 
         const normalizedValue = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
         const numericValue = parseFloat(normalizedValue);
-        if (!isNaN(numericValue) && numericValue > MAX_PAYMENT_AMOUNT) {
-            const maxString = MAX_PAYMENT_AMOUNT.toFixed(2);
+        if (!isNaN(numericValue) && effectiveMax !== null && numericValue > effectiveMax) {
+            const maxString = effectiveMax.toFixed(2);
             return preserveSeparator && separator === ',' ? maxString.replace('.', ',') : maxString;
         }
 
@@ -213,7 +220,8 @@
         if (!input || input.dataset.validationAttached === 'true') return;
 
         input.addEventListener('input', function () {
-            const formatted = sanitizePaymentValue(input.value, { preserveSeparator: true });
+            const maxForInput = getMaxAllowedValueForInput(input);
+            const formatted = sanitizePaymentValue(input.value, { preserveSeparator: true, maxValue: maxForInput });
             input.value = formatted;
             updateSubmitButtonState();
             updateTotalAmount();
@@ -226,7 +234,8 @@
                 return;
             }
 
-            let formatted = sanitizePaymentValue(input.value);
+            const maxForInput = getMaxAllowedValueForInput(input);
+            let formatted = sanitizePaymentValue(input.value, { maxValue: maxForInput });
             if (formatted.startsWith('.')) {
                 formatted = `0${formatted}`;
             }
@@ -305,6 +314,33 @@
         paymentTotalAmount.textContent = `${formatted} BYN`;
     }
 
+    // Возвращает суммарную текущую сумму по всем полям оплат (с опцией исключить одно поле)
+    function getCurrentPaymentsTotal(excludeInput = null) {
+        let total = 0;
+        paymentMethodBlocks.forEach(block => {
+            if (!block || !block.paymentInput) return;
+            if (excludeInput && block.paymentInput === excludeInput) return;
+            const value = parsePaymentNumericValue(block.paymentInput.value);
+            if (Number.isFinite(value) && value > 0) {
+                total += value;
+            }
+        });
+        return total;
+    }
+
+    // Для конкретного поля ввода возвращает максимально допустимое значение с учётом остатка и других полей
+    function getMaxAllowedValueForInput(input) {
+        if (!input) return null;
+        if (!Number.isFinite(bookingRemainingAmount)) {
+            // Если остаток ещё не загружен, не ограничиваем ввод дополнительно
+            return null;
+        }
+
+        const otherBlocksTotal = getCurrentPaymentsTotal(input);
+        const maxForThis = bookingRemainingAmount - otherBlocksTotal;
+        return maxForThis >= 0 ? maxForThis : 0;
+    }
+
     // Форматирует числовое значение в строку вида "70" или "70.50 BYN"
     function formatAmountByn(value) {
         const numeric = parsePaymentNumericValue(value);
@@ -330,6 +366,10 @@
         if (paymentSummaryRemainingElement) {
             paymentSummaryRemainingElement.textContent = formatAmountByn(bookingData.remaining_amount);
         }
+
+        // Сохраняем числовое значение остатка для дальнейшего ограничения сумм оплат
+        const remainingNumeric = parsePaymentNumericValue(bookingData.remaining_amount);
+        bookingRemainingAmount = Number.isFinite(remainingNumeric) ? Math.max(0, remainingNumeric) : 0;
     }
 
     // Загружает детали брони по текущему bookingId и обновляет блок "Стоимость / Внесено / Остаток"
@@ -389,6 +429,19 @@
         if (!paymentsData.length) {
             alert('Нет данных для оплаты');
             return;
+        }
+
+        // Дополнительная защита: суммарная сумма всех введённых оплат не должна превышать остаток по брони
+        if (Number.isFinite(bookingRemainingAmount) && bookingRemainingAmount >= 0) {
+            const totalNewPayments = paymentsData.reduce((sum, payment) => {
+                const value = typeof payment.amount === 'number' ? payment.amount : parseFloat(payment.amount);
+                return Number.isFinite(value) && value > 0 ? sum + value : sum;
+            }, 0);
+
+            if (totalNewPayments - bookingRemainingAmount > 0.000001) {
+                alert('Суммарная сумма оплат не может превышать остаток к оплате по брони');
+                return;
+            }
         }
 
         paymentSubmitButton.disabled = true;
