@@ -128,9 +128,9 @@
                             </div>
                         </div>
 
-                        <!--Кнопка оплатить-->
+                        <!--Кнопка "Оплатить"-->
                         <div class="col-md-12 d-flex align-items-center justify-content-center">
-                            <button type="button" class="button-primary d-none" id="paymentSubmitButton">Оплатить</button>
+                            <button type="button" class="button-primary" id="paymentSubmitButton" disabled>Оплатить</button>
                         </div>
                     </div>
                 </div>
@@ -282,12 +282,11 @@
         return paymentMethodBlocks.every(block => isPaymentBlockComplete(block));
     }
 
-    // Управляет видимостью и доступностью кнопки "Оплатить" в зависимости от валидности блоков
+    // Управляет доступностью кнопки "Оплатить" в зависимости от валидности блоков (кнопка не скрывается)
     function updateSubmitButtonState() {
         if (!paymentSubmitButton) return;
-        const shouldShow = allPaymentBlocksValid();
-        paymentSubmitButton.classList.toggle('d-none', !shouldShow);
-        paymentSubmitButton.disabled = !shouldShow;
+        const shouldEnable = allPaymentBlocksValid();
+        paymentSubmitButton.disabled = !shouldEnable;
     }
 
     // Показывает/скрывает блок "Итого" в зависимости от количества способов оплаты

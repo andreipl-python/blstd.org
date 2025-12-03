@@ -502,6 +502,18 @@
     cursor: default;
   }
 
+  /* Анимация состояния кнопки "Оплатить" в модалке оплаты */
+  #paymentSubmitButton {
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+  }
+
+  #paymentSubmitButton:disabled {
+    background-color: #C9B5FF;
+    border-color: #C9B5FF;
+    color: #F5F2FF;
+    opacity: 0.7;
+  }
+
   .button-third {
     background: transparent;
     border: none;
