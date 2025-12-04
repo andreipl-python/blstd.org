@@ -667,6 +667,21 @@
     border-radius: 16px !important;
   }
 
+  #app-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 1040;
+  }
+
+  #app-modal-backdrop.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   #roomNameContainer,
   #publicIdContainer,
   #paymentTextContainer,

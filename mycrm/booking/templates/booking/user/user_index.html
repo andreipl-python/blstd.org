@@ -13,6 +13,7 @@
 </head>
 
 <body>
+    <div id="app-modal-backdrop"></div>
 
     <script>
         window.ROOMS = JSON.parse('{{ rooms_json|escapejs }}');
@@ -58,7 +59,6 @@
     <div class="container-fluid">
         {% include 'booking/add/head.html' %}
         {% include 'booking/add/menu.html' %}
-        <!--{% include 'booking/add/menu2.html' %}-->
         <div class="row mt-4 mb-2" style="border-bottom: 1px solid #EBEBEC; 
     position: sticky;
     top: 41px;
@@ -717,27 +717,97 @@
     </script>
 
     <script>
-        // Универсальная очистка backdrop, modal-open и инлайновых стилей body после закрытия любой модалки
-        function clearAllBackdrops() {
-            document.body.classList.remove('modal-open');
-            document.body.style.removeProperty('overflow');
-            document.body.style.removeProperty('padding-right');
-            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-        }
+        (function () {
+            const appBackdrop = document.getElementById('app-modal-backdrop');
+            if (!appBackdrop) {
+                return;
+            }
 
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('hidden.bs.modal', function () {
-                setTimeout(() => {
-                    if (!document.querySelector('.modal.show')) {
-                        clearAllBackdrops();
+            const NO_BACKDROP_CLOSE_IDS = ['confirmCancelActionModal'];
+            let openModalsCount = 0;
+            let hideTimeoutId = null;
+
+            function showAppBackdrop() {
+                if (hideTimeoutId) {
+                    clearTimeout(hideTimeoutId);
+                    hideTimeoutId = null;
+                }
+                appBackdrop.classList.add('is-visible');
+            }
+
+            function scheduleHideBackdrop() {
+                if (hideTimeoutId) {
+                    clearTimeout(hideTimeoutId);
+                }
+                hideTimeoutId = setTimeout(function () {
+                    if (openModalsCount <= 0) {
+                        appBackdrop.classList.remove('is-visible');
+                        openModalsCount = 0;
                     }
-                }, 50);
+                }, 150);
+            }
+
+            function findTopmostClosableModal() {
+                const shownModals = Array.prototype.slice.call(document.querySelectorAll('.modal.show'));
+                if (!shownModals.length) {
+                    return null;
+                }
+
+                shownModals.sort(function (a, b) {
+                    const za = parseInt(window.getComputedStyle(a).zIndex || '0', 10);
+                    const zb = parseInt(window.getComputedStyle(b).zIndex || '0', 10);
+                    return za - zb;
+                });
+
+                for (let i = shownModals.length - 1; i >= 0; i--) {
+                    const modal = shownModals[i];
+                    if (!NO_BACKDROP_CLOSE_IDS.includes(modal.id)) {
+                        return modal;
+                    }
+                }
+                return null;
+            }
+
+            document.querySelectorAll('.modal').forEach(function (modal) {
+                modal.addEventListener('show.bs.modal', function () {
+                    openModalsCount += 1;
+                    showAppBackdrop();
+                });
+
+                modal.addEventListener('hidden.bs.modal', function () {
+                    if (openModalsCount > 0) {
+                        openModalsCount -= 1;
+                    }
+                    if (openModalsCount === 0) {
+                        scheduleHideBackdrop();
+                    }
+                });
+
+                modal.addEventListener('mousedown', function (event) {
+                    if (event.target !== modal) {
+                        return;
+                    }
+                    if (NO_BACKDROP_CLOSE_IDS.includes(modal.id)) {
+                        return;
+                    }
+                    const instance = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+                    if (instance) {
+                        instance.hide();
+                    }
+                });
             });
 
-            modal.addEventListener('show.bs.modal', function () {
-                clearAllBackdrops();
+            appBackdrop.addEventListener('click', function () {
+                const targetModal = findTopmostClosableModal();
+                if (!targetModal) {
+                    return;
+                }
+                const instance = bootstrap.Modal.getInstance(targetModal) || new bootstrap.Modal(targetModal);
+                if (instance) {
+                    instance.hide();
+                }
             });
-        });
+        })();
     </script>
 
     <script>
