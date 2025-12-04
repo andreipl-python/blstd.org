@@ -1,0 +1,223 @@
+{% load static %}
+
+<!-- Модальное окно истории платежей -->
+<div class="modal fade" id="paymentHistoryModal" tabindex="-1" aria-labelledby="paymentHistoryModalLabel"
+    aria-hidden="true" data-bs-backdrop="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:none; width: 31vw;">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="mb-3">
+                    <!--Кнопка возврата, заголовок и крестик-->
+                    <div class="row d-flex align-items-center mb-4">
+                        <div class="col-md-12 d-flex justify-content-between align-items-center">
+                            <div class="d-flex justify-content-start align-items-center gap-3">
+                                <button type="button" class="button-third" onclick="switchToInfoFromPaymentHistory()">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 19L5 12L12 5" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round" />
+                                        <path d="M19 12H5" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round" />
+                                    </svg>
+                                </button>
+                                <h2 class="mb-0">История платежей</h2>
+                            </div>
+                            <button type="button" class="modal-close-icon" data-bs-dismiss="modal" aria-label="Закрыть">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M18 6L6 18" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M6 6L18 18" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!--Список платежей-->
+                    <div id="paymentHistoryList">
+                        <!--Платёж 1-->
+                        <div class="payment-history-item mb-3" data-payment-id="1">
+                            <div class="row align-items-center">
+                                <div class="col-4">
+                                    <h6 class="m-0" style="color: #4F4F57;">03.12.2025, 14:30</h6>
+                                </div>
+                                <div class="col-4">
+                                    <h6 class="m-0" style="color: #4F4F57;">Наличные</h6>
+                                </div>
+                                <div class="col-3">
+                                    <h5 class="m-0" style="color: #181B22;">35 BYN</h5>
+                                </div>
+                                <div class="col-1 d-flex justify-content-end gap-2">
+                                    <button type="button" class="button-third payment-history-edit"
+                                        data-payment-id="1" aria-label="Редактировать платёж">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M21.1739 6.81197C21.7026 6.28335 21.9997 5.56647 21.9998 4.81885C21.9999 4.07124 21.703 3.35427 21.1744 2.82553C20.6459 2.29679 19.9289 1.99972 19.1813 1.99963C18.4337 1.99954 17.7166 2.29644 17.1879 2.82505L3.84188 16.174C3.60978 16.4055 3.43802 16.6905 3.34188 17.004L2.02088 21.356C1.99508 21.4425 1.99309 21.5344 2.01527 21.6219C2.03744 21.7094 2.08289 21.7892 2.14673 21.853C2.21058 21.9168 2.29056 21.9621 2.37807 21.9841C2.46558 22.0061 2.55752 22.004 2.64388 21.978L6.99688 20.658C7.31014 20.5628 7.59507 20.3921 7.82688 20.161L21.1739 6.81197Z"
+                                                stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round" />
+                                            <path d="M15 5L19 9" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round" />
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="button-third payment-history-remove"
+                                        data-payment-id="1" aria-label="Отменить платёж">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M3 6H5H21" stroke="#7A52FF" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                            <path d="M19 6V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V6M8 6V4C8 2.89543 8.89543 2 10 2H14C15.1046 2 16 2.89543 16 4V6"
+                                                stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round" />
+                                            <path d="M10 11V17" stroke="#7A52FF" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                            <path d="M14 11V17" stroke="#7A52FF" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!--Платёж 2-->
+                        <div class="payment-history-item mb-3" data-payment-id="2">
+                            <div class="row align-items-center">
+                                <div class="col-4">
+                                    <h6 class="m-0" style="color: #4F4F57;">02.12.2025, 10:15</h6>
+                                </div>
+                                <div class="col-4">
+                                    <h6 class="m-0" style="color: #4F4F57;">Банковская карта</h6>
+                                </div>
+                                <div class="col-3">
+                                    <h5 class="m-0" style="color: #181B22;">20 BYN</h5>
+                                </div>
+                                <div class="col-1 d-flex justify-content-end gap-2">
+                                    <button type="button" class="button-third payment-history-edit"
+                                        data-payment-id="2" aria-label="Редактировать платёж">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M21.1739 6.81197C21.7026 6.28335 21.9997 5.56647 21.9998 4.81885C21.9999 4.07124 21.703 3.35427 21.1744 2.82553C20.6459 2.29679 19.9289 1.99972 19.1813 1.99963C18.4337 1.99954 17.7166 2.29644 17.1879 2.82505L3.84188 16.174C3.60978 16.4055 3.43802 16.6905 3.34188 17.004L2.02088 21.356C1.99508 21.4425 1.99309 21.5344 2.01527 21.6219C2.03744 21.7094 2.08289 21.7892 2.14673 21.853C2.21058 21.9168 2.29056 21.9621 2.37807 21.9841C2.46558 22.0061 2.55752 22.004 2.64388 21.978L6.99688 20.658C7.31014 20.5628 7.59507 20.3921 7.82688 20.161L21.1739 6.81197Z"
+                                                stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round" />
+                                            <path d="M15 5L19 9" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round" />
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="button-third payment-history-remove"
+                                        data-payment-id="2" aria-label="Отменить платёж">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M3 6H5H21" stroke="#7A52FF" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                            <path d="M19 6V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V6M8 6V4C8 2.89543 8.89543 2 10 2H14C15.1046 2 16 2.89543 16 4V6"
+                                                stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round" />
+                                            <path d="M10 11V17" stroke="#7A52FF" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                            <path d="M14 11V17" stroke="#7A52FF" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!--Платёж 3-->
+                        <div class="payment-history-item mb-3" data-payment-id="3">
+                            <div class="row align-items-center">
+                                <div class="col-4">
+                                    <h6 class="m-0" style="color: #4F4F57;">01.12.2025, 16:45</h6>
+                                </div>
+                                <div class="col-4">
+                                    <h6 class="m-0" style="color: #4F4F57;">ЕРИП</h6>
+                                </div>
+                                <div class="col-3">
+                                    <h5 class="m-0" style="color: #181B22;">15 BYN</h5>
+                                </div>
+                                <div class="col-1 d-flex justify-content-end gap-2">
+                                    <button type="button" class="button-third payment-history-edit"
+                                        data-payment-id="3" aria-label="Редактировать платёж">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M21.1739 6.81197C21.7026 6.28335 21.9997 5.56647 21.9998 4.81885C21.9999 4.07124 21.703 3.35427 21.1744 2.82553C20.6459 2.29679 19.9289 1.99972 19.1813 1.99963C18.4337 1.99954 17.7166 2.29644 17.1879 2.82505L3.84188 16.174C3.60978 16.4055 3.43802 16.6905 3.34188 17.004L2.02088 21.356C1.99508 21.4425 1.99309 21.5344 2.01527 21.6219C2.03744 21.7094 2.08289 21.7892 2.14673 21.853C2.21058 21.9168 2.29056 21.9621 2.37807 21.9841C2.46558 22.0061 2.55752 22.004 2.64388 21.978L6.99688 20.658C7.31014 20.5628 7.59507 20.3921 7.82688 20.161L21.1739 6.81197Z"
+                                                stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round" />
+                                            <path d="M15 5L19 9" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round" />
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="button-third payment-history-remove"
+                                        data-payment-id="3" aria-label="Отменить платёж">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M3 6H5H21" stroke="#7A52FF" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                            <path d="M19 6V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V6M8 6V4C8 2.89543 8.89543 2 10 2H14C15.1046 2 16 2.89543 16 4V6"
+                                                stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round" />
+                                            <path d="M10 11V17" stroke="#7A52FF" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                            <path d="M14 11V17" stroke="#7A52FF" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--Пустое состояние (скрыто по умолчанию)-->
+                    <div id="paymentHistoryEmpty" class="text-center py-4" style="display: none;">
+                        <h6 style="color: #818EA2;">Платежи отсутствуют</h6>
+                    </div>
+
+                    <!--Итого внесено-->
+                    <div class="row mt-4 pt-3" style="border-top: 1px solid #EBEBEC;">
+                        <div class="col-md-6">
+                            <h5 class="m-0">Всего внесено:</h5>
+                        </div>
+                        <div class="col-md-6 d-flex justify-content-end">
+                            <h5 class="m-0" id="paymentHistoryTotal" style="color: #7A52FF;">70 BYN</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Закрытие модального окна истории платежей и возврат в окно информации
+    function switchToInfoFromPaymentHistory() {
+        const historyModal = bootstrap.Modal.getInstance(document.getElementById('paymentHistoryModal'));
+        if (historyModal) {
+            historyModal.hide();
+        }
+    }
+
+    // Обработчик закрытия — возвращаемся в инфо-модалку
+    const paymentHistoryModalElement = document.getElementById('paymentHistoryModal');
+    if (paymentHistoryModalElement) {
+        paymentHistoryModalElement.addEventListener('hidden.bs.modal', function () {
+            if (typeof openInfoModal === 'function') {
+                openInfoModal();
+            } else {
+                const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
+                infoModal.show();
+            }
+        });
+    }
+
+    // Открытие модального окна истории платежей из окна информации
+    function switchToPaymentHistory() {
+        const infoModal = bootstrap.Modal.getInstance(document.getElementById('infoBookingModal'));
+        if (infoModal) {
+            infoModal.hide();
+        }
+
+        setTimeout(() => {
+            const historyModal = new bootstrap.Modal(document.getElementById('paymentHistoryModal'));
+            historyModal.show();
+        }, 50);
+    }
+</script>

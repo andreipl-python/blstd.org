@@ -858,3 +858,41 @@
     color: #7A52FF;
     text-decoration: none;
   }
+
+  /* Ссылка на историю платежей в модалке информации */
+  .payment-history-link {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400 !important;
+    font-size: 14px !important;
+    line-height: 144% !important;
+    letter-spacing: -0.008em !important;
+    color: #7A52FF;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .payment-history-link:hover {
+    text-decoration: underline;
+  }
+
+  /* Элемент списка в истории платежей */
+  .payment-history-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #EBEBEC;
+  }
+
+  .payment-history-item:last-child {
+    border-bottom: none;
+  }
+
+  .payment-history-edit,
+  .payment-history-remove {
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+  }
+
+  .payment-history-edit:hover,
+  .payment-history-remove:hover {
+    opacity: 1;
+  }
