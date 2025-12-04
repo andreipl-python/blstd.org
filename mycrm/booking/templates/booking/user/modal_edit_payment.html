@@ -1,0 +1,132 @@
+{% load static %}
+
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<div class="modal fade" id="editPaymentModal" tabindex="-1" aria-labelledby="editPaymentModalLabel"
+    aria-hidden="true" data-bs-backdrop="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:none; width: 31vw;">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="row d-flex align-items-center mb-4">
+                        <div class="col-md-12 d-flex justify-content-between align-items-center">
+                            <div class="d-flex justify-content-start align-items-center gap-3">
+                                <button type="button" class="button-third" onclick="switchToHistoryFromEditPayment()">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 19L5 12L12 5" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round" />
+                                        <path d="M19 12H5" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round" />
+                                    </svg>
+                                </button>
+                                <h2 class="mb-0">Редактирование платежа</h2>
+                            </div>
+                            <button type="button" class="modal-close-icon" data-bs-dismiss="modal" aria-label="Закрыть">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M18 6L6 18" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M6 6L18 18" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-12" id="editPaymentInfoContainer">
+                            <span id="editPaymentDateTime">03.12.2025, 14:30</span>
+                            <span>/</span>
+                            <span id="editPaymentMethod">Наличные</span>
+                            <span>/</span>
+                            <span id="editPaymentAmountDisplay">35 BYN</span>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="editPaymentAmountInput" class="form-label">Сумма, BYN</label>
+                            <input type="text" id="editPaymentAmountInput" class="form-control" placeholder="35.00"
+                                autocomplete="off">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editPaymentType" class="form-label">Способ оплаты</label>
+                            <div class="custom-select" id="editPaymentType" name="editPaymentType">
+                                <span class="selected">Наличные</span>
+                                <span class="chevron">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                    </svg>
+                                </span>
+                                <ul class="options">
+                                    <li data-value="1">Наличные</li>
+                                    <li data-value="2">Банковская карта</li>
+                                    <li data-value="3">Перевод</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <label for="editPaymentComment" class="form-label">Комментарий (необязательно)</label>
+                            <textarea class="form-control" id="editPaymentComment" rows="3"
+                                placeholder="Комментарий к платежу"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-md-3">
+                            <button type="button" class="button-primary w-100">Сохранить</button>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="button" class="button-sec w-100" data-bs-dismiss="modal">Отмена</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchToHistoryFromEditPayment() {
+        const editModalElement = document.getElementById('editPaymentModal');
+        if (!editModalElement || typeof bootstrap === 'undefined') {
+            return;
+        }
+        const editModal = bootstrap.Modal.getInstance(editModalElement);
+        if (editModal) {
+            editModal.hide();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const editModalElement = document.getElementById('editPaymentModal');
+        if (!editModalElement || typeof bootstrap === 'undefined') {
+            return;
+        }
+
+        editModalElement.addEventListener('hidden.bs.modal', function () {
+            if (typeof window !== 'undefined' && !window.isSwitchingFromHistoryToEditPayment) {
+                return;
+            }
+
+            const historyElement = document.getElementById('paymentHistoryModal');
+            if (!historyElement || typeof bootstrap === 'undefined') {
+                return;
+            }
+
+            const historyModal = new bootstrap.Modal(historyElement);
+            historyModal.show();
+
+            if (typeof window !== 'undefined') {
+                window.isSwitchingFromHistoryToEditPayment = false;
+            }
+        });
+    });
+</script>

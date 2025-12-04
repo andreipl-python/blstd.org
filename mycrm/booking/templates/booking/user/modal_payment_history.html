@@ -105,6 +105,7 @@
 
 <script>
     const PAYMENT_HISTORY_URL_TEMPLATE = "{% url 'get_payment_history' 0 %}";
+    window.isSwitchingFromHistoryToEditPayment = window.isSwitchingFromHistoryToEditPayment || false;
 
     function loadPaymentHistoryForCurrentBooking() {
         const bookingId = window.currentBookingId;
@@ -184,6 +185,11 @@
                     }
                     if (editBtn) {
                         editBtn.setAttribute("data-payment-id", payment.id);
+                        editBtn.addEventListener("click", function (event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            openEditPaymentModal();
+                        });
                     }
                     if (removeBtn) {
                         removeBtn.setAttribute("data-payment-id", payment.id);
@@ -206,6 +212,28 @@
             });
     }
 
+    function openEditPaymentModal() {
+        const historyElement = document.getElementById('paymentHistoryModal');
+        const editPaymentElement = document.getElementById('editPaymentModal');
+
+        if (!editPaymentElement || typeof bootstrap === 'undefined') {
+            return;
+        }
+
+        if (historyElement) {
+            const historyModalInstance = bootstrap.Modal.getInstance(historyElement);
+            if (historyModalInstance) {
+                window.isSwitchingFromHistoryToEditPayment = true;
+                historyModalInstance.hide();
+            }
+        }
+
+        setTimeout(function () {
+            const editModal = new bootstrap.Modal(editPaymentElement);
+            editModal.show();
+        }, 50);
+    }
+
     // Закрытие модального окна истории платежей и возврат в окно информации
     function switchToInfoFromPaymentHistory() {
         const historyModal = bootstrap.Modal.getInstance(document.getElementById('paymentHistoryModal'));
@@ -222,6 +250,10 @@
         });
 
         paymentHistoryModalElement.addEventListener('hidden.bs.modal', function () {
+            if (window.isSwitchingFromHistoryToEditPayment) {
+                return;
+            }
+
             if (typeof openInfoModal === 'function') {
                 openInfoModal();
             } else {
