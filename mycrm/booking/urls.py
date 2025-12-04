@@ -44,7 +44,7 @@ from .views.edit_booking import (
     update_booking_services,
     delete_booking_service,
 )
-from .views.payment_processing import process_batch_payments_view
+from .views.payment_processing import process_batch_payments_view, get_payment_history
 from .views_all import auth_view, CustomLogoutView
 
 # Создание маршрутизатора API
@@ -115,6 +115,11 @@ urlpatterns = [
         "booking/process-batch-payments/<int:booking_id>/",
         process_batch_payments_view,
         name="process_batch_payments",
+    ),
+    path(
+        "booking/get-payment-history/<int:booking_id>/",
+        get_payment_history,
+        name="get_payment_history",
     ),
     path(
         "booking/get-cancellation-reasons/",

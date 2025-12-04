@@ -7,6 +7,7 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 from ..models import Payment, PaymentType, Reservation
 
@@ -105,6 +106,51 @@ def process_batch_payments_view(request, booking_id):
     except PaymentType.DoesNotExist:
         return JsonResponse(
             {"success": False, "error": "Тип платежа не найден"}, status=400
+        )
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@csrf_exempt
+def get_payment_history(request, booking_id):
+    """Возвращает историю платежей для указанной брони."""
+    if request.method != "GET":
+        return JsonResponse(
+            {"success": False, "error": "Метод не поддерживается"}, status=405
+        )
+
+    try:
+        booking = get_object_or_404(Reservation, id=booking_id)
+        payments = (
+            Payment.objects.filter(reservation=booking)
+            .select_related("payment_type")
+            .order_by("created_at")
+        )
+
+        payments_data = []
+        total_amount = Decimal("0")
+
+        for payment in payments:
+            amount = payment.amount or Decimal("0")
+            total_amount += amount
+            local_created = timezone.localtime(payment.created_at)
+            payments_data.append(
+                {
+                    "id": payment.id,
+                    "datetime": local_created.strftime("%d.%m.%Y, %H:%M"),
+                    "amount": str(amount),
+                    "payment_type": (
+                        payment.payment_type.name if payment.payment_type_id else ""
+                    ),
+                }
+            )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "payments": payments_data,
+                "total_amount": str(total_amount),
+            }
         )
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
