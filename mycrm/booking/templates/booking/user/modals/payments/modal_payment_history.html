@@ -120,6 +120,7 @@
 <script>
     const PAYMENT_HISTORY_URL_TEMPLATE = "{% url 'get_payment_history' 0 %}";
     window.isSwitchingFromHistoryToEditPayment = window.isSwitchingFromHistoryToEditPayment || false;
+    window.isSwitchingFromHistoryToCancelPayment = window.isSwitchingFromHistoryToCancelPayment || false;
 
     window.currentPaymentHistoryList = window.currentPaymentHistoryList || [];
 
@@ -251,7 +252,7 @@
                             removeBtn.addEventListener("click", function (event) {
                                 event.preventDefault();
                                 event.stopPropagation();
-                                cancelPayment(payment.id);
+                                confirmCancelPayment(payment.id);
                             });
                         }
                     }
@@ -288,6 +289,61 @@
                 loadPaymentHistoryForCurrentBooking();
             })
             .catch(() => alert("Ошибка при отмене платежа"));
+    }
+
+    function confirmCancelPayment(paymentId) {
+        if (!paymentId || typeof window.openConfirmCancelPaymentModal !== 'function') {
+            cancelPayment(paymentId);
+            return;
+        }
+
+        const historyModalElement = document.getElementById('paymentHistoryModal');
+        const confirmModalElement = document.getElementById('confirmCancelPaymentModal');
+        const infoModalElement = document.getElementById('infoBookingModal');
+        const historyModalInstance = historyModalElement
+            ? bootstrap.Modal.getInstance(historyModalElement) || bootstrap.Modal.getOrCreateInstance(historyModalElement)
+            : null;
+        const shouldReopenHistory = historyModalElement && historyModalElement.classList.contains('show');
+        const wasInfoShown = infoModalElement && infoModalElement.classList.contains('show');
+
+        // Флаг предотвращает автопоказ инфо-модалки, пока открыто подтверждение отмены
+        window.isSwitchingFromHistoryToCancelPayment = shouldReopenHistory || wasInfoShown;
+
+        // Явно скрываем инфо-модалку, чтобы она не всплыла под подтверждением
+        if (infoModalElement && wasInfoShown) {
+            const infoInstance = bootstrap.Modal.getInstance(infoModalElement) || bootstrap.Modal.getOrCreateInstance(infoModalElement);
+            infoInstance.hide();
+        }
+
+        if (historyModalInstance && shouldReopenHistory) {
+            historyModalInstance.hide();
+        }
+
+        if (confirmModalElement) {
+            const handleHidden = function () {
+                confirmModalElement.removeEventListener('hidden.bs.modal', handleHidden);
+                window.isSwitchingFromHistoryToCancelPayment = false;
+
+                // Возвращаемся в историю, если она была открыта
+                if (shouldReopenHistory && historyModalElement) {
+                    const historyModal = bootstrap.Modal.getOrCreateInstance(historyModalElement);
+                    historyModal.show();
+                } else if (wasInfoShown && infoModalElement) {
+                    // Иначе возвращаем инфо-модалку, если она была
+                    const infoModal = bootstrap.Modal.getOrCreateInstance(infoModalElement);
+                    infoModal.show();
+                }
+            };
+            confirmModalElement.addEventListener('hidden.bs.modal', handleHidden);
+        } else {
+            window.isSwitchingFromHistoryToCancelPayment = false;
+        }
+
+        window.openConfirmCancelPaymentModal({
+            onConfirm: function () {
+                cancelPayment(paymentId);
+            },
+        });
     }
 
     function openEditPaymentModal(paymentData) {
@@ -356,7 +412,7 @@
         });
 
         paymentHistoryModalElement.addEventListener('hidden.bs.modal', function () {
-            if (window.isSwitchingFromHistoryToEditPayment) {
+            if (window.isSwitchingFromHistoryToEditPayment || window.isSwitchingFromHistoryToCancelPayment) {
                 return;
             }
 

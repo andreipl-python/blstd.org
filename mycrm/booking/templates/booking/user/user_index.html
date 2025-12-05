@@ -373,13 +373,14 @@
         </div>
     </div>
 
-    {% include "booking/user/modal_create_booking.html" %}
-    {% include "booking/user/modal_edit_booking.html" %}
-    {% include "booking/user/modal_info_booking.html" %}
-    {% include "booking/user/modal_payment_booking.html" %}
-    {% include "booking/user/modal_payment_history.html" %}
-    {% include "booking/user/modal_edit_payment.html" %}
-    {% include "booking/user/modal_confirm_cancel_action.html" %}
+    {% include "booking/user/modals/booking/modal_create_booking.html" %}
+    {% include "booking/user/modals/booking/modal_edit_booking.html" %}
+    {% include "booking/user/modals/booking/modal_info_booking.html" %}
+    {% include "booking/user/modals/payments/modal_payment_booking.html" %}
+    {% include "booking/user/modals/payments/modal_payment_history.html" %}
+    {% include "booking/user/modals/payments/modal_edit_payment.html" %}
+    {% include "booking/user/modals/common/modal_confirm_cancel_action.html" %}
+    {% include "booking/user/modals/payments/modal_confirm_cancel_payment.html" %}
 
     {% include 'booking/add/scripts.html' %}
 

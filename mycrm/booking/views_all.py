@@ -8,88 +8,93 @@ from django.urls import reverse_lazy
 
 
 class CustomLogoutView(LogoutView):
-    next_page = reverse_lazy('index')  # Перенаправление на 'index'
-    http_method_names = ['get', 'post']  # Разрешаем GET и POST
+    next_page = reverse_lazy("index")  # Перенаправление на 'index'
+    http_method_names = ["get", "post"]  # Разрешаем GET и POST
 
     def get(self, request, *args, **kwargs):
         return self.post(request, *args, **kwargs)  # Перенаправляем GET на POST
 
 
 def auth_view(request):
-    if request.method == 'POST':
-        username = request.POST['login']
-        password = request.POST['password']
+    if request.method == "POST":
+        username = request.POST["login"]
+        password = request.POST["password"]
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
             login(request, user)
-            return redirect('index')
+            return redirect("index")
         else:
             pass
 
-    return render(request, 'booking/user/auth.html')
+    return render(request, "booking/user/pages/auth.html")
 
 
-@login_required(login_url='login')
+@login_required(login_url="login")
 def menu_view(request):
     users = Client.objects.exclude(idoblast=666)
 
-    filter_type = request.GET.get('filter_type')
-    if filter_type == 'managerandprepod':
-        users = Client.filter(role__in=['manager', 'prepod'])
-    elif filter_type == 'school':
+    filter_type = request.GET.get("filter_type")
+    if filter_type == "managerandprepod":
+        users = Client.filter(role__in=["manager", "prepod"])
+    elif filter_type == "school":
         users = Client.filter(idoblast=1)
-    elif filter_type == 'studia':
+    elif filter_type == "studia":
         users = Client.filter(idoblast=2)
-    elif filter_type == 'schoolstudia':
+    elif filter_type == "schoolstudia":
         users = Client.filter(idoblast=3)
 
     context = {
-        'users': users,
-        'filter_type': filter_type,
+        "users": users,
+        "filter_type": filter_type,
     }
 
-    return render(request, 'booking/add/menu.html', context)
+    return render(request, "booking/add/menu.html", context)
 
 
-@login_required(login_url='login')
+@login_required(login_url="login")
 def users_list_view(request):
     def how_know_func(howknow):
-        if howknow == '1':
+        if howknow == "1":
             return "Инстаграмм"
-        elif howknow == '2':
+        elif howknow == "2":
             return "ВК"
-        elif howknow == '3':
+        elif howknow == "3":
             return "Реклама"
         else:
             return "Не указано"
 
-    filter_type = request.GET.get('filter_type')
+    filter_type = request.GET.get("filter_type")
     role_type, oblast_type = None, None
 
-    users = Client.objects.all().order_by('-id')
+    users = Client.objects.all().order_by("-id")
 
-    if filter_type == 'clients':
-        users = Client.exclude(role='hide')
-    elif filter_type == 'workers':
+    if filter_type == "clients":
+        users = Client.exclude(role="hide")
+    elif filter_type == "workers":
         role_type = "workers"
-        users = Client.filter(role__in=['manager', 'prepod'])
-    elif filter_type == 'school':
+        users = Client.filter(role__in=["manager", "prepod"])
+    elif filter_type == "school":
         users = Client.filter(idoblast=1)
-        oblast_type = 'showusers_school'
-    elif filter_type == 'studio':
+        oblast_type = "showusers_school"
+    elif filter_type == "studio":
         users = Client.filter(idoblast=2)
-        oblast_type = 'showusers_studia'
-    elif filter_type == 'schoolstudia':
+        oblast_type = "showusers_studia"
+    elif filter_type == "schoolstudia":
         users = Client.filter(idoblast__in=[1, 2])
-        oblast_type = 'showusers_schoolstudia'
+        oblast_type = "showusers_schoolstudia"
 
     user_brones = {}
     for user in users:
-        brones = Reservation.objects.filter(iduser=user.id).order_by('-idprepod').values('idprepod').distinct()
+        brones = (
+            Reservation.objects.filter(iduser=user.id)
+            .order_by("-idprepod")
+            .values("idprepod")
+            .distinct()
+        )
         bron_info = []
         for bron in brones:
-            idprepod = bron['idprepod']
+            idprepod = bron["idprepod"]
             if idprepod == 0:
                 name_prepod = "Аренда"
                 comment_prepod = "Помещения"
@@ -99,13 +104,15 @@ def users_list_view(request):
                 name_prepod = prepod_user.email if prepod_user else "Неизвестно"
                 comment_prepod = prepod_user.comment if prepod_user else ""
                 color_user = prepod_user.color if prepod_user else "#cfcfcf"
-            bron_info.append({'color': color_user, 'name': name_prepod, 'comment': comment_prepod})
+            bron_info.append(
+                {"color": color_user, "name": name_prepod, "comment": comment_prepod}
+            )
         user_brones[user.id] = bron_info
 
     user_abon = {}
     for user in users:
         abon_info = ""
-        adds_abon = Abon.objects.filter(iduser=user.id, hide=0).order_by('-id')[:3]
+        adds_abon = Abon.objects.filter(iduser=user.id, hide=0).order_by("-id")[:3]
 
         for row_abon in adds_abon:
             hours = row_abon.hours
@@ -133,12 +140,32 @@ def users_list_view(request):
         if howknow != 0:
             user.howknow_show = f"<hr> <u>Как узнали?</u> - {how_know_func(howknow)}"
 
-    return render(request, 'booking/user/users_list.html', {
-        'users': users,
-        'user_brones': user_brones,
-        'user_abon': user_abon,
-        'who_show': "| Клиенты" if not role_type or role_type == "" else "| Сотрудники",
-        'where_oblast_show': "Показаны все" if not oblast_type else (
-            "Школа" if oblast_type == "showusers_school" else "Студия" if oblast_type == "showusers_studia" else "Школа + студия" if oblast_type == "showusers_schoolstudia" else ""),
-    })
-
+    return render(
+        request,
+        "booking/user/pages/users_list.html",
+        {
+            "users": users,
+            "user_brones": user_brones,
+            "user_abon": user_abon,
+            "who_show": (
+                "| Клиенты" if not role_type or role_type == "" else "| Сотрудники"
+            ),
+            "where_oblast_show": (
+                "Показаны все"
+                if not oblast_type
+                else (
+                    "Школа"
+                    if oblast_type == "showusers_school"
+                    else (
+                        "Студия"
+                        if oblast_type == "showusers_studia"
+                        else (
+                            "Школа + студия"
+                            if oblast_type == "showusers_schoolstudia"
+                            else ""
+                        )
+                    )
+                )
+            ),
+        },
+    )
