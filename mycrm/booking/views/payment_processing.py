@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
-from ..models import Payment, PaymentType, Reservation
+from booking.models import Payment, PaymentType, Reservation
 
 
 def save_payments_for_booking(booking, payments_data):
@@ -46,6 +46,7 @@ def save_payments_for_booking(booking, payments_data):
                 payment_type=payment_type,
                 amount=Decimal(str(amount)),
                 comment=payment_info.get("comment", ""),
+                canceled=False,
             )
             created_payments.append(payment.id)
 
@@ -72,7 +73,7 @@ def process_batch_payments_view(request, booking_id):
             )
 
         total_cost = booking.total_cost or Decimal("0")
-        existing_payments = Payment.objects.filter(reservation=booking)
+        existing_payments = Payment.objects.filter(reservation=booking, canceled=False)
         existing_total = sum(
             (payment.amount for payment in existing_payments), Decimal("0")
         )
@@ -128,31 +129,44 @@ def update_payment_view(request, payment_id):
         try:
             payload = json.loads(request.body or "{}")
         except json.JSONDecodeError:
-            return JsonResponse({"success": False, "error": "Некорректный JSON"}, status=400)
+            return JsonResponse(
+                {"success": False, "error": "Некорректный JSON"}, status=400
+            )
 
         amount = payload.get("amount")
         payment_type_id = payload.get("payment_type_id")
         comment = payload.get("comment", "")
 
         if amount is None or payment_type_id is None:
-            return JsonResponse({"success": False, "error": "Нужно передать amount и payment_type_id"}, status=400)
+            return JsonResponse(
+                {"success": False, "error": "Нужно передать amount и payment_type_id"},
+                status=400,
+            )
 
         try:
             payment_type = PaymentType.objects.get(id=payment_type_id)
         except PaymentType.DoesNotExist:
-            return JsonResponse({"success": False, "error": "Тип платежа не найден"}, status=400)
+            return JsonResponse(
+                {"success": False, "error": "Тип платежа не найден"}, status=400
+            )
 
         try:
             new_amount = Decimal(str(amount))
         except Exception:
-            return JsonResponse({"success": False, "error": "Некорректное значение суммы"}, status=400)
+            return JsonResponse(
+                {"success": False, "error": "Некорректное значение суммы"}, status=400
+            )
 
         if new_amount <= Decimal("0"):
-            return JsonResponse({"success": False, "error": "Сумма должна быть больше 0"}, status=400)
+            return JsonResponse(
+                {"success": False, "error": "Сумма должна быть больше 0"}, status=400
+            )
 
         # Проверяем, что новый платеж не превышает остаток с учётом других платежей
         total_cost = booking.total_cost or Decimal("0")
-        other_payments = Payment.objects.filter(reservation=booking).exclude(id=payment.id)
+        other_payments = Payment.objects.filter(
+            reservation=booking, canceled=False
+        ).exclude(id=payment.id)
         other_total = sum((p.amount for p in other_payments), Decimal("0"))
         remaining = total_cost - other_total
         if remaining < Decimal("0"):
@@ -160,8 +174,16 @@ def update_payment_view(request, payment_id):
 
         if new_amount - remaining > Decimal("0.000001"):
             return JsonResponse(
-                {"success": False, "error": "Сумма платежа превышает доступный остаток"},
+                {
+                    "success": False,
+                    "error": "Сумма платежа превышает доступный остаток",
+                },
                 status=400,
+            )
+
+        if payment.canceled:
+            return JsonResponse(
+                {"success": False, "error": "Платёж уже отменён"}, status=400
             )
 
         payment.payment_type = payment_type
@@ -169,6 +191,24 @@ def update_payment_view(request, payment_id):
         payment.comment = comment
         payment.save(update_fields=["payment_type", "amount", "comment", "updated_at"])
 
+        return JsonResponse({"success": True})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def cancel_payment_view(request, payment_id):
+    """Отмена (деактивация) платежа: помечаем canceled=True и исключаем из расчётов."""
+    try:
+        payment = get_object_or_404(Payment, id=payment_id)
+        if payment.canceled:
+            return JsonResponse(
+                {"success": False, "error": "Платёж уже отменён"}, status=400
+            )
+
+        payment.canceled = True
+        payment.save(update_fields=["canceled", "updated_at"])
         return JsonResponse({"success": True})
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
@@ -195,7 +235,8 @@ def get_payment_history(request, booking_id):
 
         for payment in payments:
             amount = payment.amount or Decimal("0")
-            total_amount += amount
+            if not payment.canceled:
+                total_amount += amount
             local_created = timezone.localtime(payment.created_at)
             local_updated = timezone.localtime(payment.updated_at)
             payments_data.append(
@@ -210,6 +251,7 @@ def get_payment_history(request, booking_id):
                     "comment": payment.comment or "",
                     "updated_at": local_updated.strftime("%d.%m.%Y, %H:%M"),
                     "edited": payment.created_at != payment.updated_at,
+                    "canceled": payment.canceled,
                 }
             )
 

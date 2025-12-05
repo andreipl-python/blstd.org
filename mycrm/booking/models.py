@@ -667,6 +667,11 @@ class Payment(models.Model):
         null=True,
         blank=True,
     )
+    canceled = models.BooleanField(
+        default=False,
+        help_text="Флаг отмены платежа (не участвует в расчётах)",
+        verbose_name="Отменён",
+    )
 
     class Meta:
         db_table = "payments"

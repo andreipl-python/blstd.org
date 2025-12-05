@@ -46,6 +46,12 @@
                                             <path d="M12.5 7.5L16.5 11.5" stroke="#818EA2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
                                         </svg>
                                     </span>
+                                    <span class="payment-history-canceled" style="display:none;" title="Платёж отменён">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M6 6L18 18" stroke="#D1435B" stroke-width="1.8" stroke-linecap="round" />
+                                            <path d="M18 6L6 18" stroke="#D1435B" stroke-width="1.8" stroke-linecap="round" />
+                                        </svg>
+                                    </span>
                                 </div>
                             </div>
                             <div class="col-4">
@@ -122,6 +128,7 @@
         const list = document.getElementById('paymentHistoryList');
         const emptyState = document.getElementById('paymentHistoryEmpty');
         const totalElement = document.getElementById('paymentHistoryTotal');
+        const historyModal = document.getElementById('paymentHistoryModal');
 
         if (!list || !totalElement) {
             return;
@@ -185,21 +192,32 @@
                     const editBtn = clone.querySelector(".payment-history-edit");
                     const removeBtn = clone.querySelector(".payment-history-remove");
                     const editedBadge = clone.querySelector(".payment-history-updated");
+                    const canceledBadge = clone.querySelector(".payment-history-canceled");
 
                     if (dateEl) {
                         dateEl.textContent = payment.datetime || "";
                         if (editedBadge) {
-                            editedBadge.style.display = payment.edited ? "" : "none";
-                            if (payment.updated_at) {
+                            const showEdited = payment.edited && !payment.canceled;
+                            editedBadge.style.display = showEdited ? "" : "none";
+                            if (showEdited && payment.updated_at) {
                                 editedBadge.setAttribute("title", `Обновлён: ${payment.updated_at}`);
                             }
+                        }
+                        if (canceledBadge) {
+                            canceledBadge.style.display = payment.canceled ? "" : "none";
                         }
                     }
                     if (methodEl) {
                         methodEl.textContent = payment.payment_type || "";
+                        if (payment.canceled) {
+                            methodEl.classList.add("text-danger");
+                        }
                     }
                     if (amountEl) {
                         amountEl.textContent = (payment.amount || "0") + " BYN";
+                        if (payment.canceled) {
+                            amountEl.classList.add("text-danger");
+                        }
                     }
                     if (editBtn) {
                         editBtn.setAttribute("data-payment-id", payment.id);
@@ -208,22 +226,34 @@
                         editBtn.setAttribute("data-payment-type-id", payment.payment_type_id || "");
                         editBtn.setAttribute("data-payment-datetime", payment.datetime || "");
                         editBtn.setAttribute("data-payment-comment", payment.comment || "");
-                        editBtn.addEventListener("click", function (event) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            openEditPaymentModal({
-                                id: payment.id,
-                                amount: payment.amount,
-                                payment_type: payment.payment_type,
-                                payment_type_id: payment.payment_type_id,
-                                datetime: payment.datetime
-                                ,
-                                comment: payment.comment
+                        if (payment.canceled) {
+                            editBtn.remove();
+                        } else {
+                            editBtn.addEventListener("click", function (event) {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                openEditPaymentModal({
+                                    id: payment.id,
+                                    amount: payment.amount,
+                                    payment_type: payment.payment_type,
+                                    payment_type_id: payment.payment_type_id,
+                                    datetime: payment.datetime,
+                                    comment: payment.comment
+                                });
                             });
-                        });
+                        }
                     }
                     if (removeBtn) {
                         removeBtn.setAttribute("data-payment-id", payment.id);
+                        if (payment.canceled) {
+                            removeBtn.remove();
+                        } else {
+                            removeBtn.addEventListener("click", function (event) {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                cancelPayment(payment.id);
+                            });
+                        }
                     }
 
                     list.appendChild(clone);
@@ -241,6 +271,23 @@
                     emptyState.style.display = "block";
                 }
             });
+    }
+
+    function cancelPayment(paymentId) {
+        if (!paymentId) return;
+        fetch(`/booking/cancel-payment/${paymentId}/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (!data || !data.success) {
+                    alert(data && data.error ? data.error : "Не удалось отменить платёж");
+                    return;
+                }
+                loadPaymentHistoryForCurrentBooking();
+            })
+            .catch(() => alert("Ошибка при отмене платежа"));
     }
 
     function openEditPaymentModal(paymentData) {
@@ -270,7 +317,7 @@
                 const historyList = Array.isArray(window.currentPaymentHistoryList) ? window.currentPaymentHistoryList : [];
                 const otherPaymentsTotal = historyList.reduce((sum, p) => {
                     const val = parseFloat(p.amount);
-                    if (Number.isFinite(val) && p.id !== paymentData?.id) {
+                    if (Number.isFinite(val) && p.id !== paymentData?.id && !p.canceled) {
                         return sum + val;
                     }
                     return sum;

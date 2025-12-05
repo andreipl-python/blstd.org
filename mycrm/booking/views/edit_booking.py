@@ -74,9 +74,9 @@ def get_booking_details(request, booking_id):
         remaining_rental_cost = (total_rental_cost or Decimal("0")) - rental_payments
 
         # Получаем сумму всех платежей для данной брони
-        total_payments = Payment.objects.filter(reservation=booking).aggregate(
-            total=Sum("amount")
-        )["total"] or Decimal("0")
+        total_payments = Payment.objects.filter(
+            reservation=booking, canceled=False
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
         # Вычисляем оставшуюся сумму
         remaining_amount = (total_cost or Decimal("0")) - total_payments
