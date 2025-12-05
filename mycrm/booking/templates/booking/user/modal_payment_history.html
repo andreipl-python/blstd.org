@@ -107,6 +107,8 @@
     const PAYMENT_HISTORY_URL_TEMPLATE = "{% url 'get_payment_history' 0 %}";
     window.isSwitchingFromHistoryToEditPayment = window.isSwitchingFromHistoryToEditPayment || false;
 
+    window.currentPaymentHistoryList = window.currentPaymentHistoryList || [];
+
     function loadPaymentHistoryForCurrentBooking() {
         const bookingId = window.currentBookingId;
         const list = document.getElementById('paymentHistoryList');
@@ -151,6 +153,7 @@
                 }
 
                 const payments = data.payments || [];
+                window.currentPaymentHistoryList = payments;
                 if (!payments.length) {
                     if (emptyState) {
                         emptyState.style.display = "block";
@@ -185,10 +188,18 @@
                     }
                     if (editBtn) {
                         editBtn.setAttribute("data-payment-id", payment.id);
+                        editBtn.setAttribute("data-payment-amount", payment.amount || "");
+                        editBtn.setAttribute("data-payment-type", payment.payment_type || "");
+                        editBtn.setAttribute("data-payment-datetime", payment.datetime || "");
                         editBtn.addEventListener("click", function (event) {
                             event.preventDefault();
                             event.stopPropagation();
-                            openEditPaymentModal();
+                            openEditPaymentModal({
+                                id: payment.id,
+                                amount: payment.amount,
+                                payment_type: payment.payment_type,
+                                datetime: payment.datetime
+                            });
                         });
                     }
                     if (removeBtn) {
@@ -212,9 +223,10 @@
             });
     }
 
-    function openEditPaymentModal() {
+    function openEditPaymentModal(paymentData) {
         const historyElement = document.getElementById('paymentHistoryModal');
         const editPaymentElement = document.getElementById('editPaymentModal');
+        const bookingId = window.currentBookingId;
 
         if (!editPaymentElement || typeof bootstrap === 'undefined') {
             return;
@@ -229,6 +241,29 @@
         }
 
         setTimeout(function () {
+            if (typeof window.prefillEditPaymentModal === 'function') {
+                // Получаем детали брони, чтобы знать остаток и вычислить лимит
+                const historyList = Array.isArray(window.currentPaymentHistoryList) ? window.currentPaymentHistoryList : [];
+                const otherPaymentsTotal = historyList.reduce((sum, p) => {
+                    const val = parseFloat(p.amount);
+                    if (Number.isFinite(val) && p.id !== paymentData?.id) {
+                        return sum + val;
+                    }
+                    return sum;
+                }, 0);
+
+                const loadBookingDetails = bookingId
+                    ? fetch(`/booking/get-booking-details/${bookingId}/`).then(r => r.json()).catch(() => null)
+                    : Promise.resolve(null);
+
+                loadBookingDetails.then(data => {
+                    const bookingDetails = data && data.success ? data.booking : null;
+                    window.prefillEditPaymentModal(paymentData || {}, bookingDetails, otherPaymentsTotal);
+                    const editModal = new bootstrap.Modal(editPaymentElement);
+                    editModal.show();
+                });
+                return;
+            }
             const editModal = new bootstrap.Modal(editPaymentElement);
             editModal.show();
         }, 50);

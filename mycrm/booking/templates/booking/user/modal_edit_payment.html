@@ -80,7 +80,7 @@
 
                     <div class="row mb-2">
                         <div class="col-md-3">
-                            <button type="button" class="button-primary w-100">Сохранить</button>
+                            <button type="button" class="button-primary w-100" id="editPaymentSaveButton" disabled>Сохранить</button>
                         </div>
                         <div class="col-md-3">
                             <button type="button" class="button-sec w-100" data-bs-dismiss="modal">Отмена</button>
@@ -94,6 +94,74 @@
 </div>
 
 <script>
+    function sanitizePaymentValue(value, options = {}) {
+        const { preserveSeparator = false, maxValue = null } = options;
+        if (!value) return '';
+
+        let sanitized = value.replace(/[^0-9.,]/g, '');
+        if (!sanitized) return '';
+
+        const separatorMatch = sanitized.match(/[.,]/);
+        const numericMax = typeof maxValue === 'number' ? maxValue : parseFloat(maxValue);
+        const hasMax = Number.isFinite(numericMax);
+        const effectiveMax = hasMax ? Math.max(0, numericMax) : null;
+
+        if (!separatorMatch) {
+            const numericValue = parseFloat(sanitized);
+            if (!isNaN(numericValue) && effectiveMax !== null && numericValue > effectiveMax) {
+                return effectiveMax.toFixed(2);
+            }
+            return sanitized;
+        }
+
+        const separatorIndex = separatorMatch.index;
+        const separator = separatorMatch[0];
+
+        const integerPartRaw = sanitized.slice(0, separatorIndex).replace(/[.,]/g, '');
+        const integerPart = integerPartRaw || '0';
+        const decimalsRaw = sanitized.slice(separatorIndex + 1).replace(/[.,]/g, '');
+        const decimalPart = decimalsRaw.slice(0, 2);
+
+        const visibleSeparator = preserveSeparator ? separator : '.';
+
+        const normalizedValue = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
+        const numericValue = parseFloat(normalizedValue);
+        if (!isNaN(numericValue) && effectiveMax !== null && numericValue > effectiveMax) {
+            const maxString = effectiveMax.toFixed(2);
+            return preserveSeparator && separator === ',' ? maxString.replace('.', ',') : maxString;
+        }
+
+        if (!decimalPart && sanitized.endsWith(separator)) {
+            return `${integerPart}${visibleSeparator}`;
+        }
+
+        return decimalPart ? `${integerPart}${visibleSeparator}${decimalPart}` : integerPart;
+    }
+
+    function parsePaymentNumericValue(value) {
+        if (!value && value !== 0) return NaN;
+        const normalized = String(value).replace(',', '.');
+        const numeric = parseFloat(normalized);
+        return Number.isFinite(numeric) ? numeric : NaN;
+    }
+
+    let editPaymentMaxValue = null;
+
+    function setEditPaymentLimits(remainingAmount = null, otherPaymentsTotal = 0) {
+        const remaining = parsePaymentNumericValue(remainingAmount);
+        const others = parsePaymentNumericValue(otherPaymentsTotal);
+        if (Number.isFinite(remaining)) {
+            const rest = remaining - (Number.isFinite(others) ? others : 0);
+            editPaymentMaxValue = Math.max(0, rest);
+        } else {
+            editPaymentMaxValue = null;
+        }
+    }
+
+    function getMaxAllowedValueForEdit() {
+        return Number.isFinite(editPaymentMaxValue) ? editPaymentMaxValue : null;
+    }
+
     function switchToHistoryFromEditPayment() {
         const editModalElement = document.getElementById('editPaymentModal');
         if (!editModalElement || typeof bootstrap === 'undefined') {
@@ -105,13 +173,242 @@
         }
     }
 
+    function selectPaymentTypeByName(paymentTypeSelect, name) {
+        if (!paymentTypeSelect) return;
+        const selected = paymentTypeSelect.querySelector('.selected');
+        const optionsContainer = paymentTypeSelect.querySelector('.options');
+        const optionsList = optionsContainer ? optionsContainer.querySelectorAll('li') : [];
+        let matched = null;
+
+        optionsList.forEach(opt => opt.classList.remove('selected'));
+        if (name) {
+            matched = Array.from(optionsList).find(opt => (opt.textContent || '').trim() === name.trim());
+        }
+        if (matched) {
+            matched.classList.add('selected');
+            paymentTypeSelect.dataset.value = matched.dataset.value || '';
+            if (selected) {
+                selected.textContent = matched.textContent;
+            }
+        } else {
+            if (optionsList[0]) {
+                optionsList[0].classList.add('selected');
+                paymentTypeSelect.dataset.value = optionsList[0].dataset.value || '';
+                if (selected) {
+                    selected.textContent = optionsList[0].textContent || 'Выберите способ';
+                }
+            }
+        }
+    }
+
+    window.prefillEditPaymentModal = function (paymentData, bookingData, otherPaymentsTotal = 0) {
+        const amountInput = document.getElementById('editPaymentAmountInput');
+        const commentInput = document.getElementById('editPaymentComment');
+        const paymentTypeSelect = document.getElementById('editPaymentType');
+        const dateTimeEl = document.getElementById('editPaymentDateTime');
+        const methodEl = document.getElementById('editPaymentMethod');
+        const amountDisplayEl = document.getElementById('editPaymentAmountDisplay');
+
+        const amount = paymentData && paymentData.amount ? paymentData.amount : '';
+        const paymentType = paymentData && paymentData.payment_type ? paymentData.payment_type : '';
+        const datetime = paymentData && paymentData.datetime ? paymentData.datetime : '';
+
+        const numericOriginal = parsePaymentNumericValue(amount);
+        window.editPaymentOriginalAmount = Number.isFinite(numericOriginal) ? numericOriginal : null;
+
+        if (amountInput) {
+            amountInput.value = amount ? sanitizePaymentValue(String(amount), { preserveSeparator: true }) : '';
+        }
+
+        if (commentInput) {
+            commentInput.value = paymentData && paymentData.comment ? paymentData.comment : '';
+        }
+
+        if (paymentTypeSelect) {
+            selectPaymentTypeByName(paymentTypeSelect, paymentType);
+        }
+
+        if (dateTimeEl) {
+            dateTimeEl.textContent = datetime || '';
+        }
+        if (methodEl) {
+            methodEl.textContent = paymentType || '';
+        }
+        if (amountDisplayEl) {
+            const numeric = parsePaymentNumericValue(amount);
+            const formatted = Number.isFinite(numeric) ? `${numeric.toFixed(Number.isInteger(numeric) ? 0 : 2)} BYN` : '';
+            amountDisplayEl.textContent = formatted || '';
+        }
+
+        const remaining = bookingData ? bookingData.remaining_amount : null;
+        setEditPaymentLimits(remaining, otherPaymentsTotal || 0);
+        if (typeof window.updateEditPaymentSaveButton === 'function') {
+            window.updateEditPaymentSaveButton();
+        }
+    };
+
     document.addEventListener('DOMContentLoaded', function () {
         const editModalElement = document.getElementById('editPaymentModal');
         if (!editModalElement || typeof bootstrap === 'undefined') {
             return;
         }
 
+        const amountInput = document.getElementById('editPaymentAmountInput');
+        const commentInput = document.getElementById('editPaymentComment');
+        const initialAmountValue = amountInput ? amountInput.value : '';
+        const initialCommentValue = commentInput ? commentInput.value : '';
+        let saveButton = document.getElementById('editPaymentSaveButton');
+
+        function isEqualWithinEpsilon(a, b, epsilon = 1e-6) {
+            if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+            return Math.abs(a - b) < epsilon;
+        }
+
+        const isAmountValid = () => {
+            if (!amountInput) return false;
+            const numericValue = parsePaymentNumericValue(amountInput.value);
+            if (!Number.isFinite(numericValue) || numericValue <= 0) return false;
+            const original = typeof window !== 'undefined' ? window.editPaymentOriginalAmount : null;
+            if (Number.isFinite(original) && isEqualWithinEpsilon(numericValue, original)) {
+                return false;
+            }
+            return true;
+        };
+
+        const updateSaveButtonState = () => {
+            if (!saveButton) {
+                saveButton = document.getElementById('editPaymentSaveButton');
+            }
+            if (!saveButton) return;
+            saveButton.disabled = !isAmountValid();
+            saveButton.classList.toggle('disabled', saveButton.disabled);
+            saveButton.setAttribute('aria-disabled', saveButton.disabled ? 'true' : 'false');
+        };
+        window.updateEditPaymentSaveButton = updateSaveButtonState;
+
+        // Открытие/закрытие кастомного селекта "Способ оплаты" и выбор опции
+        const paymentTypeSelect = document.getElementById('editPaymentType');
+        let resetPaymentTypeSelect = null;
+        if (paymentTypeSelect && !paymentTypeSelect.dataset.init) {
+            const selected = paymentTypeSelect.querySelector('.selected');
+            const optionsContainer = paymentTypeSelect.querySelector('.options');
+            const optionsList = optionsContainer ? optionsContainer.querySelectorAll('li') : [];
+            const chevron = paymentTypeSelect.querySelector('.chevron');
+
+            const initialSelectedText = selected ? selected.textContent : '';
+            const initialSelectedValue = paymentTypeSelect.dataset.value || (optionsList[0]?.dataset.value || '');
+
+            const toggleOpen = (event) => {
+                if (event) event.stopPropagation();
+                paymentTypeSelect.classList.toggle('open');
+            };
+
+            if (selected) {
+                selected.addEventListener('click', toggleOpen);
+            }
+            if (chevron) {
+                chevron.addEventListener('click', toggleOpen);
+            }
+            paymentTypeSelect.addEventListener('click', (event) => {
+                if (event.target.tagName !== 'LI') {
+                    toggleOpen(event);
+                }
+            });
+
+            optionsList.forEach(option => {
+                option.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    optionsList.forEach(opt => opt.classList.remove('selected'));
+                    option.classList.add('selected');
+                    if (selected) {
+                        selected.textContent = option.textContent;
+                    }
+                    paymentTypeSelect.dataset.value = option.dataset.value || '';
+                    paymentTypeSelect.classList.remove('open');
+                });
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!paymentTypeSelect.contains(event.target)) {
+                    paymentTypeSelect.classList.remove('open');
+                }
+            });
+
+            resetPaymentTypeSelect = () => {
+                optionsList.forEach(opt => opt.classList.remove('selected'));
+                if (optionsList[0]) {
+                    optionsList[0].classList.add('selected');
+                }
+                if (selected) {
+                    selected.textContent = initialSelectedText || (optionsList[0]?.textContent || 'Выберите способ');
+                }
+                paymentTypeSelect.dataset.value = initialSelectedValue || '';
+                paymentTypeSelect.classList.remove('open');
+            };
+
+            paymentTypeSelect.dataset.init = 'true';
+        }
+
+        if (amountInput) {
+            amountInput.addEventListener('input', function () {
+                const maxForInput = getMaxAllowedValueForEdit();
+                const formatted = sanitizePaymentValue(amountInput.value, { preserveSeparator: true, maxValue: maxForInput });
+                amountInput.value = formatted;
+                updateSaveButtonState();
+            });
+
+            amountInput.addEventListener('blur', function () {
+                if (!amountInput.value) {
+                    updateSaveButtonState();
+                    return;
+                }
+
+                const maxForInput = getMaxAllowedValueForEdit();
+                let formatted = sanitizePaymentValue(amountInput.value, { maxValue: maxForInput });
+                if (formatted.startsWith('.')) {
+                    formatted = `0${formatted}`;
+                }
+                if (formatted.endsWith('.')) {
+                    formatted = formatted.slice(0, -1);
+                }
+                const numericValue = parsePaymentNumericValue(formatted);
+                if (!numericValue || numericValue <= 0) {
+                    amountInput.value = '';
+                    updateSaveButtonState();
+                    return;
+                }
+
+                amountInput.value = formatted;
+                updateSaveButtonState();
+            });
+
+            amountInput.addEventListener('keydown', function (event) {
+                if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                    event.preventDefault();
+                }
+            });
+        }
+
+        updateSaveButtonState();
+
         editModalElement.addEventListener('hidden.bs.modal', function () {
+            if (typeof resetPaymentTypeSelect === 'function') {
+                resetPaymentTypeSelect();
+            }
+            if (amountInput) {
+                amountInput.value = initialAmountValue || '';
+            }
+            if (commentInput) {
+                commentInput.value = initialCommentValue || '';
+            }
+            if (saveButton) {
+                saveButton.disabled = true;
+            }
+            editPaymentMaxValue = null;
+            if (typeof window !== 'undefined') {
+                window.editPaymentOriginalAmount = null;
+            }
+
             if (typeof window !== 'undefined' && !window.isSwitchingFromHistoryToEditPayment) {
                 return;
             }
