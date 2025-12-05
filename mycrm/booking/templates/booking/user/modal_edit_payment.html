@@ -54,18 +54,14 @@
                         <div class="col-md-6">
                             <label for="editPaymentType" class="form-label">Способ оплаты</label>
                             <div class="custom-select" id="editPaymentType" name="editPaymentType">
-                                <span class="selected">Наличные</span>
+                                <span class="selected">Выберите способ</span>
                                 <span class="chevron">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
                                         <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
                                     </svg>
                                 </span>
-                                <ul class="options">
-                                    <li data-value="1">Наличные</li>
-                                    <li data-value="2">Банковская карта</li>
-                                    <li data-value="3">Перевод</li>
-                                </ul>
+                                <ul class="options"></ul>
                             </div>
                         </div>
                     </div>
@@ -147,15 +143,30 @@
 
     let editPaymentMaxValue = null;
 
-    function setEditPaymentLimits(remainingAmount = null, otherPaymentsTotal = 0) {
+    function setEditPaymentLimits({
+        remainingAmount = null,
+        currentPaymentAmount = null,
+        totalCost = null,
+        otherPaymentsTotal = null,
+    } = {}) {
         const remaining = parsePaymentNumericValue(remainingAmount);
+        const current = parsePaymentNumericValue(currentPaymentAmount);
+        const total = parsePaymentNumericValue(totalCost);
         const others = parsePaymentNumericValue(otherPaymentsTotal);
-        if (Number.isFinite(remaining)) {
-            const rest = remaining - (Number.isFinite(others) ? others : 0);
-            editPaymentMaxValue = Math.max(0, rest);
-        } else {
-            editPaymentMaxValue = null;
+
+        if (Number.isFinite(total) && Number.isFinite(others)) {
+            editPaymentMaxValue = Math.max(0, total - others);
+            return;
         }
+        if (Number.isFinite(remaining) && Number.isFinite(current)) {
+            editPaymentMaxValue = Math.max(0, remaining + current);
+            return;
+        }
+        if (Number.isFinite(remaining)) {
+            editPaymentMaxValue = Math.max(0, remaining);
+            return;
+        }
+        editPaymentMaxValue = null;
     }
 
     function getMaxAllowedValueForEdit() {
@@ -173,7 +184,64 @@
         }
     }
 
-    function selectPaymentTypeByName(paymentTypeSelect, name) {
+    function getAvailablePaymentTypes() {
+        return Array.isArray(window.PAYMENT_TYPES) ? window.PAYMENT_TYPES : [];
+    }
+
+    function renderEditPaymentTypes(selectedId = null) {
+        const paymentTypeSelect = document.getElementById('editPaymentType');
+        if (!paymentTypeSelect) return;
+        const optionsContainer = paymentTypeSelect.querySelector('.options');
+        const selectedDisplay = paymentTypeSelect.querySelector('.selected');
+        const chevron = paymentTypeSelect.querySelector('.chevron');
+        const paymentTypes = getAvailablePaymentTypes();
+
+        if (!optionsContainer || !selectedDisplay) return;
+        optionsContainer.innerHTML = '';
+
+        if (!paymentTypes.length) {
+            selectedDisplay.textContent = 'Нет доступных способов';
+            paymentTypeSelect.classList.add('disabled');
+            paymentTypeSelect.dataset.value = '';
+            return;
+        }
+
+        paymentTypeSelect.classList.remove('disabled');
+
+        paymentTypes.forEach(pt => {
+            const li = document.createElement('li');
+            li.dataset.value = String(pt.id);
+            li.textContent = pt.name;
+            if (selectedId && String(pt.id) === String(selectedId)) {
+                li.classList.add('selected');
+                paymentTypeSelect.dataset.value = String(pt.id);
+                selectedDisplay.textContent = pt.name;
+            }
+            li.addEventListener('click', (event) => {
+                event.stopPropagation();
+                optionsContainer.querySelectorAll('li').forEach(o => o.classList.remove('selected'));
+                li.classList.add('selected');
+                paymentTypeSelect.dataset.value = li.dataset.value || '';
+                selectedDisplay.textContent = li.textContent;
+                paymentTypeSelect.classList.remove('open');
+                if (typeof window.updateEditPaymentSaveButton === 'function') {
+                    window.updateEditPaymentSaveButton();
+                }
+            });
+            optionsContainer.appendChild(li);
+        });
+
+        if (!paymentTypeSelect.dataset.value) {
+            const first = optionsContainer.querySelector('li');
+            if (first) {
+                first.classList.add('selected');
+                paymentTypeSelect.dataset.value = first.dataset.value || '';
+                selectedDisplay.textContent = first.textContent || 'Выберите способ';
+            }
+        }
+    }
+
+    function selectPaymentTypeByName(paymentTypeSelect, name, id = null) {
         if (!paymentTypeSelect) return;
         const selected = paymentTypeSelect.querySelector('.selected');
         const optionsContainer = paymentTypeSelect.querySelector('.options');
@@ -181,7 +249,10 @@
         let matched = null;
 
         optionsList.forEach(opt => opt.classList.remove('selected'));
-        if (name) {
+        if (id) {
+            matched = Array.from(optionsList).find(opt => (opt.dataset.value || '') == String(id));
+        }
+        if (!matched && name) {
             matched = Array.from(optionsList).find(opt => (opt.textContent || '').trim() === name.trim());
         }
         if (matched) {
@@ -209,12 +280,16 @@
         const methodEl = document.getElementById('editPaymentMethod');
         const amountDisplayEl = document.getElementById('editPaymentAmountDisplay');
 
+        window.currentEditingPaymentId = paymentData && paymentData.id ? paymentData.id : null;
+
         const amount = paymentData && paymentData.amount ? paymentData.amount : '';
         const paymentType = paymentData && paymentData.payment_type ? paymentData.payment_type : '';
+        const paymentTypeId = paymentData && paymentData.payment_type_id ? paymentData.payment_type_id : null;
         const datetime = paymentData && paymentData.datetime ? paymentData.datetime : '';
 
         const numericOriginal = parsePaymentNumericValue(amount);
         window.editPaymentOriginalAmount = Number.isFinite(numericOriginal) ? numericOriginal : null;
+        window.editPaymentOriginalTypeId = paymentTypeId || null;
 
         if (amountInput) {
             amountInput.value = amount ? sanitizePaymentValue(String(amount), { preserveSeparator: true }) : '';
@@ -225,7 +300,8 @@
         }
 
         if (paymentTypeSelect) {
-            selectPaymentTypeByName(paymentTypeSelect, paymentType);
+            renderEditPaymentTypes(paymentTypeId || undefined);
+            selectPaymentTypeByName(paymentTypeSelect, paymentType, paymentTypeId);
         }
 
         if (dateTimeEl) {
@@ -241,13 +317,22 @@
         }
 
         const remaining = bookingData ? bookingData.remaining_amount : null;
-        setEditPaymentLimits(remaining, otherPaymentsTotal || 0);
+        const totalCost = bookingData ? (bookingData.total_cost || bookingData.total_amount) : null;
+        setEditPaymentLimits({
+            remainingAmount: remaining,
+            currentPaymentAmount: amount,
+            totalCost: totalCost,
+            otherPaymentsTotal: otherPaymentsTotal || 0,
+        });
         if (typeof window.updateEditPaymentSaveButton === 'function') {
             window.updateEditPaymentSaveButton();
         }
     };
 
-    document.addEventListener('DOMContentLoaded', function () {
+    function initEditPaymentModal() {
+        if (window.editPaymentModalInitialized) return;
+        window.editPaymentModalInitialized = true;
+
         const editModalElement = document.getElementById('editPaymentModal');
         if (!editModalElement || typeof bootstrap === 'undefined') {
             return;
@@ -269,10 +354,14 @@
             const numericValue = parsePaymentNumericValue(amountInput.value);
             if (!Number.isFinite(numericValue) || numericValue <= 0) return false;
             const original = typeof window !== 'undefined' ? window.editPaymentOriginalAmount : null;
-            if (Number.isFinite(original) && isEqualWithinEpsilon(numericValue, original)) {
-                return false;
-            }
-            return true;
+            const currentTypeId = getSelectedPaymentTypeId();
+            const originalTypeId = typeof window !== 'undefined' ? window.editPaymentOriginalTypeId : null;
+            const amountChanged = !(Number.isFinite(original) && isEqualWithinEpsilon(numericValue, original));
+            const typeChanged =
+                (originalTypeId || originalTypeId === 0)
+                    ? String(currentTypeId || '') !== String(originalTypeId || '')
+                    : !!currentTypeId;
+            return amountChanged || typeChanged;
         };
 
         const updateSaveButtonState = () => {
@@ -285,6 +374,63 @@
             saveButton.setAttribute('aria-disabled', saveButton.disabled ? 'true' : 'false');
         };
         window.updateEditPaymentSaveButton = updateSaveButtonState;
+
+        const getSelectedPaymentTypeId = () => {
+            const select = document.getElementById('editPaymentType');
+            if (!select) return null;
+            const val = select.dataset.value || '';
+            return val ? parseInt(val, 10) : null;
+        };
+
+        const submitEditPayment = () => {
+            if (!saveButton || saveButton.disabled) return;
+            const paymentId = window.currentEditingPaymentId;
+            const bookingId = window.currentBookingId;
+            if (!paymentId || !bookingId) {
+                alert('Не удалось определить платёж или бронь');
+                return;
+            }
+
+            const paymentTypeId = getSelectedPaymentTypeId();
+            const numericAmount = parsePaymentNumericValue(amountInput ? amountInput.value : null);
+            const comment = commentInput ? commentInput.value : '';
+
+            if (!Number.isFinite(numericAmount) || !paymentTypeId) {
+                alert('Проверьте сумму и способ оплаты');
+                return;
+            }
+
+            saveButton.disabled = true;
+            saveButton.textContent = 'Сохранение...';
+
+            fetch(`/booking/update-payment/${paymentId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    amount: numericAmount,
+                    payment_type_id: paymentTypeId,
+                    comment: comment
+                })
+            }).then(r => r.json())
+                .then(data => {
+                    if (!data || !data.success) {
+                        saveButton.disabled = false;
+                        saveButton.textContent = 'Сохранить';
+                        alert(data && data.error ? data.error : 'Ошибка при сохранении платежа');
+                        return;
+                    }
+                    // Успех: закрываем модалку, история откроется с обновлением по show.bs.modal
+                    const editModal = bootstrap.Modal.getInstance(editModalElement) || new bootstrap.Modal(editModalElement);
+                    editModal.hide();
+                })
+                .catch(() => {
+                    saveButton.disabled = false;
+                    saveButton.textContent = 'Сохранить';
+                    alert('Ошибка сети при сохранении платежа');
+                });
+        };
 
         // Открытие/закрытие кастомного селекта "Способ оплаты" и выбор опции
         const paymentTypeSelect = document.getElementById('editPaymentType');
@@ -391,6 +537,10 @@
 
         updateSaveButtonState();
 
+        if (saveButton) {
+            saveButton.addEventListener('click', submitEditPayment);
+        }
+
         editModalElement.addEventListener('hidden.bs.modal', function () {
             if (typeof resetPaymentTypeSelect === 'function') {
                 resetPaymentTypeSelect();
@@ -403,10 +553,14 @@
             }
             if (saveButton) {
                 saveButton.disabled = true;
+                saveButton.classList.add('disabled');
+                saveButton.setAttribute('aria-disabled', 'true');
+                saveButton.textContent = 'Сохранить';
             }
             editPaymentMaxValue = null;
             if (typeof window !== 'undefined') {
                 window.editPaymentOriginalAmount = null;
+                window.editPaymentOriginalTypeId = null;
             }
 
             if (typeof window !== 'undefined' && !window.isSwitchingFromHistoryToEditPayment) {
@@ -425,5 +579,14 @@
                 window.isSwitchingFromHistoryToEditPayment = false;
             }
         });
-    });
+    }
+
+    // Экспортируем инициализацию для вызова извне (например, перед открытием модалки из истории)
+    window.initEditPaymentModal = initEditPaymentModal;
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initEditPaymentModal);
+    } else {
+        initEditPaymentModal();
+    }
 </script>

@@ -38,7 +38,15 @@
                     <div id="paymentHistoryItemTemplate" class="payment-history-item mb-3" data-payment-id="" style="display: none;">
                         <div class="row align-items-center">
                             <div class="col-4">
-                                <h6 class="m-0 payment-history-datetime" style="color: #4F4F57;">03.12.2025, 14:30</h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h6 class="m-0 payment-history-datetime" style="color: #4F4F57;">03.12.2025, 14:30</h6>
+                                    <span class="payment-history-updated" style="display:none;" title="Платёж редактирован">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M4 20H8L18 10C18.5523 9.44772 18.5523 8.55228 18 8L16 6C15.4477 5.44772 14.5523 5.44772 14 6L4 16V20Z" stroke="#818EA2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M12.5 7.5L16.5 11.5" stroke="#818EA2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </span>
+                                </div>
                             </div>
                             <div class="col-4">
                                 <h6 class="m-0 payment-history-method" style="color: #4F4F57;">Наличные</h6>
@@ -176,9 +184,16 @@
                     const amountEl = clone.querySelector(".payment-history-amount");
                     const editBtn = clone.querySelector(".payment-history-edit");
                     const removeBtn = clone.querySelector(".payment-history-remove");
+                    const editedBadge = clone.querySelector(".payment-history-updated");
 
                     if (dateEl) {
                         dateEl.textContent = payment.datetime || "";
+                        if (editedBadge) {
+                            editedBadge.style.display = payment.edited ? "" : "none";
+                            if (payment.updated_at) {
+                                editedBadge.setAttribute("title", `Обновлён: ${payment.updated_at}`);
+                            }
+                        }
                     }
                     if (methodEl) {
                         methodEl.textContent = payment.payment_type || "";
@@ -190,7 +205,9 @@
                         editBtn.setAttribute("data-payment-id", payment.id);
                         editBtn.setAttribute("data-payment-amount", payment.amount || "");
                         editBtn.setAttribute("data-payment-type", payment.payment_type || "");
+                        editBtn.setAttribute("data-payment-type-id", payment.payment_type_id || "");
                         editBtn.setAttribute("data-payment-datetime", payment.datetime || "");
+                        editBtn.setAttribute("data-payment-comment", payment.comment || "");
                         editBtn.addEventListener("click", function (event) {
                             event.preventDefault();
                             event.stopPropagation();
@@ -198,7 +215,10 @@
                                 id: payment.id,
                                 amount: payment.amount,
                                 payment_type: payment.payment_type,
+                                payment_type_id: payment.payment_type_id,
                                 datetime: payment.datetime
+                                ,
+                                comment: payment.comment
                             });
                         });
                     }
@@ -230,6 +250,10 @@
 
         if (!editPaymentElement || typeof bootstrap === 'undefined') {
             return;
+        }
+
+        if (typeof window.initEditPaymentModal === 'function') {
+            window.initEditPaymentModal();
         }
 
         if (historyElement) {
