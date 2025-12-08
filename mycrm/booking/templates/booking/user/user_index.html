@@ -873,7 +873,116 @@
                     if (response.ok) {
                         var data = await response.json();
                         if (data.success && data.booking) {
-                            updateInfoModalPaymentButtonState(data.booking);
+                            var booking = data.booking;
+
+                            var scenarioElement = infoModalElement.querySelector('#scenarioName');
+                            var roomElement = infoModalElement.querySelector('#roomName');
+                            var publicIdElement = infoModalElement.querySelector('#publicID');
+                            var dateElement = infoModalElement.querySelector('#infoBookingDate');
+                            var timeElement = infoModalElement.querySelector('#infoBookingTime');
+                            var durationElement = infoModalElement.querySelector('#infoBookingDuration');
+                            var directionElement = infoModalElement.querySelector('#infoBookingDirection');
+                            var specialistElement = infoModalElement.querySelector('#infoBookingSpecialist');
+                            var clientNameElement = infoModalElement.querySelector('#infoBookingClientName');
+                            var clientPhoneElement = infoModalElement.querySelector('#infoBookingClientPhone');
+                            var commentContainer = infoModalElement.querySelector('#infoBookingCommentContainer');
+                            var commentTextElement = infoModalElement.querySelector('#infoBookingCommentText');
+                            var totalAmountElement = infoModalElement.querySelector('#infoBookingTotalAmount');
+                            var paidAmountElement = infoModalElement.querySelector('#infoBookingPaidAmount');
+
+                            if (scenarioElement && typeof booking.reservation_type === 'string') {
+                                scenarioElement.textContent = booking.reservation_type;
+                            }
+                            if (roomElement && typeof booking.room_name === 'string') {
+                                roomElement.textContent = booking.room_name;
+                            }
+
+                            if (publicIdElement && (typeof booking.id === 'number' || typeof booking.id === 'string')) {
+                                publicIdElement.textContent = booking.id;
+                            }
+
+                            if (dateElement && typeof booking.date === 'string') {
+                                dateElement.textContent = booking.date;
+                            }
+
+                            if (timeElement && typeof booking.time === 'string') {
+                                timeElement.textContent = booking.time + ' / ';
+                            }
+
+                            if (durationElement && typeof booking.duration === 'string') {
+                                durationElement.textContent = booking.duration;
+                            }
+
+                            if (directionElement && typeof booking.direction_name === 'string') {
+                                directionElement.textContent = booking.direction_name;
+                            }
+
+                            if (specialistElement && typeof booking.specialist_name === 'string') {
+                                specialistElement.textContent = booking.specialist_name;
+                            }
+
+                            if (clientNameElement && typeof booking.client_name === 'string') {
+                                clientNameElement.textContent = booking.client_name;
+                            }
+
+                            if (clientPhoneElement) {
+                                if (typeof booking.client_phone === 'string' && booking.client_phone) {
+                                    var rawPhone = booking.client_phone.replace(/\s+/g, '');
+                                    var formattedPhone = booking.client_phone;
+                                    var match = rawPhone.match(/^(\+375)(\d{2})(\d{3})(\d{2})(\d{2})$/);
+                                    if (match) {
+                                        formattedPhone = match[1] + ' ' + match[2] + ' ' + match[3] + ' ' + match[4] + ' ' + match[5];
+                                    }
+                                    clientPhoneElement.textContent = formattedPhone;
+                                } else {
+                                    clientPhoneElement.textContent = '';
+                                }
+                            }
+
+                            if (totalAmountElement && typeof booking.total_cost === 'string') {
+                                var totalRaw = booking.total_cost;
+                                var totalNum = Number(totalRaw.replace(',', '.'));
+                                if (!isNaN(totalNum)) {
+                                    var totalStr;
+                                    if (Math.abs(totalNum % 1) < 1e-9) {
+                                        totalStr = totalNum.toFixed(0);
+                                    } else {
+                                        totalStr = totalNum.toFixed(2);
+                                    }
+                                    totalAmountElement.textContent = totalStr;
+                                } else {
+                                    totalAmountElement.textContent = totalRaw;
+                                }
+                            }
+
+                            if (paidAmountElement && typeof booking.paid_amount === 'string') {
+                                var paidRaw = booking.paid_amount;
+                                var paidNum = Number(paidRaw.replace(',', '.'));
+                                if (!isNaN(paidNum)) {
+                                    var paidStr;
+                                    if (Math.abs(paidNum % 1) < 1e-9) {
+                                        paidStr = paidNum.toFixed(0);
+                                    } else {
+                                        paidStr = paidNum.toFixed(2);
+                                    }
+                                    paidAmountElement.textContent = paidStr;
+                                } else {
+                                    paidAmountElement.textContent = paidRaw;
+                                }
+                            }
+
+                            if (commentContainer && commentTextElement) {
+                                var comment = booking.comment;
+                                if (typeof comment === 'string' && comment.trim()) {
+                                    commentTextElement.textContent = comment;
+                                    commentContainer.style.display = '';
+                                } else {
+                                    commentTextElement.textContent = '';
+                                    commentContainer.style.display = 'none';
+                                }
+                            }
+
+                            updateInfoModalPaymentButtonState(booking);
                         }
                     } else {
                         console.error('Не удалось получить детали брони для info-модалки:', response.status);

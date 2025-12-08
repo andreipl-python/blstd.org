@@ -4,7 +4,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <!-- Модальное окно информации о брони -->
-<div class="modal fade" id="infoBookingModal" tabindex="-1" aria-labelledby="infoBookingModalLabel" aria-hidden="true" data-bs-backdrop="false">
+<div class="modal fade" id="infoBookingModal" tabindex="-1" aria-labelledby="infoBookingModalLabel" aria-hidden="true"
+    data-bs-backdrop="false">
     <div class="modal-dialog modal-dialog-centered" style="max-width:none; width: 31vw;">
         <div class="modal-content">
             <div class="modal-body">
@@ -14,17 +15,20 @@
                         <div class="col-md-12 d-flex justify-content-between align-items-center">
                             <h2 class="mb-0">Детали по бронированию</h2>
                             <button type="button" class="modal-close-icon" data-bs-dismiss="modal" aria-label="Закрыть">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M18 6L6 18" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                    <path d="M6 6L18 18" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M18 6L6 18" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M6 6L18 18" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
                                 </svg>
                             </button>
                         </div>
                     </div>
                     <!--Сценарий, комната и ID-->
                     <div class="row mb-4 align-items-center">
-                        <div id="roomNameContainer" class="col-md-8 d-flex align-items-center justify-content-start">
-                            <span id="scenarioName">Название сценария</span> / <span id="roomName">Название
+                        <div id="roomNameContainer" class="col-md-8 d-flex align-items-center justify-content-start gap-2">
+                            <span id="scenarioName">Название сценария</span><span>/</span><span id="roomName">Название
                                 комнаты</span>
                         </div>
                         <div id="publicIdContainer" class="col-md-4 d-flex align-items-center justify-content-end">
@@ -103,7 +107,7 @@
                                 <path d="M16 18H16.01" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
                             </svg>
-                            <h5 class="mb-0 mt-0">18 сентября / четверг</h5>
+                            <h5 class="mb-0 mt-0" id="infoBookingDate">18 сентября / четверг</h5>
                         </div>
                     </div>
                     <!--Время брони / период-->
@@ -117,13 +121,14 @@
                                 <path d="M12 6V12L16 14" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
                             </svg>
-                            <h5 class="mb-0 mt-0">14:45 - 15:30 / </h5>
-                            <h5 class="mb-0 mt-0">1 час</h5>
+                            <h5 class="mb-0 mt-0" id="infoBookingTime">14:45 - 15:30 / </h5>
+                            <h5 class="mb-0 mt-0" id="infoBookingDuration">1 час</h5>
                         </div>
                     </div>
                     <!--Направление / преподаватель-->
                     <div class="row mb-3">
                         <div class="col-md-12 d-flex align-items-center gap-4">
+
                             <div class="d-flex align-items-center gap-2">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
@@ -138,7 +143,8 @@
                                         stroke="#818EA2" stroke-width="2" stroke-linecap="round"
                                         stroke-linejoin="round" />
                                 </svg>
-                                <h5 class="mb-0 mt-0">Гитара</h5>
+                                <h5 class="mb-0 mt-0" id="infoBookingDirection">Гитара</h5>
+
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -172,8 +178,9 @@
                                         stroke="#818EA2" stroke-width="2" stroke-linecap="round"
                                         stroke-linejoin="round" />
                                 </svg>
-                                <h6 class="mb-0 mt-0" style="color: #4F4F57;">Ангелина Власова</h6>
+                                <h6 class="mb-0 mt-0" id="infoBookingSpecialist" style="color: #4F4F57;">Ангелина Власова</h6>
                             </div>
+
                         </div>
                     </div>
                     <!--Клиент / Телефон-->
@@ -191,7 +198,7 @@
                                         stroke="#818EA2" stroke-width="2" stroke-linecap="round"
                                         stroke-linejoin="round" />
                                 </svg>
-                                <h5 class="mb-0 mt-0">Иван Орлин</h5>
+                                <h5 class="mb-0 mt-0" id="infoBookingClientName">Иван Орлин</h5>
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -201,7 +208,7 @@
                                         stroke="#818EA2" stroke-width="2" stroke-linecap="round"
                                         stroke-linejoin="round" />
                                 </svg>
-                                <h6 class="mb-0 mt-0" style="color: #4F4F57;">+375 98 765 43 21</h6>
+                                <h6 class="mb-0 mt-0" id="infoBookingClientPhone" style="color: #4F4F57;">+375 98 765 43 21</h6>
                             </div>
                         </div>
                     </div>
@@ -228,8 +235,8 @@
                         </div>
                     </div>
                     <!--Комментарий к брони-->
-                    <div class="col-md-12 mb-5">
-                        <h6 style="color: #4F4F57;">Комментарий к брони</h6>
+                    <div class="col-md-12 mb-5" id="infoBookingCommentContainer">
+                        <h6 style="color: #4F4F57;" id="infoBookingCommentText">Комментарий к брони</h6>
                     </div>
                     <!--Итого/внесено-->
                     <div class="row mb-2 d-flex align-items-end">
@@ -237,13 +244,17 @@
                             <h5 class="m-0">Итого/внесено:</h5>
                         </div>
                         <div class="col-md-6 d-flex justify-content-end align-items-end">
-                            <h5 class="m-0" style="color: #4F4F57;">0 BYN / 0 BYN</h5>
+                            <h5 class="m-0" style="color: #4F4F57;">
+                                <span id="infoBookingTotalAmount">0</span> BYN /
+                                <span id="infoBookingPaidAmount">0</span> BYN
+                            </h5>
                         </div>
                     </div>
                     <!--Ссылка на историю платежей-->
                     <div class="row mb-4">
                         <div class="col-md-12">
-                            <a href="javascript:void(0);" class="payment-history-link" onclick="switchToPaymentHistory()">
+                            <a href="javascript:void(0);" class="payment-history-link"
+                                onclick="switchToPaymentHistory()">
                                 История платежей
                             </a>
                         </div>

@@ -31,16 +31,35 @@ def get_booking_details(request, booking_id):
         end_datetime = booking.datetimeend
 
         weekdays = {
-            0: "Понедельник",
-            1: "Вторник",
-            2: "Среда",
-            3: "Четверг",
-            4: "Пятница",
-            5: "Суббота",
-            6: "Воскресенье",
+            0: "понедельник",
+            1: "вторник",
+            2: "среда",
+            3: "четверг",
+            4: "пятница",
+            5: "суббота",
+            6: "воскресенье",
         }
 
-        date_str = f"{start_datetime.strftime('%d-%m-%Y')}, {weekdays[start_datetime.weekday()]}"
+        months = {
+            1: "января",
+            2: "февраля",
+            3: "марта",
+            4: "апреля",
+            5: "мая",
+            6: "июня",
+            7: "июля",
+            8: "августа",
+            9: "сентября",
+            10: "октября",
+            11: "ноября",
+            12: "декабря",
+        }
+
+        month_name = months.get(start_datetime.month, start_datetime.strftime("%m"))
+        weekday_name = weekdays[start_datetime.weekday()]
+
+        # Пример формата: "18 сентября / четверг"
+        date_str = f"{start_datetime.day} {month_name} / {weekday_name}"
         time_str = (
             f"{start_datetime.strftime('%H:%M')} - {end_datetime.strftime('%H:%M')}"
         )
@@ -176,6 +195,14 @@ def get_booking_details(request, booking_id):
             ),
             "specialist_id": booking.specialist.id if booking.specialist else None,
             "specialist_name": str(booking.specialist) if booking.specialist else None,
+            "direction_id": (
+                booking.direction.id if getattr(booking, "direction", None) else None
+            ),
+            "direction_name": (
+                booking.direction.name
+                if getattr(booking, "direction", None)
+                else "Не указано"
+            ),
             "services_by_group": services_by_group,
             "total_services_cost": str(total_services_cost),
             "total_cost": str(booking.total_cost) if booking.total_cost else "0",
