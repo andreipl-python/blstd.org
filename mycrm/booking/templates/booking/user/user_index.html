@@ -28,33 +28,6 @@
     </script>
 
     <p id="bookings_in_range" style="display: none;">{{ bookings_in_range }}</p>
-    <script>
-        // Получаем данные о связях area-сценарии
-        window.AREAS = JSON.parse('{{ areas_json|escapejs }}');
-        window.SCENARIOS = JSON.parse('{{ scenarios_json|escapejs }}');
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const areaSelect = document.getElementById('area-select');
-            const scenarioSelect = document.getElementById('scenario-select');
-            areaSelect.addEventListener('change', function () {
-                const areaId = this.value;
-                scenarioSelect.innerHTML = '<option value="">Сценарий</option>';
-                if (!areaId) return;
-                const areaObj = window.AREAS.find(a => a.pk == areaId);
-                if (areaObj && areaObj.fields && areaObj.fields.scenario) {
-                    areaObj.fields.scenario.forEach(scenId => {
-                        const scenarioObj = window.SCENARIOS.find(s => s.pk == scenId);
-                        if (scenarioObj) {
-                            const opt = document.createElement('option');
-                            opt.value = scenarioObj.pk;
-                            opt.textContent = scenarioObj.fields.name;
-                            scenarioSelect.appendChild(opt);
-                        }
-                    });
-                }
-            });
-        });
-    </script>
 
     <div class="container-fluid">
         {% include 'booking/add/head.html' %}
@@ -95,7 +68,7 @@
             <div class="row mb-2" id="booking-filters">
                 <div class="col-md-3">
                     <div class="custom-select-wrapper">
-                        <div class="custom-select" data-placeholder="Выберите помещение">
+                        <div class="custom-select" data-placeholder="Выберите помещение" data-filter-type="area">
                             <span class="selected">Выберите помещение</span>
                             <span class="chevron">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -114,7 +87,7 @@
 
                 <div class="col-md-3">
                     <div class="custom-select-wrapper">
-                        <div class="custom-select" data-placeholder="Выберите сценарий">
+                        <div class="custom-select" data-placeholder="Выберите сценарий" data-filter-type="scenario">
                             <span class="selected">Выберите сценарий</span>
                             <span class="chevron">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -355,9 +328,6 @@
                     `{{ block.time|time_add:forloop.counter0 }}`,
                     `{{ room.name }}`,
                     '{{ room.id }}',
-                    'global',
-                    `{{ scenarios_json|escapejs }}`,
-                    `{{ specialists_json|escapejs }}`,
                     this
                     )">
                         </td>
@@ -389,128 +359,6 @@
         var bookingsInRange = [];
 
         $(document).ready(function () {
-            // Обработка формы создания брони
-            $('#bookingForm').on('submit', function (e) {
-                e.preventDefault();
-
-                const bookingType = $('#bookingType').val();
-                const client = $('#client').val();
-                const specialist = $('#specialist').val();
-                const duration = $('#bookingDuration').val();
-
-                if (!bookingType || !client || !duration) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Ошибка',
-                        text: 'Заполните все обязательные поля'
-                    });
-                    return false;
-                }
-
-                const fullDatetime = $('#fullDatetimeField').val();
-                if (!fullDatetime) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Ошибка',
-                        text: 'Не указано время начала брони'
-                    });
-                    return false;
-                }
-
-                Swal.fire({
-                    title: 'Создание брони...',
-                    text: 'Пожалуйста, подождите',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                // Собираем данные формы
-                const formData = new FormData();
-                formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
-                formData.append('bookingType', bookingType);
-                formData.append('client', client);
-                if (specialist) {
-                    formData.append('specialist', specialist);
-                }
-
-                // Добавляем ID группы, если включено групповое бронирование
-                const selectedClientData = cachedData.clients.find(c => c.id === parseInt(client));
-                const isGroupBooking = $('#groupBookingSwitch').is(':checked');
-                if (isGroupBooking && selectedClientData && selectedClientData.group) {
-                    formData.append('client_group', selectedClientData.group.id);
-                }
-
-                formData.append('bookingDuration', duration);
-                formData.append('full_datetime', fullDatetime);
-                formData.append('room_id', $('#roomIdField').val());
-                formData.append('comment', $('#comment').val());
-
-                // Добавляем стоимость брони
-                const bookingCost = $('#bookingCost').text();
-                if (bookingCost) {
-                    formData.append('total_cost', bookingCost);
-                }
-
-                // Добавляем выбранные услуги
-                const selectedServices = $('#scenarios').val();
-                if (selectedServices && selectedServices.length > 0) {
-                    selectedServices.forEach(service => {
-                        formData.append('scenarios', service);
-                    });
-                }
-
-                // Отправляем запрос
-                $.ajax({
-                    url: '{% url "create_booking" %}',
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    headers: {
-                        'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-                    },
-                    success: function (response) {
-                        if (response.success) {
-                            // Закрываем модальное окно
-                            $('#createBookingModal').modal('hide');
-
-                            // Показываем сообщение об успехе
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Бронь создана успешно!',
-                                showConfirmButton: false,
-                                timer: 1500
-                            }).then(() => {
-                                // Обновляем сетку броней без перезагрузки страницы
-                                if (typeof refreshBookingsGrid === 'function') {
-                                    refreshBookingsGrid({ silent: false });
-                                }
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Ошибка',
-                                text: response.error || 'Произошла ошибка при создании брони'
-                            });
-                        }
-                    },
-                    error: function (xhr, status, error) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Ошибка',
-                            text: 'Произошла ошибка при отправке запроса'
-                        });
-                        console.error('Error:', error);
-                    }
-                });
-
-                return false;
-            });
-
             // Обновление забронированных ячеек
             bookingsInRange = JSON.parse(document.getElementById('bookings_in_range').textContent);
             const roomCells = document.querySelectorAll('td[room_name]');
@@ -686,34 +534,62 @@
     </script>
 
     <script>
-        // Поведение выпадающих списков
-        const customSelects = document.querySelectorAll('.custom-select');
+        document.addEventListener('DOMContentLoaded', function () {
+            // Поведение выпадающих списков только для фильтров в шапке календаря
+            const customSelects = document.querySelectorAll('#booking-filters .custom-select');
 
-        customSelects.forEach(select => {
-            const selected = select.querySelector('.selected');
-            const optionsContainer = select.querySelector('.options');
-            const optionsList = optionsContainer.querySelectorAll('li');
+            customSelects.forEach(select => {
+                const selected = select.querySelector('.selected');
+                const optionsContainer = select.querySelector('.options');
+                if (!selected || !optionsContainer) {
+                    return;
+                }
 
-            // событие на весь div
-            select.addEventListener('click', () => {
-                select.classList.toggle('open');
-            });
+                const optionsList = optionsContainer.querySelectorAll('li');
+                const filterType = select.getAttribute('data-filter-type');
 
-            optionsList.forEach(option => {
-                option.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    // убрать выделение со всех
-                    optionsList.forEach(opt => opt.classList.remove('selected'));
-                    // добавить выбранному
-                    option.classList.add('selected');
-                    selected.textContent = option.textContent;
-                    select.classList.remove('open');
+                // событие на весь div
+                select.addEventListener('click', () => {
+                    select.classList.toggle('open');
                 });
-            });
 
-            document.addEventListener('click', (e) => {
-                if (!select.contains(e.target)) {
-                    select.classList.remove('open');
+                optionsList.forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        // убрать выделение со всех
+                        optionsList.forEach(opt => opt.classList.remove('selected'));
+                        // добавить выбранному
+                        option.classList.add('selected');
+                        selected.textContent = option.textContent;
+                        select.classList.remove('open');
+
+                        const value = option.getAttribute('data-value') || null;
+                        if (filterType === 'scenario') {
+                            window.currentScenarioFilterId = value;
+                        } else if (filterType === 'area') {
+                            window.currentAreaFilterId = value;
+                        }
+                    });
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!select.contains(e.target)) {
+                        select.classList.remove('open');
+                    }
+                });
+
+                // Для фильтров (area/scenario) сразу выбираем первый элемент из БД
+                if (optionsList.length > 0 && (filterType === 'area' || filterType === 'scenario')) {
+                    const firstOption = optionsList[0];
+                    firstOption.classList.add('selected');
+                    selected.textContent = firstOption.textContent;
+
+                    const initialValue = firstOption.getAttribute('data-value') || null;
+                    if (filterType === 'scenario') {
+                        window.currentScenarioFilterId = initialValue;
+                    } else if (filterType === 'area') {
+                        window.currentAreaFilterId = initialValue;
+                    }
                 }
             });
         });
@@ -814,8 +690,17 @@
     </script>
 
     <script>
-        function openCreateModal(date, time, roomName, roomId, mode, scenarios, specialists, element) {
-            const createModal = new bootstrap.Modal(document.getElementById('createBookingModal'));
+        function openCreateModal(date, time, roomName, roomId, element) {
+            var createModalElement = document.getElementById('createBookingModal');
+            if (!createModalElement) {
+                return;
+            }
+
+            if (typeof openModal === 'function') {
+                openModal(date, time, roomName, roomId, element);
+            }
+
+            var createModal = bootstrap.Modal.getInstance(createModalElement) || new bootstrap.Modal(createModalElement);
             createModal.show();
         }
     </script>
