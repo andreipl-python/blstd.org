@@ -105,10 +105,39 @@
                 </div>
 
                 <div class="col-md-3 offset-md-3">
-                    <div class="calendar-period">
-                        <span>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                xmlns="http://www.w3.org/2000/svg">
+                    <div class="calendar-period-wrapper" style="position: relative; display: inline-block;">
+                        <div class="calendar-period" id="calendar-period-trigger">
+                            <span>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M8 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M16 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path
+                                        d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z"
+                                        stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M3 10H21" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M8 14H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M12 14H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M16 14H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M8 18H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M12 18H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M16 18H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </span>
+                            <span id="start-calendar-period-text">
+                                18 сентября
+                            </span>
+                            <span style="color: #818EA2;"> — </span>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M8 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
                                 <path d="M16 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
@@ -131,37 +160,52 @@
                                 <path d="M16 18H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
                             </svg>
-                        </span>
-                        <span id="start-calendar-period-text">
-                            18 сентября
-                        </span>
-                        <span style="color: #818EA2;"> — </span>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M8 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                            <path d="M16 2V6" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                            <path
-                                d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z"
-                                stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                            <path d="M3 10H21" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                            <path d="M8 14H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                            <path d="M12 14H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                            <path d="M16 14H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                            <path d="M8 18H8.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                            <path d="M12 18H12.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                            <path d="M16 18H16.01" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                        </svg>
-                        <span id="end-calendar-period-text">
-                            24 сентября
-                        </span>
+                            <span id="end-calendar-period-text">
+                                24 сентября
+                            </span>
+                        </div>
+                        <div id="dateRangePicker" class="date-range-picker">
+                            <div class="date-range-picker__content">
+                                <div class="date-range-picker__presets">
+                                    <ul class="date-range-picker__presets-list">
+                                        <li class="date-range-picker__presets-item" data-preset="today">Сегодня</li>
+                                        <li class="date-range-picker__presets-item" data-preset="yesterday">Вчера</li>
+                                        <li class="date-range-picker__presets-item" data-preset="today_yesterday">Сегодня и вчера</li>
+                                        <li class="date-range-picker__presets-item" data-preset="last7">Последние 7 дн.</li>
+                                        <li class="date-range-picker__presets-item" data-preset="last14">Последние 14 дн.</li>
+                                        <li class="date-range-picker__presets-item" data-preset="last30">Последние 30 дн.</li>
+                                        <li class="date-range-picker__presets-item" data-preset="this_week">Эта неделя</li>
+                                        <li class="date-range-picker__presets-item" data-preset="last_week">Прошлая неделя</li>
+                                        <li class="date-range-picker__presets-item" data-preset="this_month">Этот месяц</li>
+                                        <li class="date-range-picker__presets-item" data-preset="last_month">Прошлый месяц</li>
+                                    </ul>
+                                </div>
+                                <div class="date-range-picker__calendars">
+                                    <div class="date-range-picker__months">
+                                        <div class="date-range-picker__month">
+                                            <div class="date-range-picker__month-header date-range-picker__month-header--left">
+                                                <button type="button" class="date-range-picker__nav-btn" data-role="nav-prev">&#8249;</button>
+                                                <select class="date-range-picker__select" data-role="month-select-left"></select>
+                                                <select class="date-range-picker__select" data-role="year-select-left"></select>
+                                            </div>
+                                            <div class="date-range-picker__month-grid" data-role="month-grid-left"></div>
+                                        </div>
+                                        <div class="date-range-picker__month">
+                                            <div class="date-range-picker__month-header date-range-picker__month-header--right">
+                                                <select class="date-range-picker__select" data-role="month-select-right"></select>
+                                                <select class="date-range-picker__select" data-role="year-select-right"></select>
+                                                <button type="button" class="date-range-picker__nav-btn" data-role="nav-next">&#8250;</button>
+                                            </div>
+                                            <div class="date-range-picker__month-grid" data-role="month-grid-right"></div>
+                                        </div>
+                                    </div>
+                                    <div class="date-range-picker__footer">
+                                        <button type="button" class="button-secondary" id="dateRangeCancelBtn">Отмена</button>
+                                        <button type="button" class="button-primary" id="dateRangeApplyBtn">Обновить</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -658,6 +702,464 @@
 
             // Делаем функцию доступной глобально, чтобы можно было вызывать при смене фильтра сценария
             window.applyScenarioWorkTimeRestrictions = applyScenarioWorkTimeRestrictions;
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var periodTrigger = document.getElementById('calendar-period-trigger');
+            var picker = document.getElementById('dateRangePicker');
+            if (!periodTrigger || !picker) {
+                return;
+            }
+
+            var monthGridLeft = picker.querySelector('[data-role="month-grid-left"]');
+            var monthGridRight = picker.querySelector('[data-role="month-grid-right"]');
+            var navPrevBtn = picker.querySelector('[data-role="nav-prev"]');
+            var navNextBtn = picker.querySelector('[data-role="nav-next"]');
+            var monthSelectLeft = picker.querySelector('[data-role="month-select-left"]');
+            var yearSelectLeft = picker.querySelector('[data-role="year-select-left"]');
+            var monthSelectRight = picker.querySelector('[data-role="month-select-right"]');
+            var yearSelectRight = picker.querySelector('[data-role="year-select-right"]');
+            var applyBtn = document.getElementById('dateRangeApplyBtn');
+            var cancelBtn = document.getElementById('dateRangeCancelBtn');
+            var presets = picker.querySelectorAll('.date-range-picker__presets-item');
+
+            if (!monthGridLeft || !monthGridRight) {
+                return;
+            }
+
+            function parseISODate(dateStr) {
+                if (!dateStr) {
+                    return null;
+                }
+                var parts = String(dateStr).split('-');
+                if (parts.length !== 3) {
+                    return null;
+                }
+                var year = parseInt(parts[0], 10);
+                var month = parseInt(parts[1], 10) - 1;
+                var day = parseInt(parts[2], 10);
+                if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                    return null;
+                }
+                return new Date(year, month, day);
+            }
+
+            function formatISODate(date) {
+                var year = date.getFullYear();
+                var month = String(date.getMonth() + 1).padStart(2, '0');
+                var day = String(date.getDate()).padStart(2, '0');
+                return year + '-' + month + '-' + day;
+            }
+
+            function datesEqual(a, b) {
+                if (!a || !b) {
+                    return false;
+                }
+                return (
+                    a.getFullYear() === b.getFullYear() &&
+                    a.getMonth() === b.getMonth() &&
+                    a.getDate() === b.getDate()
+                );
+            }
+
+            function isInRange(date, start, end) {
+                if (!start || !end) {
+                    return false;
+                }
+                var time = date.getTime();
+                return time >= start.getTime() && time <= end.getTime();
+            }
+
+            function formatHumanDateRu(date) {
+                var monthNames = [
+                    'января',
+                    'февраля',
+                    'марта',
+                    'апреля',
+                    'мая',
+                    'июня',
+                    'июля',
+                    'августа',
+                    'сентября',
+                    'октября',
+                    'ноября',
+                    'декабря'
+                ];
+                return date.getDate() + ' ' + monthNames[date.getMonth()];
+            }
+
+            function formatMonthYearRuShort(date) {
+                var monthNamesShort = [
+                    'янв',
+                    'фев',
+                    'мар',
+                    'апр',
+                    'май',
+                    'июн',
+                    'июл',
+                    'авг',
+                    'сен',
+                    'окт',
+                    'ноя',
+                    'дек'
+                ];
+                return monthNamesShort[date.getMonth()] + ' ' + date.getFullYear();
+            }
+
+            function fillMonthSelect(select, selectedMonthIndex) {
+                if (!select) {
+                    return;
+                }
+                var monthNamesShort = [
+                    'янв',
+                    'фев',
+                    'мар',
+                    'апр',
+                    'май',
+                    'июн',
+                    'июл',
+                    'авг',
+                    'сен',
+                    'окт',
+                    'ноя',
+                    'дек'
+                ];
+                select.innerHTML = '';
+                for (var i = 0; i < 12; i++) {
+                    var opt = document.createElement('option');
+                    opt.value = String(i);
+                    opt.textContent = monthNamesShort[i];
+                    if (i === selectedMonthIndex) {
+                        opt.selected = true;
+                    }
+                    select.appendChild(opt);
+                }
+            }
+
+            function fillYearSelect(select, selectedYear) {
+                if (!select || !selectedYear) {
+                    return;
+                }
+                var baseYear = selectedYear;
+                var fromYear = baseYear - 5;
+                var toYear = baseYear + 5;
+                select.innerHTML = '';
+                for (var y = fromYear; y <= toYear; y++) {
+                    var opt = document.createElement('option');
+                    opt.value = String(y);
+                    opt.textContent = String(y);
+                    if (y === selectedYear) {
+                        opt.selected = true;
+                    }
+                    select.appendChild(opt);
+                }
+            }
+
+            function updateMonthYearControls() {
+                var leftYear = currentLeftMonth.getFullYear();
+                var leftMonthIndex = currentLeftMonth.getMonth();
+                var rightMonthDate = new Date(currentLeftMonth.getFullYear(), currentLeftMonth.getMonth() + 1, 1);
+
+                fillMonthSelect(monthSelectLeft, leftMonthIndex);
+                fillYearSelect(yearSelectLeft, leftYear);
+                fillMonthSelect(monthSelectRight, rightMonthDate.getMonth());
+                fillYearSelect(yearSelectRight, rightMonthDate.getFullYear());
+            }
+
+            var appliedStartDate = parseISODate(window.SHOW_DATE_FROM);
+            var appliedEndDate = parseISODate(window.SHOW_DATE_TO);
+
+            if (!appliedStartDate || !appliedEndDate) {
+                var today = new Date();
+                today.setHours(0, 0, 0, 0);
+                appliedStartDate = new Date(today.getTime());
+                appliedEndDate = new Date(today.getTime());
+            }
+
+            var selectedStartDate = new Date(appliedStartDate.getTime());
+            var selectedEndDate = new Date(appliedEndDate.getTime());
+
+            var currentLeftMonth = new Date(appliedStartDate.getFullYear(), appliedStartDate.getMonth(), 1);
+
+            function buildMonthGrid(gridElement, monthDate) {
+                gridElement.innerHTML = '';
+
+                var dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+                for (var i = 0; i < dayNames.length; i++) {
+                    var dayNameCell = document.createElement('div');
+                    dayNameCell.className = 'date-range-picker__day-name';
+                    dayNameCell.textContent = dayNames[i];
+                    gridElement.appendChild(dayNameCell);
+                }
+
+                var year = monthDate.getFullYear();
+                var month = monthDate.getMonth();
+                var firstOfMonth = new Date(year, month, 1);
+                var dayOfWeek = firstOfMonth.getDay();
+                var mondayBasedIndex = (dayOfWeek + 6) % 7;
+                var daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                for (var j = 0; j < mondayBasedIndex; j++) {
+                    var emptyCell = document.createElement('div');
+                    emptyCell.className = 'date-range-picker__day date-range-picker__day--outside';
+                    emptyCell.textContent = '';
+                    gridElement.appendChild(emptyCell);
+                }
+
+                for (var day = 1; day <= daysInMonth; day++) {
+                    (function (currentDay) {
+                        var cellDate = new Date(year, month, currentDay);
+                        var cell = document.createElement('div');
+                        cell.className = 'date-range-picker__day';
+                        cell.textContent = String(currentDay);
+                        cell.setAttribute('data-date', formatISODate(cellDate));
+
+                        if (selectedStartDate && selectedEndDate && isInRange(cellDate, selectedStartDate, selectedEndDate)) {
+                            cell.classList.add('date-range-picker__day--in-range');
+                        }
+                        if (selectedStartDate && datesEqual(cellDate, selectedStartDate)) {
+                            cell.classList.add('date-range-picker__day--selected');
+                        }
+                        if (selectedEndDate && datesEqual(cellDate, selectedEndDate) && !datesEqual(selectedStartDate, selectedEndDate)) {
+                            cell.classList.add('date-range-picker__day--selected');
+                        }
+
+                        cell.addEventListener('click', function (event) {
+                            // Останавливаем всплытие, чтобы клик по дню не закрывал попап
+                            event.stopPropagation();
+                            var clickedDate = parseISODate(cell.getAttribute('data-date'));
+                            if (!clickedDate) {
+                                return;
+                            }
+                            clickedDate.setHours(0, 0, 0, 0);
+
+                            if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
+                                selectedStartDate = clickedDate;
+                                selectedEndDate = null;
+                            } else {
+                                if (clickedDate.getTime() < selectedStartDate.getTime()) {
+                                    selectedEndDate = new Date(selectedStartDate.getTime());
+                                    selectedStartDate = clickedDate;
+                                } else {
+                                    selectedEndDate = clickedDate;
+                                }
+                            }
+
+                            renderCalendars();
+                        });
+
+                        gridElement.appendChild(cell);
+                    })(day);
+                }
+            }
+
+            function renderCalendars() {
+                updateMonthYearControls();
+                buildMonthGrid(monthGridLeft, currentLeftMonth);
+                var rightMonth = new Date(currentLeftMonth.getFullYear(), currentLeftMonth.getMonth() + 1, 1);
+                buildMonthGrid(monthGridRight, rightMonth);
+            }
+
+            function updatePeriodLabelsFromApplied() {
+                var startSpan = document.getElementById('start-calendar-period-text');
+                var endSpan = document.getElementById('end-calendar-period-text');
+                if (startSpan && appliedStartDate) {
+                    startSpan.textContent = formatHumanDateRu(appliedStartDate);
+                }
+                if (endSpan && appliedEndDate) {
+                    endSpan.textContent = formatHumanDateRu(appliedEndDate);
+                }
+            }
+
+            function openPicker() {
+                picker.style.display = 'block';
+            }
+
+            function closePicker() {
+                picker.style.display = 'none';
+            }
+
+            // Клики внутри попапа не должны закрывать его через глобальный обработчик
+            picker.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+
+            if (navPrevBtn) {
+                navPrevBtn.addEventListener('click', function () {
+                    currentLeftMonth = new Date(currentLeftMonth.getFullYear(), currentLeftMonth.getMonth() - 1, 1);
+                    renderCalendars();
+                });
+            }
+
+            if (navNextBtn) {
+                navNextBtn.addEventListener('click', function () {
+                    currentLeftMonth = new Date(currentLeftMonth.getFullYear(), currentLeftMonth.getMonth() + 1, 1);
+                    renderCalendars();
+                });
+            }
+
+            if (monthSelectLeft) {
+                monthSelectLeft.addEventListener('change', function () {
+                    var monthIndex = parseInt(monthSelectLeft.value, 10);
+                    if (isNaN(monthIndex)) {
+                        return;
+                    }
+                    currentLeftMonth = new Date(currentLeftMonth.getFullYear(), monthIndex, 1);
+                    renderCalendars();
+                });
+            }
+
+            if (yearSelectLeft) {
+                yearSelectLeft.addEventListener('change', function () {
+                    var year = parseInt(yearSelectLeft.value, 10);
+                    if (isNaN(year)) {
+                        return;
+                    }
+                    currentLeftMonth = new Date(year, currentLeftMonth.getMonth(), 1);
+                    renderCalendars();
+                });
+            }
+
+            function updateLeftMonthFromRightControls() {
+                if (!monthSelectRight || !yearSelectRight) {
+                    return;
+                }
+                var monthIndex = parseInt(monthSelectRight.value, 10);
+                var year = parseInt(yearSelectRight.value, 10);
+                if (isNaN(monthIndex) || isNaN(year)) {
+                    return;
+                }
+                var rightMonthDate = new Date(year, monthIndex, 1);
+                currentLeftMonth = new Date(rightMonthDate.getFullYear(), rightMonthDate.getMonth() - 1, 1);
+                renderCalendars();
+            }
+
+            if (monthSelectRight) {
+                monthSelectRight.addEventListener('change', function () {
+                    updateLeftMonthFromRightControls();
+                });
+            }
+
+            if (yearSelectRight) {
+                yearSelectRight.addEventListener('change', function () {
+                    updateLeftMonthFromRightControls();
+                });
+            }
+
+            presets.forEach(function (item) {
+                item.addEventListener('click', function () {
+                    var preset = item.getAttribute('data-preset');
+                    var today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    var start = new Date(today.getTime());
+                    var end = new Date(today.getTime());
+
+                    if (preset === 'today') {
+                        start = new Date(today.getTime());
+                        end = new Date(today.getTime());
+                    } else if (preset === 'yesterday') {
+                        start = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+                        end = new Date(start.getTime());
+                    } else if (preset === 'today_yesterday') {
+                        end = new Date(today.getTime());
+                        start = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+                    } else if (preset === 'last7') {
+                        start = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+                        end = new Date(today.getTime());
+                    } else if (preset === 'last14') {
+                        start = new Date(today.getTime() - 13 * 24 * 60 * 60 * 1000);
+                        end = new Date(today.getTime());
+                    } else if (preset === 'last30') {
+                        start = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
+                        end = new Date(today.getTime());
+                    } else if (preset === 'this_week') {
+                        // Неделя: Пн-Вс, текущая неделя
+                        var dayOfWeek = today.getDay(); // 0 (Вс) - 6 (Сб)
+                        var mondayOffset = (dayOfWeek + 6) % 7; // 0 для Пн, 6 для Вс
+                        start = new Date(today.getTime() - mondayOffset * 24 * 60 * 60 * 1000);
+                        end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
+                    } else if (preset === 'last_week') {
+                        var dayOfWeekLW = today.getDay();
+                        var mondayOffsetLW = (dayOfWeekLW + 6) % 7;
+                        var thisMonday = new Date(today.getTime() - mondayOffsetLW * 24 * 60 * 60 * 1000);
+                        end = new Date(thisMonday.getTime() - 24 * 60 * 60 * 1000);
+                        start = new Date(end.getTime() - 6 * 24 * 60 * 60 * 1000);
+                    } else if (preset === 'this_month') {
+                        start = new Date(today.getFullYear(), today.getMonth(), 1);
+                        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    } else if (preset === 'last_month') {
+                        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        end = new Date(today.getFullYear(), today.getMonth(), 0);
+                    }
+
+                    selectedStartDate = start;
+                    selectedEndDate = end;
+
+                    currentLeftMonth = new Date(start.getFullYear(), start.getMonth(), 1);
+                    renderCalendars();
+                });
+            });
+
+            if (applyBtn) {
+                applyBtn.addEventListener('click', function () {
+                    if (!selectedStartDate && !selectedEndDate) {
+                        closePicker();
+                        return;
+                    }
+
+                    if (selectedStartDate && !selectedEndDate) {
+                        selectedEndDate = new Date(selectedStartDate.getTime());
+                    }
+
+                    appliedStartDate = new Date(selectedStartDate.getTime());
+                    appliedEndDate = new Date(selectedEndDate.getTime());
+
+                    window.SHOW_DATE_FROM = formatISODate(appliedStartDate);
+                    window.SHOW_DATE_TO = formatISODate(appliedEndDate);
+
+                    updatePeriodLabelsFromApplied();
+                    closePicker();
+                });
+            }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function () {
+                    selectedStartDate = new Date(appliedStartDate.getTime());
+                    selectedEndDate = new Date(appliedEndDate.getTime());
+                    currentLeftMonth = new Date(appliedStartDate.getFullYear(), appliedStartDate.getMonth(), 1);
+                    renderCalendars();
+                    closePicker();
+                });
+            }
+
+            periodTrigger.addEventListener('click', function (event) {
+                event.stopPropagation();
+                if (picker.style.display === 'block') {
+                    closePicker();
+                } else {
+                    selectedStartDate = new Date(appliedStartDate.getTime());
+                    selectedEndDate = new Date(appliedEndDate.getTime());
+                    currentLeftMonth = new Date(appliedStartDate.getFullYear(), appliedStartDate.getMonth(), 1);
+                    renderCalendars();
+                    openPicker();
+                }
+            });
+
+            document.addEventListener('click', function (event) {
+                var wrapper = document.querySelector('.calendar-period-wrapper');
+                if (!wrapper) {
+                    return;
+                }
+                if (!wrapper.contains(event.target)) {
+                    closePicker();
+                }
+            });
+
+            renderCalendars();
+            updatePeriodLabelsFromApplied();
         });
     </script>
 
