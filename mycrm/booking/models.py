@@ -78,6 +78,14 @@ class Reservation(models.Model):
         verbose_name="ID специалиста",
         null=True,
     )
+    direction = models.ForeignKey(
+        "Direction",
+        on_delete=models.PROTECT,
+        help_text="Выбранное направление специалиста для этой брони",
+        verbose_name="Направление специалиста",
+        null=True,
+        blank=True,
+    )
     client = models.ForeignKey(
         "Client",
         on_delete=models.PROTECT,
