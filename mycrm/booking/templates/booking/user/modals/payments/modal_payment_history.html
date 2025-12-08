@@ -123,6 +123,7 @@
     window.isSwitchingFromHistoryToCancelPayment = window.isSwitchingFromHistoryToCancelPayment || false;
 
     window.currentPaymentHistoryList = window.currentPaymentHistoryList || [];
+    window.paymentHistoryRequestId = window.paymentHistoryRequestId || 0;
 
     function loadPaymentHistoryForCurrentBooking() {
         const bookingId = window.currentBookingId;
@@ -150,6 +151,7 @@
         }
 
         const url = PAYMENT_HISTORY_URL_TEMPLATE.replace("/0/", "/" + bookingId + "/");
+        const requestId = ++window.paymentHistoryRequestId;
 
         fetch(url, {
             method: "GET",
@@ -161,6 +163,10 @@
                 return response.json();
             })
             .then(function (data) {
+                if (requestId !== window.paymentHistoryRequestId) {
+                    return;
+                }
+
                 if (!data || !data.success) {
                     if (emptyState) {
                         emptyState.style.display = "block";
@@ -268,6 +274,9 @@
                 }
             })
             .catch(function () {
+                if (requestId !== window.paymentHistoryRequestId) {
+                    return;
+                }
                 if (emptyState) {
                     emptyState.style.display = "block";
                 }

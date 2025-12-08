@@ -235,7 +235,7 @@ class ServiceGroup(models.Model):
 
 
 class Service(models.Model):
-    """Модель для хранения информации об услугах"""
+    """Модель для хранения информации о предоставляемых услугах"""
 
     id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(
@@ -297,6 +297,33 @@ class Service(models.Model):
         return (self.name,)
 
 
+class Direction(models.Model):
+    """Модель для хранения направлений специалиста (фортепиано, бубен и т.п.)"""
+
+    id = models.IntegerField(primary_key=True, null=False, blank=False)
+    name = models.CharField(
+        help_text="Название направления (инструмент/специализация)",
+        verbose_name="Название направления",
+        max_length=100,
+        unique=True,
+        null=False,
+        blank=False,
+    )
+    active = models.BooleanField(
+        help_text="Активность направления",
+        verbose_name="Активно",
+        default=True,
+    )
+
+    class Meta:
+        db_table = "directions"
+        verbose_name = "Направление"
+        verbose_name_plural = "Направления"
+
+    def __str__(self):
+        return self.name
+
+
 class Specialist(models.Model):
     """Модель для хранения информации о специалистах"""
 
@@ -326,6 +353,13 @@ class Specialist(models.Model):
         related_name="scenarios",
         help_text="Типы бронирования доступные для специалиста",
         verbose_name="Типы бронирования",
+    )
+    directions = models.ManyToManyField(
+        "Direction",
+        related_name="specialists",
+        help_text="Направления деятельности специалиста (фортепиано, бубен и т.п.)",
+        verbose_name="Направления",
+        blank=True,
     )
 
     class Meta:
