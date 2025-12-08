@@ -370,6 +370,128 @@
                 }
             });
 
+            function getCurrentScenarioFromGlobals() {
+                if (!window.currentScenarioFilterId || !Array.isArray(window.SCENARIOS)) {
+                    return null;
+                }
+
+                var scenarioId = String(window.currentScenarioFilterId);
+                return window.SCENARIOS.find(function (s) {
+                    return String(s.pk) === scenarioId;
+                }) || null;
+            }
+
+            function parseTimeToMinutes(timeStr) {
+                if (!timeStr) {
+                    return null;
+                }
+
+                // Ожидаем формат HH:MM или HH:MM:SS
+                var parts = String(timeStr).split(':');
+                if (parts.length < 2) {
+                    return null;
+                }
+
+                var hours = parseInt(parts[0], 10);
+                var minutes = parseInt(parts[1], 10);
+
+                if (isNaN(hours) || isNaN(minutes)) {
+                    return null;
+                }
+
+                return hours * 60 + minutes;
+            }
+
+            function resetScenarioRestrictionsForAllCells() {
+                roomCells.forEach(function (cell) {
+                    if (cell.classList.contains('booked')) {
+                        return;
+                    }
+
+                    if (cell.dataset.originalOnclick && !cell.getAttribute('onclick')) {
+                        cell.setAttribute('onclick', cell.dataset.originalOnclick);
+                    }
+
+                    cell.classList.add('available');
+                    cell.style.backgroundColor = '';
+                    cell.style.cursor = '';
+                });
+            }
+
+            function applyScenarioWorkTimeRestrictions() {
+                var scenario = getCurrentScenarioFromGlobals();
+
+                // Если сценарий не выбран или нет данных по времени работы — ничего не ограничиваем
+                if (!scenario || !scenario.fields) {
+                    resetScenarioRestrictionsForAllCells();
+                    return;
+                }
+
+                var fields = scenario.fields || {};
+                var startMinutes = parseTimeToMinutes(fields.work_time_start);
+                var endMinutes = parseTimeToMinutes(fields.work_time_end);
+
+                // Если время не задано или не распарсилось — считаем, что ограничений нет
+                if (startMinutes === null || endMinutes === null) {
+                    resetScenarioRestrictionsForAllCells();
+                    return;
+                }
+
+                roomCells.forEach(function (cell) {
+                    // Забронированные ячейки не трогаем, их поведение определяется логикой броней
+                    if (cell.classList.contains('booked')) {
+                        return;
+                    }
+
+                    var dtStr = cell.getAttribute('full_datetime');
+                    if (!dtStr) {
+                        return;
+                    }
+
+                    var dtParts = dtStr.split(' ');
+                    if (dtParts.length < 2) {
+                        return;
+                    }
+
+                    var cellMinutes = parseTimeToMinutes(dtParts[1]);
+                    if (cellMinutes === null) {
+                        return;
+                    }
+
+                    var insideInterval;
+                    if (endMinutes > startMinutes) {
+                        // Обычный интервал в пределах суток, например 08:00-22:00
+                        insideInterval = cellMinutes >= startMinutes && cellMinutes < endMinutes;
+                    } else if (endMinutes < startMinutes) {
+                        // Интервал через полночь (например 22:00-02:00)
+                        insideInterval = cellMinutes >= startMinutes || cellMinutes < endMinutes;
+                    } else {
+                        // start == end — трактуем как отсутствие рабочего времени
+                        insideInterval = false;
+                    }
+
+                    if (!insideInterval) {
+                        // Вне рабочего интервала сценария — отключаем клик и красим ячейку
+                        cell.classList.remove('available');
+                        cell.style.backgroundColor = '#EBEBEC';
+                        cell.style.cursor = 'default';
+                        cell.removeAttribute('onclick');
+                    } else {
+                        // Внутри рабочего интервала — возвращаем доступность, если ячейка не занята
+                        if (cell.dataset.originalOnclick && !cell.getAttribute('onclick')) {
+                            cell.setAttribute('onclick', cell.dataset.originalOnclick);
+                        }
+                        cell.classList.add('available');
+                        if (cell.style.backgroundColor === 'rgb(235, 235, 236)' || cell.style.backgroundColor === '#EBEBEC') {
+                            cell.style.backgroundColor = '';
+                        }
+                        if (cell.style.cursor === 'default') {
+                            cell.style.cursor = '';
+                        }
+                    }
+                });
+            }
+
             function updateBookedCells() {
                 // Сначала очищаем все ячейки
                 roomCells.forEach(function (cell) {
@@ -437,6 +559,9 @@
                         firstCell.appendChild(bookingBlock);
                     }
                 });
+
+                // После отрисовки броней применяем ограничения по времени работы выбранного сценария
+                applyScenarioWorkTimeRestrictions();
             }
 
             function createBookingBlock(booking, blockWidth, firstCell) {
@@ -530,6 +655,9 @@
             setInterval(function () {
                 refreshBookingsGrid({ silent: true });
             }, 5000);
+
+            // Делаем функцию доступной глобально, чтобы можно было вызывать при смене фильтра сценария
+            window.applyScenarioWorkTimeRestrictions = applyScenarioWorkTimeRestrictions;
         });
     </script>
 
@@ -566,6 +694,9 @@
                         const value = option.getAttribute('data-value') || null;
                         if (filterType === 'scenario') {
                             window.currentScenarioFilterId = value;
+                            if (typeof window.applyScenarioWorkTimeRestrictions === 'function') {
+                                window.applyScenarioWorkTimeRestrictions();
+                            }
                         } else if (filterType === 'area') {
                             window.currentAreaFilterId = value;
                         }
@@ -587,6 +718,9 @@
                     const initialValue = firstOption.getAttribute('data-value') || null;
                     if (filterType === 'scenario') {
                         window.currentScenarioFilterId = initialValue;
+                        if (typeof window.applyScenarioWorkTimeRestrictions === 'function') {
+                            window.applyScenarioWorkTimeRestrictions();
+                        }
                     } else if (filterType === 'area') {
                         window.currentAreaFilterId = initialValue;
                     }

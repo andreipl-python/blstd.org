@@ -174,6 +174,18 @@ class Scenario(models.Model):
         null=False,
         unique=True,
     )
+    work_time_start = models.TimeField(
+        help_text="Время начала работы по сценарию",
+        verbose_name="Начало работы сценария",
+        null=True,
+        blank=True,
+    )
+    work_time_end = models.TimeField(
+        help_text="Время окончания работы по сценарию",
+        verbose_name="Окончание работы сценария",
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         db_table = "scenarios"
