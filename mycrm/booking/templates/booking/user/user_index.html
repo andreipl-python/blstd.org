@@ -803,6 +803,73 @@
                 appliedEndDate = new Date(today.getTime());
             }
 
+            function updateActivePresetFromApplied() {
+                presets.forEach(function (p) {
+                    p.classList.remove('date-range-picker__presets-item--active');
+                });
+
+                if (!appliedStartDate || !appliedEndDate) {
+                    return;
+                }
+
+                var today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                presets.forEach(function (item) {
+                    var preset = item.getAttribute('data-preset');
+                    if (!preset) {
+                        return;
+                    }
+
+                    var start = new Date(today.getTime());
+                    var end = new Date(today.getTime());
+
+                    if (preset === 'today') {
+                        start = new Date(today.getTime());
+                        end = new Date(today.getTime());
+                    } else if (preset === 'yesterday') {
+                        start = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+                        end = new Date(start.getTime());
+                    } else if (preset === 'today_yesterday') {
+                        end = new Date(today.getTime());
+                        start = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+                    } else if (preset === 'last7') {
+                        start = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+                        end = new Date(today.getTime());
+                    } else if (preset === 'last14') {
+                        start = new Date(today.getTime() - 13 * 24 * 60 * 60 * 1000);
+                        end = new Date(today.getTime());
+                    } else if (preset === 'last30') {
+                        start = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
+                        end = new Date(today.getTime());
+                    } else if (preset === 'this_week') {
+                        // Неделя: Пн-Вс, текущая неделя
+                        var dayOfWeek = today.getDay(); // 0 (Вс) - 6 (Сб)
+                        var mondayOffset = (dayOfWeek + 6) % 7; // 0 для Пн, 6 для Вс
+                        start = new Date(today.getTime() - mondayOffset * 24 * 60 * 60 * 1000);
+                        end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
+                    } else if (preset === 'last_week') {
+                        var dayOfWeekLW = today.getDay();
+                        var mondayOffsetLW = (dayOfWeekLW + 6) % 7;
+                        var thisMonday = new Date(today.getTime() - mondayOffsetLW * 24 * 60 * 60 * 1000);
+                        end = new Date(thisMonday.getTime() - 24 * 60 * 60 * 1000);
+                        start = new Date(end.getTime() - 6 * 24 * 60 * 60 * 1000);
+                    } else if (preset === 'this_month') {
+                        start = new Date(today.getFullYear(), today.getMonth(), 1);
+                        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    } else if (preset === 'last_month') {
+                        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        end = new Date(today.getFullYear(), today.getMonth(), 0);
+                    } else {
+                        return;
+                    }
+
+                    if (datesEqual(start, appliedStartDate) && datesEqual(end, appliedEndDate)) {
+                        item.classList.add('date-range-picker__presets-item--active');
+                    }
+                });
+            }
+
             var selectedStartDate = new Date(appliedStartDate.getTime());
             var selectedEndDate = new Date(appliedEndDate.getTime());
 
@@ -899,6 +966,7 @@
             }
 
             function openPicker() {
+                updateActivePresetFromApplied();
                 picker.style.display = 'block';
             }
 
@@ -1099,6 +1167,7 @@
 
             renderCalendars();
             updatePeriodLabelsFromApplied();
+            updateActivePresetFromApplied();
         });
     </script>
 
