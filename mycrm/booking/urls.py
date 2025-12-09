@@ -30,7 +30,7 @@ from .api import (
     AreaViewSet,
 )
 from .views import user_index_view, create_booking_view
-from .views.user_index import get_bookings_grid
+from .views.user_index import get_bookings_grid, get_calendar_grid
 from .views.edit_booking import (
     get_booking_details,
     edit_booking_view,
@@ -106,6 +106,11 @@ urlpatterns = [
         "booking/bookings-grid/",
         get_bookings_grid,
         name="get_bookings_grid",
+    ),
+    path(
+        "booking/calendar-grid/",
+        get_calendar_grid,
+        name="get_calendar_grid",
     ),
     path("booking/edit/<int:booking_id>/", edit_booking_view, name="edit_booking"),
     path(

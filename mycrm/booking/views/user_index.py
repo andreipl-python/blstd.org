@@ -22,6 +22,7 @@ from django.core.serializers import serialize
 from django.db.models import QuerySet, Q, Case, When, Value, IntegerField
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .menu2 import menu2_view
@@ -329,6 +330,8 @@ def get_bookings_grid(request):
 
     date_from_str = request.GET.get("date_from")
     date_to_str = request.GET.get("date_to")
+    area_id = request.GET.get("area_id")
+    scenario_id = request.GET.get("scenario_id")
 
     if not date_from_str or not date_to_str:
         return JsonResponse(
@@ -369,11 +372,139 @@ def get_bookings_grid(request):
         Q(datetimestart__lte=end_dt) & Q(datetimeend__gte=start_dt)
     ).exclude(status_id=4)
 
+    # Дополнительная фильтрация по помещению и сценарию, если переданы
+    area_id_int = None
+    if area_id:
+        try:
+            area_id_int = int(area_id)
+        except (TypeError, ValueError):
+            area_id_int = None
+        if area_id_int is not None:
+            bookings_qs = bookings_qs.filter(room__area_id=area_id_int)
+
+    scenario_id_int = None
+    if scenario_id:
+        try:
+            scenario_id_int = int(scenario_id)
+        except (TypeError, ValueError):
+            scenario_id_int = None
+        if scenario_id_int is not None:
+            bookings_qs = bookings_qs.filter(scenario_id=scenario_id_int)
+
     bookings_in_range = add_blocks_datetime_range_and_room_name(bookings_qs, 15)
 
     return JsonResponse(
         {
             "success": True,
+            "bookings_in_range": bookings_in_range,
+            "date_from": date_from_str,
+            "date_to": date_to_str,
+        }
+    )
+
+
+@login_required(login_url="login")
+def get_calendar_grid(request):
+    """Возвращает HTML календарной сетки и список броней для заданного диапазона дат и фильтров.
+
+    Ожидает параметры GET:
+      - date_from (YYYY-MM-DD)
+      - date_to   (YYYY-MM-DD)
+      - area_id   (опционально)
+      - scenario_id (опционально)
+    """
+
+    date_from_str = request.GET.get("date_from")
+    date_to_str = request.GET.get("date_to")
+    area_id = request.GET.get("area_id")
+    scenario_id = request.GET.get("scenario_id")
+
+    if not date_from_str or not date_to_str:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Параметры date_from и date_to обязательны",
+            },
+            status=400,
+        )
+
+    try:
+        start_date = timezone.datetime.strptime(date_from_str, "%Y-%m-%d").date()
+        end_date = timezone.datetime.strptime(date_to_str, "%Y-%m-%d").date()
+    except ValueError:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Некорректный формат даты, ожидается YYYY-MM-DD",
+            },
+            status=400,
+        )
+
+    if start_date > end_date:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "date_from не может быть больше date_to",
+            },
+            status=400,
+        )
+
+    # Даты в виде aware-datetime для выборки броней
+    start_dt = timezone.datetime.combine(start_date, timezone.datetime.min.time())
+    end_dt = timezone.datetime.combine(end_date, timezone.datetime.max.time())
+    start_dt = timezone.make_aware(start_dt)
+    end_dt = timezone.make_aware(end_dt)
+
+    # Те же вспомогательные структуры, что и на основной странице
+    days_of_month = generate_days_of_month("period", date_from_str, date_to_str)
+    time_blocks = generate_time_blocks("00:00", 1, 24)
+
+    rooms_qs = Room.objects.prefetch_related("scenario").all()
+
+    area_id_int = None
+    if area_id:
+        try:
+            area_id_int = int(area_id)
+        except (TypeError, ValueError):
+            area_id_int = None
+        if area_id_int is not None:
+            rooms_qs = rooms_qs.filter(area_id=area_id_int)
+
+    rooms = list(rooms_qs)
+
+    bookings_qs = Reservation.objects.filter(
+        Q(datetimestart__lte=end_dt) & Q(datetimeend__gte=start_dt)
+    ).exclude(status_id=4)
+
+    if area_id_int is not None:
+        bookings_qs = bookings_qs.filter(room__area_id=area_id_int)
+
+    scenario_id_int = None
+    if scenario_id:
+        try:
+            scenario_id_int = int(scenario_id)
+        except (TypeError, ValueError):
+            scenario_id_int = None
+        if scenario_id_int is not None:
+            bookings_qs = bookings_qs.filter(scenario_id=scenario_id_int)
+
+    bookings_in_range = add_blocks_datetime_range_and_room_name(bookings_qs, 15)
+
+    html = render_to_string(
+        "booking/user/_calendar_grid.html",
+        {
+            "days_of_month": days_of_month,
+            "time_blocks": time_blocks,
+            "rooms": rooms,
+            "time_cells": range(96),
+        },
+        request=request,
+    )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "html": html,
             "bookings_in_range": bookings_in_range,
             "date_from": date_from_str,
             "date_to": date_to_str,

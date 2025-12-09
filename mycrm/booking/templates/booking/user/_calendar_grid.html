@@ -1,0 +1,175 @@
+{% load static %}
+{% load custom_filters %}
+
+{% for day in days_of_month %}
+<div class="row">
+    <div class="col-md-2" id="day-header" style="white-space: nowrap;">
+        <h3>{{ day.date|date:"d E" }} / {{ day.date|date:"l"|lower }}</h3>
+    </div>
+    <div class="col-md-2" id="hide-specialists" style="white-space: nowrap;">
+        <span>Скрыть специалистов</span>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 15L12 9L6 15" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+        </svg>
+    </div>
+</div>
+<!-- Блок занятости администраторов и преподавателей -->
+<div class="row mt-4 align-items-start" ;>
+    <h6 class="d-flex align-items-center gap-3 w-100">
+        Администраторы
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 15L12 9L6 15" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+        </svg>
+    </h6>
+
+    <div class="d-flex">
+        <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+            <img src="{% static 'image/image.png' %}" alt="Описание картинки" width="32" height="32">
+        </div>
+        <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+            <span class="fw-semibold" style="font-size: 14px;">Алия Петрова</span>
+            <div class="d-flex w-100 specialist-time">
+                {% for i in time_cells %}
+                <div class="time-cell flex-fill"></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex">
+        <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+            <img src="{% static 'image/image2.png' %}" alt="Описание картинки" width="32" height="32">
+        </div>
+        <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+            <span class="fw-semibold" style="font-size: 14px;">Каныш Сидоренко</span>
+            <div class="d-flex w-100 specialist-time">
+                {% for i in time_cells %}
+                <div class="time-cell flex-fill"></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex">
+        <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+            <img src="{% static 'image/default.png' %}" alt="Описание картинки" width="32" height="32">
+        </div>
+        <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+            <span class="fw-semibold" style="font-size: 14px;">Мукатай Смирнов</span>
+            <div class="d-flex w-100 specialist-time">
+                {% for i in time_cells %}
+                <div class="time-cell flex-fill"></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-2 align-items-start" ;>
+    <h6 class="d-flex align-items-center gap-3 w-100">
+        Преподаватели
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 15L12 9L6 15" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+        </svg>
+    </h6>
+
+    <div class="d-flex">
+        <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+            <img src="{% static 'image/image3.png' %}" alt="Описание картинки" width="32" height="32">
+        </div>
+        <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-semibold" style="font-size: 14px;">Ангелина Власова</span>
+                <span>•</span>
+                <span>Вокал / Фортепиано</span>
+            </div>
+            <div class="d-flex w-100 specialist-time">
+                {% for i in time_cells %}
+                <div class="time-cell flex-fill"></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex">
+        <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+            <img src="{% static 'image/image4.png' %}" alt="Описание картинки" width="32" height="32">
+        </div>
+        <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-semibold" style="font-size: 14px;">Сергей Золотарёв</span>
+                <span>•</span>
+                <span>Вокал / Гитара</span>
+            </div>
+            <div class="d-flex w-100 specialist-time">
+                {% for i in time_cells %}
+                <div class="time-cell flex-fill"></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex">
+        <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+            <img src="{% static 'image/image5.png' %}" alt="Описание картинки" width="32" height="32">
+        </div>
+        <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-semibold" style="font-size: 14px;">Виолетта Бочарова</span>
+                <span>•</span>
+                <span>Фортепиано</span>
+            </div>
+            <div class="d-flex w-100 specialist-time">
+                {% for i in time_cells %}
+                <div class="time-cell flex-fill"></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+<!--Таблица броней-->
+<table id="table-{{ forloop.counter }}" class="table table-bordered">
+    <thead>
+        <tr>
+            <th></th>
+            {% for block in time_blocks %}
+            <th colspan="4">
+                {{ block.time }}
+            </th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for room in rooms %}
+        <tr id="row-{{ forloop.counter }}">
+            <td title="{{ room.name }}">
+                {{ room.name }}
+            </td>
+
+            {% for block in time_blocks %}
+            {% for i in "1234" %}
+            {% with block_time=block.time|time_add:forloop.counter0|str_to_time %}
+            {% with full_datetime=day.date|combine_date_time:block_time %}
+
+            <td class="highlight-cell available" full_datetime="{{ full_datetime|date:'Y-m-d H:i:s' }}"
+                room_name="{{ room.name }}" room_id="{{ room.id }}"
+                title="{{ block.time|time_add:forloop.counter0 }}" onclick="openCreateModal(
+                    `{{ day.date|date:'d E Y' }}`,
+                    `{{ block.time|time_add:forloop.counter0 }}`,
+                    `{{ room.name }}`,
+                    '{{ room.id }}',
+                    this
+                    )">
+            </td>
+            {% endwith %}
+            {% endwith %}
+            {% endfor %}
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endfor %}
