@@ -164,15 +164,34 @@ def user_index_view(request):
     )
     end_date = timezone.make_aware(end_date)
 
+    # Помещения и сценарии для фильтров
+    areas = Area.objects.prefetch_related("scenario").all()
+    scenarios = Scenario.objects.all()
+
+    default_area = areas[0] if areas else None
+    default_scenario = scenarios[0] if scenarios else None
+
     # Получаем все брони без фильтрации по датам для проверки
     all_bookings = Reservation.objects.exclude(status_id=4)
 
-    # Применяем фильтр
-    bookings_in_range = Reservation.objects.filter(
+    # Брони в выбранном диапазоне с учётом дефолтного помещения и сценария
+    bookings_in_range_qs = Reservation.objects.filter(
         Q(datetimestart__lte=end_date) & Q(datetimeend__gte=start_date)
     ).exclude(status_id=4)
 
-    bookings_in_range = add_blocks_datetime_range_and_room_name(bookings_in_range, 15)
+    if default_area is not None:
+        bookings_in_range_qs = bookings_in_range_qs.filter(
+            room__area_id=default_area.id
+        )
+
+    if default_scenario is not None:
+        bookings_in_range_qs = bookings_in_range_qs.filter(
+            scenario_id=default_scenario.id
+        )
+
+    bookings_in_range = add_blocks_datetime_range_and_room_name(
+        bookings_in_range_qs, 15
+    )
     bookings_in_range_json = json.dumps(bookings_in_range)
 
     clients = Client.objects.prefetch_related(
@@ -231,8 +250,13 @@ def user_index_view(request):
     specialists = Specialist.objects.prefetch_related("scenario").all()
     specialists_json = serialize("json", specialists, use_natural_primary_keys=True)
 
-    rooms = Room.objects.prefetch_related("scenario").all()
-    rooms_json = serialize("json", rooms, use_natural_primary_keys=True)
+    rooms_all = Room.objects.prefetch_related("scenario").all()
+    rooms_json = serialize("json", rooms_all, use_natural_primary_keys=True)
+
+    if default_area is not None:
+        rooms = rooms_all.filter(area_id=default_area.id)
+    else:
+        rooms = rooms_all
 
     specialist_colors = {
         color.specialist_id: {
@@ -251,7 +275,6 @@ def user_index_view(request):
 
     specialist_colors_json = json.dumps(specialist_colors)
 
-    scenarios = Scenario.objects.all()
     scenarios_json = serialize("json", scenarios, use_natural_primary_keys=True)
 
     tariff_units = TariffUnit.objects.all()
@@ -271,12 +294,7 @@ def user_index_view(request):
     days_of_month = days_of_month
     rooms = rooms
 
-    print("==== DEBUG user_index_view ====")
-
-    areas = Area.objects.prefetch_related("scenario").all()
     areas_json = serialize("json", areas, use_natural_primary_keys=True)
-    scenarios = Scenario.objects.all()
-    scenarios_json = serialize("json", scenarios, use_natural_primary_keys=True)
 
     version_value = ""
     version_file = Path(settings.BASE_DIR).parent / "VERSION"

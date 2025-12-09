@@ -14,6 +14,12 @@
 
 <body>
     <div id="app-modal-backdrop"></div>
+    <div id="calendar-loading-overlay">
+        <div class="calendar-loading-content">
+            <div class="calendar-loading-spinner"></div>
+            <div class="calendar-loading-text">Загрузка календаря...</div>
+        </div>
+    </div>
 
     <script>
         window.ROOMS = JSON.parse('{{ rooms_json|escapejs }}');
@@ -587,9 +593,33 @@
                 }
             }
 
+            function showCalendarLoadingOverlay() {
+                var overlay = document.getElementById('calendar-loading-overlay');
+                if (overlay) {
+                    overlay.classList.add('is-visible');
+                }
+            }
+
+            function hideCalendarLoadingOverlay() {
+                var overlay = document.getElementById('calendar-loading-overlay');
+                if (overlay) {
+                    overlay.classList.remove('is-visible');
+                }
+            }
+
+            async function reloadCalendarGridForAreaChange() {
+                showCalendarLoadingOverlay();
+                try {
+                    await reloadCalendarGridForCurrentState();
+                } finally {
+                    hideCalendarLoadingOverlay();
+                }
+            }
+
             // Экспортируем функции в глобальное пространство имён, чтобы вызывать из других скриптов
             window.refreshBookingsGrid = refreshBookingsGrid;
             window.reloadCalendarGridForCurrentState = reloadCalendarGridForCurrentState;
+            window.reloadCalendarGridForAreaChange = reloadCalendarGridForAreaChange;
 
             setInterval(function () {
                 refreshBookingsGrid({ silent: true });
@@ -945,6 +975,12 @@
 
             presets.forEach(function (item) {
                 item.addEventListener('click', function () {
+                    presets.forEach(function (p) {
+                        p.classList.remove('date-range-picker__presets-item--active');
+                    });
+
+                    item.classList.add('date-range-picker__presets-item--active');
+
                     var preset = item.getAttribute('data-preset');
                     var today = new Date();
                     today.setHours(0, 0, 0, 0);
@@ -1018,7 +1054,9 @@
                     updatePeriodLabelsFromApplied();
                     closePicker();
 
-                    if (typeof window.reloadCalendarGridForCurrentState === 'function') {
+                    if (typeof window.reloadCalendarGridForAreaChange === 'function') {
+                        window.reloadCalendarGridForAreaChange();
+                    } else if (typeof window.reloadCalendarGridForCurrentState === 'function') {
                         window.reloadCalendarGridForCurrentState();
                     } else if (typeof window.refreshBookingsGrid === 'function') {
                         window.refreshBookingsGrid();
@@ -1105,7 +1143,9 @@
                             }
                         } else if (filterType === 'area') {
                             window.currentAreaFilterId = value;
-                            if (typeof window.reloadCalendarGridForCurrentState === 'function') {
+                            if (typeof window.reloadCalendarGridForAreaChange === 'function') {
+                                window.reloadCalendarGridForAreaChange();
+                            } else if (typeof window.reloadCalendarGridForCurrentState === 'function') {
                                 window.reloadCalendarGridForCurrentState();
                             } else if (typeof window.refreshBookingsGrid === 'function') {
                                 window.refreshBookingsGrid();
@@ -1137,11 +1177,6 @@
                         }
                     } else if (filterType === 'area') {
                         window.currentAreaFilterId = initialValue;
-                        if (typeof window.reloadCalendarGridForCurrentState === 'function') {
-                            window.reloadCalendarGridForCurrentState();
-                        } else if (typeof window.refreshBookingsGrid === 'function') {
-                            window.refreshBookingsGrid();
-                        }
                     }
                 }
             });
