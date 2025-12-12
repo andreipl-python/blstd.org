@@ -282,7 +282,7 @@
                     <!--Кнопки Добавить и Отмена-->
                     <div class="row mb-3">
                         <div class="col-md-3">
-                            <button type="button" class="button-primary">Добавить</button>
+                            <button type="button" class="button-primary" id="createBookingSubmitBtn">Добавить</button>
                         </div>
                         <div class="col-md-3">
                             <button type="button" class="button-sec" data-bs-dismiss="modal">Отмена</button>
@@ -383,13 +383,17 @@
                     }
                 }
 
-                // Длительность: 1..4 периода от минимальной длительности сценария
+                // =====================================================
+                // Длительность: динамический расчёт доступных периодов
+                // Ограничения: work_time_end сценария ИЛИ следующая бронь
+                // =====================================================
+
+                // Получить минимальную длительность периода из текущего сценария
                 function getScenarioMinDurationMinutes() {
                     var fallback = 60;
                     if (!window.currentScenarioFilterId || !Array.isArray(window.SCENARIOS)) {
                         return fallback;
                     }
-
                     var scenarioId = String(window.currentScenarioFilterId);
                     var scenarioObj = window.SCENARIOS.find(function (s) { return String(s.pk) === scenarioId; });
                     var raw = scenarioObj && scenarioObj.fields ? scenarioObj.fields.min_booking_duration_minutes : null;
@@ -397,74 +401,207 @@
                     return (!isNaN(val) && val > 0) ? val : fallback;
                 }
 
+                // Получить work_time_end сценария в минутах от полуночи
+                function getScenarioWorkTimeEndMinutes() {
+                    if (!window.currentScenarioFilterId || !Array.isArray(window.SCENARIOS)) {
+                        return null;
+                    }
+                    var scenarioId = String(window.currentScenarioFilterId);
+                    var scenarioObj = window.SCENARIOS.find(function (s) { return String(s.pk) === scenarioId; });
+                    if (!scenarioObj || !scenarioObj.fields || !scenarioObj.fields.work_time_end) {
+                        return null;
+                    }
+                    var parts = String(scenarioObj.fields.work_time_end).split(':');
+                    if (parts.length < 2) return null;
+                    var h = parseInt(parts[0], 10);
+                    var m = parseInt(parts[1], 10);
+                    if (isNaN(h) || isNaN(m)) return null;
+                    return h * 60 + m;
+                }
+
+                // Преобразовать datetime строку "YYYY-MM-DD HH:MM:SS" в объект Date
+                function parseDatetimeStr(dtStr) {
+                    if (!dtStr) return null;
+                    var parts = dtStr.split(' ');
+                    if (parts.length < 2) return null;
+                    var dateParts = parts[0].split('-');
+                    var timeParts = parts[1].split(':');
+                    if (dateParts.length < 3 || timeParts.length < 2) return null;
+                    return new Date(
+                        parseInt(dateParts[0], 10),
+                        parseInt(dateParts[1], 10) - 1,
+                        parseInt(dateParts[2], 10),
+                        parseInt(timeParts[0], 10),
+                        parseInt(timeParts[1], 10),
+                        timeParts[2] ? parseInt(timeParts[2], 10) : 0
+                    );
+                }
+
+                // Найти время начала следующей брони в той же комнате после заданного datetime
+                function getNextBookingStartMinutes(currentRoomId, startDatetime) {
+                    if (!window.bookingsInRange || !Array.isArray(window.bookingsInRange)) {
+                        // Попробуем глобальную переменную без window
+                        if (typeof bookingsInRange === 'undefined' || !Array.isArray(bookingsInRange)) {
+                            return null;
+                        }
+                    }
+                    var bookings = window.bookingsInRange || bookingsInRange;
+                    var startDate = parseDatetimeStr(startDatetime);
+                    if (!startDate) return null;
+
+                    var nextStart = null;
+                    bookings.forEach(function (booking) {
+                        // Проверяем совпадение комнаты
+                        if (String(booking.idroom) !== String(currentRoomId)) return;
+                        // Ищем первый блок брони, который начинается после нашего времени
+                        if (!booking.blocks_datetime_range || !booking.blocks_datetime_range.length) return;
+                        var bookingFirstBlock = booking.blocks_datetime_range[0];
+                        var bookingStart = parseDatetimeStr(bookingFirstBlock);
+                        if (!bookingStart) return;
+                        // Бронь должна начинаться строго после нашего времени начала
+                        if (bookingStart > startDate) {
+                            if (nextStart === null || bookingStart < nextStart) {
+                                nextStart = bookingStart;
+                            }
+                        }
+                    });
+
+                    if (!nextStart) return null;
+                    // Возвращаем разницу в минутах от startDate до nextStart
+                    return Math.floor((nextStart - startDate) / 60000);
+                }
+
+                // Форматирование длительности для отображения
                 function formatDurationHuman(totalMinutes) {
                     var m = parseInt(totalMinutes, 10);
-                    if (isNaN(m) || m <= 0) {
-                        return '';
-                    }
-
+                    if (isNaN(m) || m <= 0) return '';
                     var h = Math.floor(m / 60);
                     var mm = m % 60;
-                    if (h > 0 && mm > 0) {
-                        return h + ' ч ' + mm + ' мин';
-                    }
-                    if (h > 0) {
-                        return h + ' ч';
-                    }
+                    if (h > 0 && mm > 0) return h + ' ч ' + mm + ' мин';
+                    if (h > 0) return h + ' ч';
                     return mm + ' мин';
                 }
 
+                // Форматирование длительности в HH:MM для отправки на сервер
                 function formatDurationHHMM(totalMinutes) {
                     var m = parseInt(totalMinutes, 10);
-                    if (isNaN(m) || m < 0) {
-                        return '';
-                    }
-
+                    if (isNaN(m) || m < 0) return '';
                     var h = Math.floor(m / 60);
                     var mm = m % 60;
-                    var hhStr = String(h).padStart(2, '0');
-                    var mmStr = String(mm).padStart(2, '0');
-                    return hhStr + ':' + mmStr;
+                    return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
                 }
 
+                // Склонение слова "период"
                 function formatPeriodsLabel(n) {
                     var k = parseInt(n, 10);
-                    if (k === 1) {
-                        return 'период';
-                    }
-                    return 'периода';
+                    if (k === 1) return 'период';
+                    if (k >= 2 && k <= 4) return 'периода';
+                    return 'периодов';
                 }
 
+                // Вычисляем доступные минуты до ограничения
                 var minMinutes = getScenarioMinDurationMinutes();
+                var workTimeEndMinutes = getScenarioWorkTimeEndMinutes();
+                var currentRoomId = roomIdField ? roomIdField.value : roomId;
+
+                // Время начала в минутах от полуночи
+                var startTimeMinutes = (function () {
+                    var parts = timeHm.split(':');
+                    if (parts.length < 2) return 0;
+                    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+                })();
+
+                // Ограничение 1: до конца рабочего времени сценария
+                var minutesToWorkEnd = null;
+                if (workTimeEndMinutes !== null) {
+                    minutesToWorkEnd = workTimeEndMinutes - startTimeMinutes;
+                    if (minutesToWorkEnd <= 0) minutesToWorkEnd = 0;
+                }
+
+                // Ограничение 2: до следующей брони
+                var minutesToNextBooking = getNextBookingStartMinutes(currentRoomId, fullDatetimeStr);
+
+                // Итоговое ограничение = минимум из двух (если оба заданы)
+                var availableMinutes = null;
+                if (minutesToWorkEnd !== null && minutesToNextBooking !== null) {
+                    availableMinutes = Math.min(minutesToWorkEnd, minutesToNextBooking);
+                } else if (minutesToWorkEnd !== null) {
+                    availableMinutes = minutesToWorkEnd;
+                } else if (minutesToNextBooking !== null) {
+                    availableMinutes = minutesToNextBooking;
+                } else {
+                    // Нет ограничений — ставим большое число (например, 24 часа)
+                    availableMinutes = 24 * 60;
+                }
+
+                // Максимальное количество периодов
+                var maxPeriods = Math.floor(availableMinutes / minMinutes);
+
+                // Кнопка "Добавить"
+                var submitBtn = document.getElementById('createBookingSubmitBtn');
+
                 var durationSelect = document.getElementById('duration');
                 if (durationSelect) {
                     var durationSelectedSpan = durationSelect.querySelector('.selected');
-                    var durationOptions = durationSelect.querySelectorAll('ul.options li');
+                    var durationOptionsUl = durationSelect.querySelector('ul.options');
 
-                    Array.from(durationOptions).forEach(function (li) {
-                        li.classList.remove('selected');
-                    });
+                    // Очищаем существующие опции
+                    if (durationOptionsUl) {
+                        durationOptionsUl.innerHTML = '';
+                    }
 
-                    for (var i = 0; i < durationOptions.length; i++) {
-                        if (i < 4) {
-                            var periodsCount = i + 1;
-                            var total = minMinutes * periodsCount;
+                    if (maxPeriods <= 0) {
+                        // Нет доступных периодов — показываем placeholder
+                        if (durationSelectedSpan) {
+                            durationSelectedSpan.textContent = 'Нет доступных периодов';
+                        }
+                        durationSelect.classList.add('disabled');
+                        // Делаем кнопку "Добавить" неактивной
+                        if (submitBtn) {
+                            submitBtn.disabled = true;
+                        }
+                    } else {
+                        durationSelect.classList.remove('disabled');
+                        // Кнопка "Добавить" активна
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                        }
+
+                        // Генерируем опции для 1..maxPeriods
+                        for (var i = 1; i <= maxPeriods; i++) {
+                            var total = minMinutes * i;
                             var human = formatDurationHuman(total);
                             var value = formatDurationHHMM(total);
-                            var label = periodsCount + ' ' + formatPeriodsLabel(periodsCount) + ' — ' + human;
+                            var label = i + ' ' + formatPeriodsLabel(i) + ' — ' + human;
 
-                            durationOptions[i].style.display = '';
-                            durationOptions[i].textContent = label;
-                            durationOptions[i].setAttribute('data-value', value);
+                            var li = document.createElement('li');
+                            li.textContent = label;
+                            li.setAttribute('data-value', value);
 
-                            if (i === 0) {
-                                durationOptions[i].classList.add('selected');
+                            if (i === 1) {
+                                li.classList.add('selected');
                                 if (durationSelectedSpan) {
                                     durationSelectedSpan.textContent = label;
                                 }
                             }
-                        } else {
-                            durationOptions[i].style.display = 'none';
+
+                            // Обработчик клика для выбора опции
+                            (function (liEl, liLabel) {
+                                liEl.addEventListener('click', function (e) {
+                                    e.stopPropagation();
+                                    // Снимаем выделение со всех опций
+                                    durationOptionsUl.querySelectorAll('li').forEach(function (opt) {
+                                        opt.classList.remove('selected');
+                                    });
+                                    liEl.classList.add('selected');
+                                    if (durationSelectedSpan) {
+                                        durationSelectedSpan.textContent = liLabel;
+                                    }
+                                    durationSelect.classList.remove('open');
+                                });
+                            })(li, label);
+
+                            durationOptionsUl.appendChild(li);
                         }
                     }
                 }

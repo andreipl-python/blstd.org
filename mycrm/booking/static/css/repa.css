@@ -718,6 +718,60 @@
     opacity: 0.7;
   }
 
+  /* Кнопка "Добавить" в модалке создания брони — те же состояния, что и кнопка "Оплатить" */
+  #createBookingSubmitBtn {
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+  }
+
+  #createBookingSubmitBtn:disabled {
+    background-color: #C9B5FF;
+    border-color: #C9B5FF;
+    color: #F5F2FF;
+    opacity: 0.7;
+    cursor: default;
+  }
+
+  /* Прокрутка для списка длительности (>4 элементов) */
+  #duration ul.options {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  /* Стилизованный scrollbar для списка длительности */
+  #duration ul.options::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #duration ul.options::-webkit-scrollbar-track {
+    background: #F5F2FF;
+    border-radius: 3px;
+  }
+
+  #duration ul.options::-webkit-scrollbar-thumb {
+    background: #C9B5FF;
+    border-radius: 3px;
+  }
+
+  #duration ul.options::-webkit-scrollbar-thumb:hover {
+    background: #7A52FF;
+  }
+
+  /* Firefox scrollbar */
+  #duration ul.options {
+    scrollbar-width: thin;
+    scrollbar-color: #C9B5FF #F5F2FF;
+  }
+
+  /* Стиль для disabled селекта длительности */
+  #duration.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  #duration.disabled .selected {
+    color: #818EA2;
+  }
+
   .button-third {
     background: transparent;
     border: none;
