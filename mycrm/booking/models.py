@@ -187,6 +187,12 @@ class Scenario(models.Model):
         blank=True,
     )
 
+    min_booking_duration_minutes = models.PositiveIntegerField(
+        help_text="Минимальная длительность брони по сценарию (в минутах)",
+        verbose_name="Минимальная длительность брони (мин)",
+        default=60,
+    )
+
     class Meta:
         db_table = "scenarios"
         verbose_name = "Сценарий"

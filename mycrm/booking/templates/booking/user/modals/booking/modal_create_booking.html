@@ -326,12 +326,152 @@
         var roomIdField = document.getElementById('roomIdField');
         var fullDatetimeField = document.getElementById('fullDatetimeField');
 
+        var fullDatetimeStr = (cell && typeof cell.getAttribute === 'function')
+            ? (cell.getAttribute('full_datetime') || '')
+            : '';
+
         if (dateField) dateField.value = date;
         if (timeField) timeField.value = time;
         if (roomNameField) roomNameField.value = roomName;
         if (roomIdField) roomIdField.value = roomId;
-        if (fullDatetimeField && cell) {
-            fullDatetimeField.value = cell.getAttribute('full_datetime') || '';
+
+        if (fullDatetimeField) {
+            fullDatetimeField.value = fullDatetimeStr;
+        }
+
+        // Видимые поля
+        if (fullDatetimeStr) {
+            var dtParts = fullDatetimeStr.split(' ');
+            if (dtParts.length >= 2) {
+                var dateIso = dtParts[0];
+                var timeRaw = dtParts[1];
+                var timeParts = String(timeRaw).split(':');
+                var timeHm = timeParts.length >= 2 ? (timeParts[0] + ':' + timeParts[1]) : String(timeRaw);
+
+                var modalDateInput = document.getElementById('modal-create-date');
+                if (modalDateInput) {
+                    modalDateInput.value = dateIso;
+                }
+
+                var startTimeSelect = document.getElementById('start-time');
+                if (startTimeSelect) {
+                    var selectedSpan = startTimeSelect.querySelector('.selected');
+                    var optionsUl = startTimeSelect.querySelector('ul.options');
+                    if (optionsUl) {
+                        // Временно оставляем только одно значение: время нажатой ячейки
+                        optionsUl.innerHTML = '';
+                        var li = document.createElement('li');
+                        li.className = 'selected';
+                        li.textContent = timeHm;
+                        li.setAttribute('data-value', timeHm);
+
+                        // Чтобы селект вёл себя предсказуемо даже с одним пунктом
+                        li.addEventListener('mousedown', function (e) {
+                            e.stopPropagation();
+                        });
+                        li.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            if (selectedSpan) {
+                                selectedSpan.textContent = timeHm;
+                            }
+                            startTimeSelect.classList.remove('open');
+                        });
+                        optionsUl.appendChild(li);
+                    }
+                    if (selectedSpan) {
+                        selectedSpan.textContent = timeHm;
+                    }
+                }
+
+                // Длительность: 1..4 периода от минимальной длительности сценария
+                function getScenarioMinDurationMinutes() {
+                    var fallback = 60;
+                    if (!window.currentScenarioFilterId || !Array.isArray(window.SCENARIOS)) {
+                        return fallback;
+                    }
+
+                    var scenarioId = String(window.currentScenarioFilterId);
+                    var scenarioObj = window.SCENARIOS.find(function (s) { return String(s.pk) === scenarioId; });
+                    var raw = scenarioObj && scenarioObj.fields ? scenarioObj.fields.min_booking_duration_minutes : null;
+                    var val = parseInt(raw, 10);
+                    return (!isNaN(val) && val > 0) ? val : fallback;
+                }
+
+                function formatDurationHuman(totalMinutes) {
+                    var m = parseInt(totalMinutes, 10);
+                    if (isNaN(m) || m <= 0) {
+                        return '';
+                    }
+
+                    var h = Math.floor(m / 60);
+                    var mm = m % 60;
+                    if (h > 0 && mm > 0) {
+                        return h + ' ч ' + mm + ' мин';
+                    }
+                    if (h > 0) {
+                        return h + ' ч';
+                    }
+                    return mm + ' мин';
+                }
+
+                function formatDurationHHMM(totalMinutes) {
+                    var m = parseInt(totalMinutes, 10);
+                    if (isNaN(m) || m < 0) {
+                        return '';
+                    }
+
+                    var h = Math.floor(m / 60);
+                    var mm = m % 60;
+                    var hhStr = String(h).padStart(2, '0');
+                    var mmStr = String(mm).padStart(2, '0');
+                    return hhStr + ':' + mmStr;
+                }
+
+                function formatPeriodsLabel(n) {
+                    var k = parseInt(n, 10);
+                    if (k === 1) {
+                        return 'период';
+                    }
+                    return 'периода';
+                }
+
+                var minMinutes = getScenarioMinDurationMinutes();
+                var durationSelect = document.getElementById('duration');
+                if (durationSelect) {
+                    var durationSelectedSpan = durationSelect.querySelector('.selected');
+                    var durationOptions = durationSelect.querySelectorAll('ul.options li');
+
+                    Array.from(durationOptions).forEach(function (li) {
+                        li.classList.remove('selected');
+                    });
+
+                    for (var i = 0; i < durationOptions.length; i++) {
+                        if (i < 4) {
+                            var periodsCount = i + 1;
+                            var total = minMinutes * periodsCount;
+                            var human = formatDurationHuman(total);
+                            var value = formatDurationHHMM(total);
+                            var label = periodsCount + ' ' + formatPeriodsLabel(periodsCount) + ' — ' + human;
+
+                            durationOptions[i].style.display = '';
+                            durationOptions[i].textContent = label;
+                            durationOptions[i].setAttribute('data-value', value);
+
+                            if (i === 0) {
+                                durationOptions[i].classList.add('selected');
+                                if (durationSelectedSpan) {
+                                    durationSelectedSpan.textContent = label;
+                                }
+                            }
+                        } else {
+                            durationOptions[i].style.display = 'none';
+                        }
+                    }
+                }
+
+                if (dateField) dateField.value = dateIso;
+                if (timeField) timeField.value = timeHm;
+            }
         }
     }
 
