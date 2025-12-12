@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta
-from django.db import models
-
-import dateparser
 from django.core.exceptions import ValidationError
+from django.db.models import Max
 from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -15,14 +13,6 @@ from ..models import (
     ReservationStatusType,
     ClientGroup,
 )
-
-
-def parse_datetime(date: str, time: str) -> datetime:
-    """Функция для парсинга даты и времени в объект datetime"""
-    date_obj = dateparser.parse(date, languages=["ru"])
-    time_obj = datetime.strptime(time, "%H:%M")
-    naive_datetime = datetime.combine(date_obj.date(), time_obj.time())
-    return naive_datetime
 
 
 def check_room_availability(
@@ -52,9 +42,6 @@ def check_room_availability(
             continue
 
         if booking_start < end_datetime and booking_end > start_datetime:
-            print(f"Конфликт с бронью: {booking.id}")
-            print(f"Существующая бронь: {booking_start} - {booking_end}")
-            print(f"Новая бронь: {start_datetime} - {end_datetime}")
             raise ValidationError("На это время уже есть бронирование")
 
     return True
@@ -76,16 +63,12 @@ def check_specialist_availability(
     return True
 
 
-import random
-
-
 @csrf_exempt
 def create_booking_view(request):
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Неверный метод запроса"})
 
     try:
-        print("Request POST data:", request.POST)
         service_types = request.POST.getlist("serviceType")
         booking_type = int(request.POST.get("bookingType"))
         specialist_id = request.POST.get("specialist")
@@ -99,8 +82,6 @@ def create_booking_view(request):
         full_datetime = request.POST.get("full_datetime")
         total_cost = request.POST.get("total_cost")
         total_cost = float(total_cost) if total_cost else None
-
-        print("Received full_datetime:", full_datetime)
 
         if not full_datetime:
             return JsonResponse(
@@ -116,7 +97,7 @@ def create_booking_view(request):
         # В будущем здесь будет запрос к внешнему API, который вернёт id для бронирования.
         # Сейчас просто генерируем id для новой брони (максимальный + 1 или случайный).
         def get_external_booking_id():
-            max_id = Reservation.objects.aggregate(max_id=models.Max("id"))["max_id"]
+            max_id = Reservation.objects.aggregate(max_id=Max("id"))["max_id"]
             return (max_id or 0) + 1
             # Альтернатива: return random.randint(100000, 999999)
 
@@ -139,7 +120,6 @@ def create_booking_view(request):
             return JsonResponse({"success": False, "error": "Группа не найдена"})
 
         start_datetime = datetime.strptime(full_datetime, "%Y-%m-%d %H:%M:%S")
-        start_datetime = start_datetime
         duration_hours, duration_minutes = map(int, booking_duration.split(":"))
         end_datetime = start_datetime + timedelta(
             hours=duration_hours, minutes=duration_minutes
@@ -177,7 +157,6 @@ def create_booking_view(request):
         return JsonResponse({"success": True, "reservation_id": reservation.id})
 
     except Exception as e:
-        print(f"Произошла ошибка при создании брони: {str(e)}")
         return JsonResponse(
             {
                 "success": False,

@@ -184,6 +184,41 @@
     user-select: none;
   }
 
+  .custom-select.custom-select--clearable {
+    padding-right: 80px;
+  }
+
+  .custom-select--clearable .custom-select-clear {
+    position: absolute;
+    top: 50%;
+    right: 44px;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Manrope', sans-serif;
+    font-size: 20px;
+    font-weight: 400;
+    line-height: 1;
+    color: #818EA2;
+    cursor: pointer;
+  }
+
+  .custom-select--clearable.has-selection .custom-select-clear {
+    display: flex;
+  }
+
+  .custom-select--clearable .custom-select-clear:hover {
+    background: #F1F2F6;
+    border-radius: 12px;
+    color: #7A52FF;
+  }
+
   .custom-select .chevron {
     position: absolute;
     top: 50%;

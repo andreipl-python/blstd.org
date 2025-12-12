@@ -96,7 +96,6 @@ urlpatterns = [
     path("user_stats_all/", user_index_view, name="stats_all"),
     path("create_booking/", create_booking_view, name="create_booking"),
     # Управление бронированием
-    path("create_booking/", create_booking_view, name="create_booking"),
     path(
         "booking/get-booking-details/<int:booking_id>/",
         get_booking_details,

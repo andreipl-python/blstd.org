@@ -11,8 +11,8 @@ from booking.models import (
     Reservation,
     Scenario,
     Specialist,
+    Direction,
     TariffUnit,
-    SpecialistColor,
     PaymentType,
     Area,
 )
@@ -83,7 +83,6 @@ def generate_time_blocks(
         timezone.datetime.combine(timezone.now().date(), naive_start_time.time())
     )
     interval = timedelta(hours=hours_interval)
-    num_blocks = num_blocks
     time_blocks = []
 
     for i in range(num_blocks):
@@ -171,9 +170,6 @@ def user_index_view(request):
     default_area = areas[0] if areas else None
     default_scenario = scenarios[0] if scenarios else None
 
-    # Получаем все брони без фильтрации по датам для проверки
-    all_bookings = Reservation.objects.exclude(status_id=4)
-
     # Брони в выбранном диапазоне с учётом дефолтного помещения и сценария
     bookings_in_range_qs = Reservation.objects.filter(
         Q(datetimestart__lte=end_date) & Q(datetimeend__gte=start_date)
@@ -247,8 +243,10 @@ def user_index_view(request):
 
     services_json = serialize("json", services, use_natural_foreign_keys=True)
 
-    specialists = Specialist.objects.prefetch_related("scenario").all()
+    specialists = Specialist.objects.prefetch_related("scenario", "directions").all()
     specialists_json = serialize("json", specialists, use_natural_primary_keys=True)
+
+    directions = Direction.objects.filter(active=True).order_by("name")
 
     rooms_all = Room.objects.prefetch_related("scenario").all()
     rooms_json = serialize("json", rooms_all, use_natural_primary_keys=True)
@@ -257,23 +255,6 @@ def user_index_view(request):
         rooms = rooms_all.filter(area_id=default_area.id)
     else:
         rooms = rooms_all
-
-    specialist_colors = {
-        color.specialist_id: {
-            "primary": color.primary_color,
-            "secondary": color.secondary_color,
-        }
-        for color in SpecialistColor.objects.all()
-    }
-
-    for specialist in specialists:
-        if specialist.id not in specialist_colors:
-            specialist_colors[specialist.id] = {
-                "primary": "#a960ee",
-                "secondary": "#90a0f7",
-            }
-
-    specialist_colors_json = json.dumps(specialist_colors)
 
     scenarios_json = serialize("json", scenarios, use_natural_primary_keys=True)
 
@@ -291,11 +272,6 @@ def user_index_view(request):
         ]
     )
 
-    days_of_month = days_of_month
-    rooms = rooms
-
-    areas_json = serialize("json", areas, use_natural_primary_keys=True)
-
     version_value = ""
     version_file = Path(settings.BASE_DIR).parent / "VERSION"
     try:
@@ -312,21 +288,19 @@ def user_index_view(request):
         "rooms": rooms,
         "rooms_json": rooms_json,
         "areas": areas,
-        "areas_json": areas_json,
         "scenarios": scenarios,
         "scenarios_json": scenarios_json,
         "show_datefrom": days_of_month[0]["date"].date().isoformat(),
         "show_dateto": days_of_month[-1]["date"].date().isoformat(),
         "services": services,
         "services_json": services_json,
+        "specialists": specialists,
         "specialists_json": specialists_json,
+        "directions": directions,
         "bookings_in_range": bookings_in_range_json,
-        "scenarios_json": scenarios_json,
         "tariff_units_json": tariff_units_json,
         "clients": clients,
         "clients_json": clients_json,
-        "specialist_colors": specialist_colors_json,
-        "payment_types": payment_types,
         "payment_types_json": payment_types_json,
         "time_cells": range(96),
         "app_version": version_value,

@@ -77,11 +77,9 @@
                                                 autocomplete="off" />
                                         </span>
                                     </li>
-                                    <li data-value="1">клиент1</li>
-                                    <li data-value="2">клиент2</li>
-                                    <li data-value="3">клиент3</li>
-                                    <li data-value="4">клиент4</li>
-                                    <li data-value="5">клиент5</li>
+                                    {% for client in clients %}
+                                        <li data-value="{{ client.id }}">{{ client.name }}</li>
+                                    {% endfor %}
                                 </ul>
                             </div>
                         </div>
@@ -89,8 +87,9 @@
                         <!-- Выпадающий список "Направление" -->
                         <div class="col-md-6">
                             <label for="field-direction" class="form-label">Направление</label>
-                            <div class="custom-select" id="field-direction" name="field-direction">
+                            <div class="custom-select custom-select--clearable" id="field-direction" name="field-direction" data-placeholder="Выберите направление">
                                 <span class="selected">Выберите направление</span>
+                                <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
                                 <span class="chevron">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
@@ -98,11 +97,9 @@
                                     </svg>
                                 </span>
                                 <ul class="options">
-                                    <li data-value="1">Гитара</li>
-                                    <li data-value="2">Фортепиано</li>
-                                    <li data-value="3">Бубен</li>
-                                    <li data-value="4">Контрабас</li>
-                                    <li data-value="5">Труба</li>
+                                    {% for direction in directions %}
+                                        <li data-value="{{ direction.id }}">{{ direction.name }}</li>
+                                    {% endfor %}
                                 </ul>
                             </div>
                         </div>
@@ -207,8 +204,9 @@
                         <!--Выпадающий список Преподаватель-->
                         <div class="col-md-6">
                             <label for="teacher" class="form-label">Преподаватель</label>
-                            <div class="custom-select" id="teacher" name="teacher">
+                            <div class="custom-select custom-select--clearable" id="teacher" name="teacher" data-placeholder="Выберите преподавателя">
                                 <span class="selected">Выберите преподавателя</span>
+                                <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
                                 <span class="chevron">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
@@ -216,11 +214,11 @@
                                     </svg>
                                 </span>
                                 <ul class="options">
-                                    <li data-value="1">Иван Иванов</li>
-                                    <li data-value="2">Петр Петров</li>
-                                    <li data-value="3">Сергей Сергеев</li>
-                                    <li data-value="4">Анна Анновна</li>
-                                    <li data-value="5">Мария Мариновна</li>
+                                    {% for specialist in specialists %}
+                                        {% if specialist.active %}
+                                            <li data-value="{{ specialist.id }}" data-directions="{% for direction in specialist.directions.all %}{{ direction.id }}{% if not forloop.last %},{% endif %}{% endfor %}">{{ specialist.name }}</li>
+                                        {% endif %}
+                                    {% endfor %}
                                 </ul>
                             </div>
                         </div>
@@ -237,11 +235,11 @@
                                     </svg>
                                 </span>
                                 <ul class="options">
-                                    <li data-value="1">Услуга 1</li>
-                                    <li data-value="2">Услуга 2</li>
-                                    <li data-value="3">Услуга 3</li>
-                                    <li data-value="4">Услуга 4</li>
-                                    <li data-value="5">Услуга 5</li>
+                                    {% for service in services %}
+                                        {% if service.active %}
+                                            <li data-value="{{ service.id }}" data-scenario-id="{{ service.scenario_id|default_if_none:'' }}" data-room-id="{{ service.room_id|default_if_none:'' }}">{{ service.name }}</li>
+                                        {% endif %}
+                                    {% endfor %}
                                 </ul>
                             </div>
                         </div>
@@ -299,7 +297,7 @@
 </div>
 
 <script>
-    // Минимальный JS для модалки создания брони
+    // JS модалки создания брони
 
     // Функция открытия модального окна: подставляет комнату и сценарий в шапку + базовые hidden-поля
     function openModal(date, time, roomName, roomId, cell) {
@@ -337,7 +335,7 @@
         }
     }
 
-    // Счётчик символов для поля комментария в модалке
+    // Счётчик символов для поля комментария
     document.addEventListener('DOMContentLoaded', function () {
         var textarea = document.getElementById('bookingComment');
         var counter = document.getElementById('bookingCommentCounter');
@@ -370,14 +368,212 @@
         updateCounter();
     });
 
-    // Поведение кастомных выпадающих списков только внутри этой модалки
+    // Кастомные селекты только внутри этой модалки
     (function () {
         var modalElement = document.getElementById('createBookingModal');
         if (!modalElement) {
             return;
         }
 
-        var customSelects = modalElement.querySelectorAll('.custom-select');
+        var teacherDirectionLastChanged = null;
+
+        // --------------------------
+        // Вспомогательные функции
+        // --------------------------
+
+        function getSelectedValue(selectEl) {
+            var selectedLi = selectEl.querySelector('ul.options li.selected');
+            return selectedLi ? (selectedLi.getAttribute('data-value') || '') : '';
+        }
+
+        function syncClearableSelectState(selectEl) {
+            if (!selectEl || !selectEl.classList.contains('custom-select--clearable')) {
+                return;
+            }
+
+            var hasValue = Boolean(getSelectedValue(selectEl));
+            if (hasValue) {
+                selectEl.classList.add('has-selection');
+            } else {
+                selectEl.classList.remove('has-selection');
+            }
+        }
+
+        function resetSelect(selectEl) {
+            var selectedSpan = selectEl.querySelector('.selected');
+            var placeholder = selectEl.getAttribute('data-placeholder') || (selectedSpan ? selectedSpan.textContent : '');
+            var options = selectEl.querySelectorAll('ul.options li');
+
+            options.forEach(function (li) {
+                li.classList.remove('selected');
+            });
+
+            if (selectedSpan) {
+                selectedSpan.textContent = placeholder;
+            }
+
+            syncClearableSelectState(selectEl);
+        }
+
+        function resetTeacherDirectionUI() {
+            var teacherSelect = modalElement.querySelector('#teacher');
+            var directionSelect = modalElement.querySelector('#field-direction');
+            if (!teacherSelect || !directionSelect) {
+                return;
+            }
+
+            resetSelect(teacherSelect);
+            resetSelect(directionSelect);
+
+            teacherSelect.querySelectorAll('ul.options li').forEach(function (li) {
+                li.style.display = '';
+            });
+            directionSelect.querySelectorAll('ul.options li').forEach(function (li) {
+                li.style.display = '';
+            });
+        }
+
+        function applyTeacherDirectionFilters() {
+            var teacherSelect = modalElement.querySelector('#teacher');
+            var directionSelect = modalElement.querySelector('#field-direction');
+            if (!teacherSelect || !directionSelect) {
+                return;
+            }
+
+            var selectedTeacherId = getSelectedValue(teacherSelect);
+            var selectedDirectionId = getSelectedValue(directionSelect);
+
+            var teacherLis = teacherSelect.querySelectorAll('ul.options li');
+            var directionLis = directionSelect.querySelectorAll('ul.options li');
+
+            // 1) Проверка на конфликт: если оба выбраны, но не совместимы — сбрасываем противоположный
+            if (selectedTeacherId && selectedDirectionId) {
+                var selectedTeacherLi = teacherSelect.querySelector('ul.options li.selected');
+                var teacherDirectionsRaw = selectedTeacherLi ? (selectedTeacherLi.getAttribute('data-directions') || '') : '';
+                var teacherDirections = teacherDirectionsRaw ? teacherDirectionsRaw.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : [];
+
+                if (teacherDirections.indexOf(String(selectedDirectionId)) === -1) {
+                    if (teacherDirectionLastChanged === 'field-direction') {
+                        resetSelect(teacherSelect);
+                        selectedTeacherId = '';
+                    } else {
+                        resetSelect(directionSelect);
+                        selectedDirectionId = '';
+                    }
+                }
+            }
+
+            // 2) Фильтрация направлений по выбранному преподавателю
+            if (selectedTeacherId) {
+                var teacherLi = teacherSelect.querySelector('ul.options li.selected');
+                var dirsRaw = teacherLi ? (teacherLi.getAttribute('data-directions') || '') : '';
+                var allowedDirs = dirsRaw ? dirsRaw.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : [];
+
+                directionLis.forEach(function (li) {
+                    var dirId = li.getAttribute('data-value') || '';
+                    li.style.display = allowedDirs.indexOf(String(dirId)) !== -1 ? '' : 'none';
+                });
+            } else {
+                directionLis.forEach(function (li) {
+                    li.style.display = '';
+                });
+            }
+
+            // 3) Фильтрация преподавателей по выбранному направлению
+            if (selectedDirectionId) {
+                teacherLis.forEach(function (li) {
+                    var dirsRaw = li.getAttribute('data-directions') || '';
+                    var dirs = dirsRaw ? dirsRaw.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : [];
+                    li.style.display = dirs.indexOf(String(selectedDirectionId)) !== -1 ? '' : 'none';
+                });
+            } else {
+                teacherLis.forEach(function (li) {
+                    li.style.display = '';
+                });
+            }
+        }
+
+        function applyServicesFilters() {
+            var servicesSelect = modalElement.querySelector('#services');
+            if (!servicesSelect) {
+                return;
+            }
+
+            var roomIdField = modalElement.querySelector('#roomIdField');
+            var currentRoomId = roomIdField ? String(roomIdField.value || '') : '';
+            var currentScenarioId = (window.currentScenarioFilterId !== undefined && window.currentScenarioFilterId !== null)
+                ? String(window.currentScenarioFilterId)
+                : '';
+
+            // Фильтрация + защита от дублей:
+            // Если по какой-то причине одинаковые услуги оказались добавлены несколько раз, оставляем только одну.
+            // Ключ: service_id + room_id + scenario_id
+            var options = servicesSelect.querySelectorAll('ul.options li');
+            var seen = new Map();
+
+            Array.from(options).forEach(function (li) {
+                var liRoomId = String(li.getAttribute('data-room-id') || '');
+                var liScenarioId = String(li.getAttribute('data-scenario-id') || '');
+                var liValue = String(li.getAttribute('data-value') || '');
+
+                var dedupeKey = liValue + '|' + liRoomId + '|' + liScenarioId;
+                if (seen.has(dedupeKey)) {
+                    var kept = seen.get(dedupeKey);
+
+                    // Если выбран дубль, а сохранённый элемент не выбран — переносим выбранность на сохранённый.
+                    if (li.classList.contains('selected') && kept && !kept.classList.contains('selected')) {
+                        kept.classList.add('selected');
+
+                        if (servicesSelect._selectedOptions) {
+                            servicesSelect._selectedOptions.add(kept);
+                            servicesSelect._selectedOptions.delete(li);
+                        }
+                    }
+
+                    if (li.parentNode) {
+                        li.parentNode.removeChild(li);
+                    }
+                    return;
+                }
+                seen.set(dedupeKey, li);
+
+                var roomOk = !liRoomId || !currentRoomId || liRoomId === currentRoomId;
+                var scenarioOk = !liScenarioId || !currentScenarioId || liScenarioId === currentScenarioId;
+
+                li.style.display = (roomOk && scenarioOk) ? '' : 'none';
+            });
+
+            if (servicesSelect._selectedOptions && servicesSelect._selectedOptions.size) {
+                var changed = false;
+                Array.from(servicesSelect._selectedOptions).forEach(function (opt) {
+                    if (opt.style.display === 'none') {
+                        opt.classList.remove('selected');
+                        servicesSelect._selectedOptions.delete(opt);
+                        changed = true;
+                    }
+                });
+
+                if (changed && typeof servicesSelect._updateSelectedText === 'function') {
+                    servicesSelect._updateSelectedText();
+                }
+            }
+        }
+
+        applyServicesFilters();
+
+        // --------------------------
+        // Инициализация кастомных селектов
+        // --------------------------
+        var customSelects = Array.from(modalElement.querySelectorAll('.custom-select'));
+
+        // Один глобальный обработчик закрытия по клику вне селекта (без навешивания N одинаковых слушателей)
+        document.addEventListener('click', function (e) {
+            customSelects.forEach(function (select) {
+                if (!select.contains(e.target)) {
+                    select.classList.remove('open');
+                }
+            });
+        });
 
         customSelects.forEach(function (select) {
             var selected = select.querySelector('.selected');
@@ -391,9 +587,40 @@
             var searchInput = isClientSelect ? select.querySelector('#client-search-input') : null;
             var searchOption = isClientSelect ? select.querySelector('#search-option') : null;
 
-            // Множественный выбор только для услуг
+            var clearBtn = select.querySelector('.custom-select-clear');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    teacherDirectionLastChanged = select.id;
+                    resetSelect(select);
+                    select.classList.remove('open');
+
+                    if (select.id === 'teacher' || select.id === 'field-direction') {
+                        applyTeacherDirectionFilters();
+                    }
+                });
+            }
+
+            syncClearableSelectState(select);
+
+            // Множественный выбор только для услуг (список не закрываем при выборе)
             if (select.id === 'services') {
                 var selectedOptions = new Set();
+                select._selectedOptions = selectedOptions;
+
+                function updateSelectedText() {
+                    if (selectedOptions.size === 0) {
+                        selected.textContent = 'Выберите услугу';
+                    } else if (selectedOptions.size === 1) {
+                        selected.textContent = Array.from(selectedOptions)[0].textContent;
+                    } else {
+                        selected.textContent = selectedOptions.size + ' выбрано';
+                    }
+                }
+
+                select._updateSelectedText = updateSelectedText;
 
                 select.addEventListener('click', function (e) {
                     if (e.target.tagName !== 'LI') {
@@ -415,20 +642,8 @@
                             selectedOptions.add(option);
                         }
 
-                        if (selectedOptions.size === 0) {
-                            selected.textContent = 'Выберите услугу';
-                        } else if (selectedOptions.size === 1) {
-                            selected.textContent = Array.from(selectedOptions)[0].textContent;
-                        } else {
-                            selected.textContent = selectedOptions.size + ' выбрано';
-                        }
+                        updateSelectedText();
                     });
-                });
-
-                document.addEventListener('click', function (e) {
-                    if (!select.contains(e.target)) {
-                        select.classList.remove('open');
-                    }
                 });
 
                 return;
@@ -458,7 +673,7 @@
                 }
             }
 
-            // Обычный одиночный выбор
+            // Обычный одиночный выбор (селект закрывается после выбора)
             select.addEventListener('click', function (e) {
                 // не обрабатываем клики по option, они обрабатываются ниже
                 if (e.target.tagName !== 'LI') {
@@ -485,14 +700,27 @@
                     option.classList.add('selected');
                     selected.textContent = option.textContent;
                     select.classList.remove('open');
+
+                    syncClearableSelectState(select);
+
+                    if (select.id === 'teacher' || select.id === 'field-direction') {
+                        teacherDirectionLastChanged = select.id;
+                        applyTeacherDirectionFilters();
+                    }
                 });
             });
+        });
 
-            document.addEventListener('click', function (e) {
-                if (!select.contains(e.target)) {
-                    select.classList.remove('open');
-                }
-            });
+        // При закрытии модалки сбрасываем связанные селекты и фильтры, чтобы при следующем открытии не оставались скрытые элементы
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            teacherDirectionLastChanged = null;
+            resetTeacherDirectionUI();
+        });
+
+        // При открытии гарантируем корректную фильтрацию (на случай, если есть предустановленные значения)
+        modalElement.addEventListener('shown.bs.modal', function () {
+            applyTeacherDirectionFilters();
+            applyServicesFilters();
         });
     })();
 </script>
