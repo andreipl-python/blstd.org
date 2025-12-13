@@ -772,6 +772,73 @@
     color: #818EA2;
   }
 
+  /* Прокрутка и стили для селекта "Время окончания" */
+  #end-time ul.options {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  #end-time ul.options::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #end-time ul.options::-webkit-scrollbar-track {
+    background: #F5F2FF;
+    border-radius: 3px;
+  }
+
+  #end-time ul.options::-webkit-scrollbar-thumb {
+    background: #C9B5FF;
+    border-radius: 3px;
+  }
+
+  #end-time ul.options::-webkit-scrollbar-thumb:hover {
+    background: #7A52FF;
+  }
+
+  #end-time ul.options {
+    scrollbar-width: thin;
+    scrollbar-color: #C9B5FF #F5F2FF;
+  }
+
+  #end-time.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  #end-time.disabled .selected {
+    color: #818EA2;
+  }
+
+  /* Прокрутка и стили для селекта "Время начала" */
+  #start-time ul.options {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  #start-time ul.options::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #start-time ul.options::-webkit-scrollbar-track {
+    background: #F5F2FF;
+    border-radius: 3px;
+  }
+
+  #start-time ul.options::-webkit-scrollbar-thumb {
+    background: #C9B5FF;
+    border-radius: 3px;
+  }
+
+  #start-time ul.options::-webkit-scrollbar-thumb:hover {
+    background: #7A52FF;
+  }
+
+  #start-time ul.options {
+    scrollbar-width: thin;
+    scrollbar-color: #C9B5FF #F5F2FF;
+  }
+
   .button-third {
     background: transparent;
     border: none;
