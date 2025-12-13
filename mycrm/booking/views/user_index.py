@@ -502,3 +502,72 @@ def get_calendar_grid(request):
             "date_to": date_to_str,
         }
     )
+
+
+@login_required(login_url="login")
+def get_room_bookings_for_date(request):
+    """Возвращает все брони комнаты на указанную дату (без фильтра по сценарию).
+
+    Используется в модалке создания брони для проверки пересечений
+    с бронями других сценариев.
+
+    Ожидает параметры GET:
+      - room_id (обязательный)
+      - date    (YYYY-MM-DD, обязательный)
+    """
+
+    room_id = request.GET.get("room_id")
+    date_str = request.GET.get("date")
+
+    if not room_id or not date_str:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Параметры room_id и date обязательны",
+            },
+            status=400,
+        )
+
+    try:
+        room_id_int = int(room_id)
+    except (TypeError, ValueError):
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Некорректный room_id",
+            },
+            status=400,
+        )
+
+    try:
+        target_date = timezone.datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Некорректный формат даты, ожидается YYYY-MM-DD",
+            },
+            status=400,
+        )
+
+    start_dt = timezone.datetime.combine(target_date, timezone.datetime.min.time())
+    end_dt = timezone.datetime.combine(target_date, timezone.datetime.max.time())
+    start_dt = timezone.make_aware(start_dt)
+    end_dt = timezone.make_aware(end_dt)
+
+    # Все брони в комнате на дату (без фильтра по сценарию!)
+    bookings_qs = Reservation.objects.filter(
+        Q(datetimestart__lte=end_dt) & Q(datetimeend__gte=start_dt),
+        room_id=room_id_int,
+    ).exclude(status_id=4)
+
+    bookings_in_range = add_blocks_datetime_range_and_room_name(bookings_qs, 15)
+
+    return JsonResponse(
+        {
+            "success": True,
+            "bookings": bookings_in_range,
+            "room_id": room_id_int,
+            "date": date_str,
+        }
+    )

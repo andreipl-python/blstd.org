@@ -1337,9 +1337,7 @@
     min-height: 44px;
   }
 
-  .modal-datepicker__trigger:hover {
-    border-color: #7A52FF;
-  }
+  /* Убрана подсветка при наведении на trigger */
 
   .modal-datepicker__popup {
     display: none;
