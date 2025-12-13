@@ -130,9 +130,48 @@
                         <!--Календарь дата-->
                         <div class="col-md-3">
                             <label for="modal-create-date" class="form-label">Дата</label>
-                            <div id="custom-date-field" style="padding: 0; border: none; background: none;">
-                                <input type="date" id="modal-create-date" name="modal-create-date"
-                                    class="form-control" />
+                            <div class="modal-datepicker" id="modal-datepicker">
+                                <input type="hidden" id="modal-create-date" name="modal-create-date" />
+                                <div class="modal-datepicker__trigger" id="datepicker-trigger">
+                                    <span id="datepicker-display">Выберите дату</span>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" stroke="#818EA2" stroke-width="2"/>
+                                        <path d="M16 2V6" stroke="#818EA2" stroke-width="2" stroke-linecap="round"/>
+                                        <path d="M8 2V6" stroke="#818EA2" stroke-width="2" stroke-linecap="round"/>
+                                        <path d="M3 10H21" stroke="#818EA2" stroke-width="2"/>
+                                    </svg>
+                                </div>
+                                <div class="modal-datepicker__popup" id="datepicker-popup">
+                                    <div class="modal-datepicker__header">
+                                        <button type="button" class="modal-datepicker__nav-btn" id="datepicker-prev">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </button>
+                                        <div class="modal-datepicker__selects">
+                                            <select class="modal-datepicker__select" id="datepicker-month"></select>
+                                            <select class="modal-datepicker__select" id="datepicker-year"></select>
+                                        </div>
+                                        <button type="button" class="modal-datepicker__nav-btn" id="datepicker-next">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="modal-datepicker__weekdays">
+                                        <div class="modal-datepicker__weekday">Пн</div>
+                                        <div class="modal-datepicker__weekday">Вт</div>
+                                        <div class="modal-datepicker__weekday">Ср</div>
+                                        <div class="modal-datepicker__weekday">Чт</div>
+                                        <div class="modal-datepicker__weekday">Пт</div>
+                                        <div class="modal-datepicker__weekday">Сб</div>
+                                        <div class="modal-datepicker__weekday">Вс</div>
+                                    </div>
+                                    <div class="modal-datepicker__grid" id="datepicker-grid"></div>
+                                    <div class="modal-datepicker__footer">
+                                        <button type="button" class="modal-datepicker__today-btn" id="datepicker-today">Сегодня</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -879,32 +918,56 @@
                                 // Обновляем список окончаний "вправо" от времени начала
                                 var endTimesForStart = getEndTimesForStartTime(liMinutes);
                                 
-                                if (currentEndTimeMinutes !== null) {
-                                    // Есть время окончания — вычисляем и подставляем длительность
+                                if (currentSelectedPeriods !== null) {
+                                    // Длительность выбрана — подставляем окончание по длительности
+                                    var newEndTime = liMinutes + (minMinutes * currentSelectedPeriods);
+                                    if (currentSelectedPeriods <= maxPeriodsForStart && endTimesForStart.indexOf(newEndTime) !== -1) {
+                                        // Длительность помещается — подставляем окончание
+                                        currentEndTimeMinutes = newEndTime;
+                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
+                                    } else {
+                                        // Длительность не помещается — сбрасываем окончание, сохраняем длительность
+                                        currentEndTimeMinutes = null;
+                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
+                                    }
+                                    // Список окончаний фильтруем по длительности
+                                    var filteredEndTimes = getAllEndTimesForPeriods(currentSelectedPeriods);
+                                    rebuildEndTimeSelect(filteredEndTimes, currentEndTimeMinutes);
+                                } else if (currentEndTimeMinutes !== null) {
+                                    // Длительность не выбрана, но есть окончание — вычисляем длительность
                                     var periodsBetween = Math.round((currentEndTimeMinutes - liMinutes) / minMinutes);
                                     if (periodsBetween >= 1 && periodsBetween <= maxPeriodsForStart && endTimesForStart.indexOf(currentEndTimeMinutes) !== -1) {
                                         // Время окончания валидно для нового начала
                                         currentSelectedPeriods = periodsBetween;
                                         rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
+                                        rebuildEndTimeSelect(endTimesForStart, currentEndTimeMinutes);
+                                    } else if (maxPeriodsForStart === 1) {
+                                        // Время окончания не валидно, но единственный вариант длительности — автоподстановка
+                                        currentSelectedPeriods = 1;
+                                        currentEndTimeMinutes = liMinutes + minMinutes;
+                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
+                                        var filteredEndTimes = getAllEndTimesForPeriods(currentSelectedPeriods);
+                                        rebuildEndTimeSelect(filteredEndTimes, currentEndTimeMinutes);
                                     } else {
                                         // Время окончания не валидно — сбрасываем его
                                         currentEndTimeMinutes = null;
-                                        currentSelectedPeriods = null;
                                         rebuildDurationSelect(null, maxPeriodsForStart);
+                                        rebuildEndTimeSelect(endTimesForStart, currentEndTimeMinutes);
                                     }
-                                } else if (currentSelectedPeriods !== null) {
-                                    // Период выбран, но нет окончания — подставляем окончание
-                                    if (currentSelectedPeriods > maxPeriodsForStart) {
-                                        currentSelectedPeriods = maxPeriodsForStart > 0 ? 1 : 0;
-                                    }
-                                    currentEndTimeMinutes = liMinutes + (minMinutes * currentSelectedPeriods);
-                                    rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
                                 } else {
-                                    // Ничего не выбрано — показываем плейсхолдер
-                                    rebuildDurationSelect(null, maxPeriodsForStart);
+                                    // Ничего не выбрано
+                                    if (maxPeriodsForStart === 1) {
+                                        // Единственный вариант длительности — автоподстановка
+                                        currentSelectedPeriods = 1;
+                                        currentEndTimeMinutes = liMinutes + minMinutes;
+                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
+                                        var filteredEndTimes = getAllEndTimesForPeriods(currentSelectedPeriods);
+                                        rebuildEndTimeSelect(filteredEndTimes, currentEndTimeMinutes);
+                                    } else {
+                                        rebuildDurationSelect(null, maxPeriodsForStart);
+                                        rebuildEndTimeSelect(endTimesForStart, currentEndTimeMinutes);
+                                    }
                                 }
-                                
-                                rebuildEndTimeSelect(endTimesForStart, currentEndTimeMinutes);
                                 updateSubmitButtonState();
                             });
                         })(li, slotTimeStr, slotMinutes);
@@ -976,41 +1039,63 @@
                                 var startTimesForEnd = getStartTimesForEndTime(liMinutes);
                                 var maxPeriodsForEnd = getMaxPeriodsForEndTime(liMinutes);
                                 
-                                if (currentStartTimeMinutes !== null) {
-                                    // Есть время начала — вычисляем и подставляем длительность
+                                // Скрываем предупреждение о недоступном слоте
+                                var startTimeWarning = document.getElementById('start-time-warning-icon');
+                                if (startTimeWarning) startTimeWarning.style.display = 'none';
+                                
+                                if (currentSelectedPeriods !== null) {
+                                    // Длительность выбрана — подставляем начало по длительности
+                                    var newStartTime = liMinutes - (minMinutes * currentSelectedPeriods);
+                                    if (startTimesForEnd.indexOf(newStartTime) !== -1) {
+                                        // Длительность помещается — подставляем начало
+                                        currentStartTimeMinutes = newStartTime;
+                                        if (timeField) timeField.value = formatTimeHHMM(currentStartTimeMinutes);
+                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
+                                    } else {
+                                        // Длительность не помещается — сбрасываем начало, сохраняем длительность
+                                        currentStartTimeMinutes = null;
+                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
+                                    }
+                                    // Список начала фильтруем по длительности
+                                    var filteredStartTimes = getStartTimeSlotsForPeriods(currentSelectedPeriods);
+                                    rebuildStartTimeSelect(filteredStartTimes, currentStartTimeMinutes);
+                                } else if (currentStartTimeMinutes !== null) {
+                                    // Длительность не выбрана, но есть начало — вычисляем длительность
                                     var periodsBetween = Math.round((liMinutes - currentStartTimeMinutes) / minMinutes);
                                     if (periodsBetween >= 1 && periodsBetween <= maxPeriodsForEnd && startTimesForEnd.indexOf(currentStartTimeMinutes) !== -1) {
                                         // Время начала валидно для нового окончания
                                         currentSelectedPeriods = periodsBetween;
                                         rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
-                                        
-                                        // Скрываем предупреждение о недоступном слоте
-                                        var startTimeWarning = document.getElementById('start-time-warning-icon');
-                                        if (startTimeWarning) startTimeWarning.style.display = 'none';
+                                        rebuildStartTimeSelect(startTimesForEnd, currentStartTimeMinutes);
+                                    } else if (maxPeriodsForEnd === 1) {
+                                        // Время начала не валидно, но единственный вариант длительности — автоподстановка
+                                        currentSelectedPeriods = 1;
+                                        currentStartTimeMinutes = liMinutes - minMinutes;
+                                        if (timeField) timeField.value = formatTimeHHMM(currentStartTimeMinutes);
+                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
+                                        var filteredStartTimes = getStartTimeSlotsForPeriods(currentSelectedPeriods);
+                                        rebuildStartTimeSelect(filteredStartTimes, currentStartTimeMinutes);
                                     } else {
                                         // Время начала не валидно — сбрасываем его
                                         currentStartTimeMinutes = null;
-                                        currentSelectedPeriods = null;
                                         rebuildDurationSelect(null, maxPeriodsForEnd);
-                                    }
-                                } else if (currentSelectedPeriods !== null) {
-                                    // Период выбран, но нет начала — подставляем начало
-                                    var potentialStart = liMinutes - (minMinutes * currentSelectedPeriods);
-                                    if (startTimesForEnd.indexOf(potentialStart) !== -1) {
-                                        currentStartTimeMinutes = potentialStart;
-                                        if (timeField) timeField.value = formatTimeHHMM(currentStartTimeMinutes);
-                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
-                                    } else {
-                                        // Не удалось подставить — сбрасываем период
-                                        currentSelectedPeriods = null;
-                                        rebuildDurationSelect(null, maxPeriodsForEnd);
+                                        rebuildStartTimeSelect(startTimesForEnd, currentStartTimeMinutes);
                                     }
                                 } else {
-                                    // Ничего не выбрано — показываем плейсхолдер
-                                    rebuildDurationSelect(null, maxPeriodsForEnd);
+                                    // Ничего не выбрано
+                                    if (maxPeriodsForEnd === 1) {
+                                        // Единственный вариант длительности — автоподстановка
+                                        currentSelectedPeriods = 1;
+                                        currentStartTimeMinutes = liMinutes - minMinutes;
+                                        if (timeField) timeField.value = formatTimeHHMM(currentStartTimeMinutes);
+                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
+                                        var filteredStartTimes = getStartTimeSlotsForPeriods(currentSelectedPeriods);
+                                        rebuildStartTimeSelect(filteredStartTimes, currentStartTimeMinutes);
+                                    } else {
+                                        rebuildDurationSelect(null, maxPeriodsForEnd);
+                                        rebuildStartTimeSelect(startTimesForEnd, currentStartTimeMinutes);
+                                    }
                                 }
-                                
-                                rebuildStartTimeSelect(startTimesForEnd, currentStartTimeMinutes);
                                 updateSubmitButtonState();
                             });
                         })(li, endTimeStr, endMinutes);
@@ -1219,6 +1304,277 @@
                     }
                 }
 
+                // =====================================================
+                // МОДУЛЬ КАЛЕНДАРЯ (DATEPICKER)
+                // =====================================================
+                
+                var datepickerTrigger = document.getElementById('datepicker-trigger');
+                var datepickerPopup = document.getElementById('datepicker-popup');
+                var datepickerDisplay = document.getElementById('datepicker-display');
+                var datepickerGrid = document.getElementById('datepicker-grid');
+                var datepickerMonthSelect = document.getElementById('datepicker-month');
+                var datepickerYearSelect = document.getElementById('datepicker-year');
+                var datepickerPrevBtn = document.getElementById('datepicker-prev');
+                var datepickerNextBtn = document.getElementById('datepicker-next');
+                var datepickerTodayBtn = document.getElementById('datepicker-today');
+                var datepickerInput = document.getElementById('modal-create-date');
+                
+                // Текущий отображаемый месяц в календаре
+                var datepickerCurrentMonth = new Date(dateIso);
+                // Выбранная дата
+                var datepickerSelectedDate = new Date(dateIso);
+                
+                var monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                                  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+                
+                // Форматирование даты для отображения (например: "13 декабря 2025")
+                function formatDateDisplay(date) {
+                    var day = date.getDate();
+                    var monthIdx = date.getMonth();
+                    var year = date.getFullYear();
+                    var monthNamesGenitive = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+                                              'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+                    return day + ' ' + monthNamesGenitive[monthIdx] + ' ' + year;
+                }
+                
+                // Форматирование даты в ISO (YYYY-MM-DD)
+                function formatDateIso(date) {
+                    var y = date.getFullYear();
+                    var m = String(date.getMonth() + 1).padStart(2, '0');
+                    var d = String(date.getDate()).padStart(2, '0');
+                    return y + '-' + m + '-' + d;
+                }
+                
+                // Заполнение select месяцев
+                function populateMonthSelect() {
+                    datepickerMonthSelect.innerHTML = '';
+                    for (var i = 0; i < 12; i++) {
+                        var opt = document.createElement('option');
+                        opt.value = i;
+                        opt.textContent = monthNames[i];
+                        if (i === datepickerCurrentMonth.getMonth()) {
+                            opt.selected = true;
+                        }
+                        datepickerMonthSelect.appendChild(opt);
+                    }
+                }
+                
+                // Заполнение select годов (текущий год ±5)
+                function populateYearSelect() {
+                    datepickerYearSelect.innerHTML = '';
+                    var currentYear = new Date().getFullYear();
+                    for (var y = currentYear - 2; y <= currentYear + 3; y++) {
+                        var opt = document.createElement('option');
+                        opt.value = y;
+                        opt.textContent = y;
+                        if (y === datepickerCurrentMonth.getFullYear()) {
+                            opt.selected = true;
+                        }
+                        datepickerYearSelect.appendChild(opt);
+                    }
+                }
+                
+                // Построение сетки дней
+                function buildDatepickerGrid() {
+                    datepickerGrid.innerHTML = '';
+                    
+                    var year = datepickerCurrentMonth.getFullYear();
+                    var month = datepickerCurrentMonth.getMonth();
+                    
+                    // Первый день месяца
+                    var firstDay = new Date(year, month, 1);
+                    // День недели первого числа (0=Вс, переводим в Пн=0)
+                    var startDayOfWeek = (firstDay.getDay() + 6) % 7;
+                    
+                    // Последний день месяца
+                    var lastDay = new Date(year, month + 1, 0);
+                    var daysInMonth = lastDay.getDate();
+                    
+                    // Предыдущий месяц — для заполнения пустых ячеек
+                    var prevMonthLastDay = new Date(year, month, 0).getDate();
+                    
+                    var today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    // Дни предыдущего месяца
+                    for (var i = startDayOfWeek - 1; i >= 0; i--) {
+                        var dayNum = prevMonthLastDay - i;
+                        var cell = document.createElement('div');
+                        cell.className = 'modal-datepicker__day modal-datepicker__day--outside';
+                        cell.textContent = dayNum;
+                        datepickerGrid.appendChild(cell);
+                    }
+                    
+                    // Дни текущего месяца
+                    for (var d = 1; d <= daysInMonth; d++) {
+                        var cell = document.createElement('div');
+                        cell.className = 'modal-datepicker__day';
+                        cell.textContent = d;
+                        
+                        var cellDate = new Date(year, month, d);
+                        cellDate.setHours(0, 0, 0, 0);
+                        
+                        // Сегодня
+                        if (cellDate.getTime() === today.getTime()) {
+                            cell.classList.add('modal-datepicker__day--today');
+                        }
+                        
+                        // Выбранная дата
+                        if (datepickerSelectedDate &&
+                            cellDate.getFullYear() === datepickerSelectedDate.getFullYear() &&
+                            cellDate.getMonth() === datepickerSelectedDate.getMonth() &&
+                            cellDate.getDate() === datepickerSelectedDate.getDate()) {
+                            cell.classList.add('modal-datepicker__day--selected');
+                        }
+                        
+                        // Обработчик клика
+                        (function(dayDate) {
+                            cell.addEventListener('click', function() {
+                                onDateSelected(dayDate);
+                            });
+                        })(cellDate);
+                        
+                        datepickerGrid.appendChild(cell);
+                    }
+                    
+                    // Дни следующего месяца (заполнение до конца сетки)
+                    var totalCells = datepickerGrid.children.length;
+                    var remainingCells = (7 - (totalCells % 7)) % 7;
+                    for (var n = 1; n <= remainingCells; n++) {
+                        var cell = document.createElement('div');
+                        cell.className = 'modal-datepicker__day modal-datepicker__day--outside';
+                        cell.textContent = n;
+                        datepickerGrid.appendChild(cell);
+                    }
+                }
+                
+                // Обновление отображения календаря
+                function renderDatepicker() {
+                    populateMonthSelect();
+                    populateYearSelect();
+                    buildDatepickerGrid();
+                }
+                
+                // Обработчик выбора даты
+                function onDateSelected(newDate) {
+                    datepickerSelectedDate = newDate;
+                    var newDateIso = formatDateIso(newDate);
+                    
+                    // Обновляем отображение и скрытый input
+                    datepickerDisplay.textContent = formatDateDisplay(newDate);
+                    datepickerInput.value = newDateIso;
+                    
+                    // Закрываем попап
+                    datepickerPopup.classList.remove('open');
+                    
+                    // --- Пересчёт списков времени для новой даты ---
+                    dateIso = newDateIso;
+                    if (dateField) dateField.value = dateIso;
+                    
+                    // Сбрасываем время окончания и длительность
+                    currentEndTimeMinutes = null;
+                    currentSelectedPeriods = null;
+                    
+                    // Скрываем предупреждение
+                    var startTimeWarning = document.getElementById('start-time-warning-icon');
+                    if (startTimeWarning) startTimeWarning.style.display = 'none';
+                    
+                    // Пересчитываем списки для нового дня
+                    var newAllSlots = getStartTimeSlotsForPeriods(1);
+                    
+                    if (currentStartTimeMinutes !== null) {
+                        // Проверяем доступность текущего времени начала в новом дне
+                        var newMaxPeriodsForStart = getMaxPeriodsForStartTime(currentStartTimeMinutes, currentRoomId, dateIso);
+                        
+                        if (newMaxPeriodsForStart >= 1) {
+                            // Время начала доступно в новом дне
+                            rebuildDurationSelect(null, newMaxPeriodsForStart);
+                            rebuildStartTimeSelect(newAllSlots, currentStartTimeMinutes);
+                            var newEndTimes = getEndTimesForStartTime(currentStartTimeMinutes);
+                            rebuildEndTimeSelect(newEndTimes, null);
+                        } else {
+                            // Время начала недоступно в новом дне — показываем номинально с предупреждением
+                            if (startTimeWarning) startTimeWarning.style.display = 'inline-block';
+                            var newGlobalMaxPeriods = getGlobalMaxPeriods();
+                            rebuildDurationSelect(null, newGlobalMaxPeriods);
+                            rebuildStartTimeSelect(newAllSlots, currentStartTimeMinutes);
+                            rebuildEndTimeSelect(getAllEndTimesForPeriods(1), null);
+                        }
+                    } else {
+                        // Время начала не было выбрано — глобальные списки
+                        var newGlobalMaxPeriods = getGlobalMaxPeriods();
+                        rebuildDurationSelect(null, newGlobalMaxPeriods);
+                        rebuildStartTimeSelect(newAllSlots, null);
+                        rebuildEndTimeSelect(getAllEndTimesForPeriods(1), null);
+                    }
+                    
+                    updateSubmitButtonState();
+                }
+                
+                // Обработчики событий календаря
+                if (datepickerTrigger) {
+                    datepickerTrigger.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        datepickerPopup.classList.toggle('open');
+                        if (datepickerPopup.classList.contains('open')) {
+                            // Показываем месяц выбранной даты
+                            datepickerCurrentMonth = new Date(datepickerSelectedDate.getFullYear(), datepickerSelectedDate.getMonth(), 1);
+                            renderDatepicker();
+                        }
+                    });
+                }
+                
+                if (datepickerPrevBtn) {
+                    datepickerPrevBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        datepickerCurrentMonth.setMonth(datepickerCurrentMonth.getMonth() - 1);
+                        renderDatepicker();
+                    });
+                }
+                
+                if (datepickerNextBtn) {
+                    datepickerNextBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        datepickerCurrentMonth.setMonth(datepickerCurrentMonth.getMonth() + 1);
+                        renderDatepicker();
+                    });
+                }
+                
+                if (datepickerMonthSelect) {
+                    datepickerMonthSelect.addEventListener('change', function() {
+                        datepickerCurrentMonth.setMonth(parseInt(this.value, 10));
+                        renderDatepicker();
+                    });
+                }
+                
+                if (datepickerYearSelect) {
+                    datepickerYearSelect.addEventListener('change', function() {
+                        datepickerCurrentMonth.setFullYear(parseInt(this.value, 10));
+                        renderDatepicker();
+                    });
+                }
+                
+                if (datepickerTodayBtn) {
+                    datepickerTodayBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        var today = new Date();
+                        onDateSelected(today);
+                    });
+                }
+                
+                // Закрытие попапа по клику вне
+                document.addEventListener('click', function(e) {
+                    if (datepickerPopup && datepickerPopup.classList.contains('open')) {
+                        if (!datepickerPopup.contains(e.target) && !datepickerTrigger.contains(e.target)) {
+                            datepickerPopup.classList.remove('open');
+                        }
+                    }
+                });
+                
+                // Инициализация отображения даты
+                datepickerDisplay.textContent = formatDateDisplay(datepickerSelectedDate);
+                datepickerInput.value = dateIso;
+
                 // --- Первоначальная инициализация ---
                 bindClearButtons();
                 
@@ -1238,9 +1594,15 @@
                 currentEndTimeMinutes = null;
                 
                 if (clickedSlotAvailable) {
-                    // Слот доступен — устанавливаем только время начала
+                    // Слот доступен — устанавливаем время начала
                     currentStartTimeMinutes = clickedSlotMinutes;
                     if (startTimeWarning) startTimeWarning.style.display = 'none';
+                    
+                    // Если единственный вариант длительности — автоподстановка
+                    if (clickedSlotMaxPeriods === 1) {
+                        currentSelectedPeriods = 1;
+                        currentEndTimeMinutes = clickedSlotMinutes + minMinutes;
+                    }
                 } else {
                     // Слот недоступен — показываем время номинально, но не в списке
                     currentStartTimeMinutes = clickedSlotMinutes;
@@ -1248,17 +1610,21 @@
                 }
                 
                 // Инициализируем все селекты
-                // Длительность: плейсхолдер "выберите период", список для времени начала
                 var maxPeriodsForStart = clickedSlotAvailable ? clickedSlotMaxPeriods : globalMaxPeriods;
-                rebuildDurationSelect(null, maxPeriodsForStart);
-                // Передаём время начала, но оно может не быть в списке (номинальное отображение)
+                rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
                 rebuildStartTimeSelect(allStartSlots, currentStartTimeMinutes);
                 
                 // Время окончания: список "вправо" от времени начала (если доступно)
-                var endTimes = clickedSlotAvailable 
-                    ? getEndTimesForStartTime(clickedSlotMinutes) 
-                    : getAllEndTimesForPeriods(1);
-                rebuildEndTimeSelect(endTimes, null);
+                var endTimes;
+                if (currentSelectedPeriods !== null) {
+                    // Длительность выбрана — фильтруем по длительности
+                    endTimes = getAllEndTimesForPeriods(currentSelectedPeriods);
+                } else if (clickedSlotAvailable) {
+                    endTimes = getEndTimesForStartTime(clickedSlotMinutes);
+                } else {
+                    endTimes = getAllEndTimesForPeriods(1);
+                }
+                rebuildEndTimeSelect(endTimes, currentEndTimeMinutes);
                 
                 updateSubmitButtonState();
 

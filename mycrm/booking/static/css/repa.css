@@ -1316,3 +1316,166 @@
   .payment-history-remove:hover {
     opacity: 1;
   }
+
+  /* Кастомный datepicker для модалки создания брони */
+  .modal-datepicker {
+    position: relative;
+  }
+
+  .modal-datepicker__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border: 1px solid #EBEBEC;
+    border-radius: 12px;
+    background: #FFFFFF;
+    cursor: pointer;
+    font-family: 'Manrope';
+    font-size: 14px;
+    color: #1F2430;
+    min-height: 44px;
+  }
+
+  .modal-datepicker__trigger:hover {
+    border-color: #7A52FF;
+  }
+
+  .modal-datepicker__popup {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: #FFFFFF;
+    border-radius: 16px;
+    box-shadow: 0px 16px 32px rgba(31, 36, 48, 0.12);
+    padding: 16px;
+    z-index: 1000;
+    min-width: 280px;
+  }
+
+  .modal-datepicker__popup.open {
+    display: block;
+  }
+
+  .modal-datepicker__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .modal-datepicker__nav-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1F2430;
+  }
+
+  .modal-datepicker__nav-btn:hover {
+    background: #F5F2FF;
+  }
+
+  .modal-datepicker__selects {
+    display: flex;
+    gap: 8px;
+  }
+
+  .modal-datepicker__select {
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-family: 'Manrope';
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    color: #1F2430;
+  }
+
+  .modal-datepicker__select:hover {
+    background: #F5F2FF;
+  }
+
+  .modal-datepicker__weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  .modal-datepicker__weekday {
+    text-align: center;
+    color: #818EA2;
+    font-size: 12px;
+    font-family: 'Manrope';
+    padding: 4px 0;
+  }
+
+  .modal-datepicker__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+
+  .modal-datepicker__day {
+    text-align: center;
+    padding: 8px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: 'Manrope';
+    color: #1F2430;
+    transition: background 0.15s ease;
+  }
+
+  .modal-datepicker__day:hover {
+    background: #F5F2FF;
+  }
+
+  .modal-datepicker__day--outside {
+    color: #C2C8D4;
+  }
+
+  .modal-datepicker__day--today {
+    font-weight: 600;
+    color: #7A52FF;
+  }
+
+  .modal-datepicker__day--selected {
+    background: #7A52FF;
+    color: #FFFFFF;
+  }
+
+  .modal-datepicker__day--selected:hover {
+    background: #6B46E5;
+  }
+
+  .modal-datepicker__footer {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #EBEBEC;
+    display: flex;
+    justify-content: center;
+  }
+
+  .modal-datepicker__today-btn {
+    border: none;
+    background: transparent;
+    color: #7A52FF;
+    font-family: 'Manrope';
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 8px;
+  }
+
+  .modal-datepicker__today-btn:hover {
+    background: #F5F2FF;
+  }
