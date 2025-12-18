@@ -843,7 +843,7 @@
   .start-time-warning-icon {
     position: absolute;
     top: 50%;
-    right: 56px;
+    right: 80px;
     transform: translateY(-50%);
     font-size: 16px;
     color: #7A52FF;
@@ -878,6 +878,107 @@
   }
 
   .start-time-warning-icon:hover .warning-tooltip {
+    display: block;
+  }
+
+  /* Значок предупреждения для преподавателя */
+  .teacher-warning-icon {
+    position: absolute;
+    top: 50%;
+    right: 80px;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: #7A52FF;
+    cursor: help;
+    z-index: 5;
+  }
+
+  .teacher-warning-icon .warning-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    right: -10px;
+    width: 220px;
+    padding: 10px 12px;
+    background: #3D3356;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(61, 51, 86, 0.25);
+    z-index: 100;
+  }
+
+  .teacher-warning-icon .warning-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 16px;
+    border: 6px solid transparent;
+    border-top-color: #3D3356;
+  }
+
+  .teacher-warning-icon:hover .warning-tooltip {
+    display: block;
+  }
+
+  /* Значок предупреждения для кнопки Добавить (в правом нижнем углу модалки) */
+  .submit-warning-icon {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    cursor: help;
+    z-index: 10;
+  }
+
+  .submit-warning-icon svg {
+    display: block;
+    width: 24px;
+    height: 24px;
+  }
+
+  .submit-warning-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    right: 0;
+    width: 260px;
+    padding: 12px 14px;
+    background: #3D3356;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(61, 51, 86, 0.25);
+    z-index: 100;
+  }
+
+  .submit-warning-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 8px;
+    border: 6px solid transparent;
+    border-top-color: #3D3356;
+  }
+
+  .submit-warning-tooltip ul {
+    margin: 0;
+    padding: 0 0 0 18px;
+    list-style: disc;
+  }
+
+  .submit-warning-tooltip ul li {
+    margin-bottom: 4px;
+  }
+
+  .submit-warning-tooltip ul li:last-child {
+    margin-bottom: 0;
+  }
+
+  .submit-warning-icon:hover .submit-warning-tooltip {
     display: block;
   }
 
@@ -1036,6 +1137,7 @@
   /*Модальные окна*/
   .modal-content {
     border-radius: 16px !important;
+    position: relative;
   }
 
   #app-modal-backdrop {

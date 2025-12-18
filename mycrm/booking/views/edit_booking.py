@@ -5,6 +5,7 @@ from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 from ..models import (
     Reservation,
@@ -27,8 +28,8 @@ def get_booking_details(request, booking_id):
 
         payment_types = PaymentType.objects.exclude(name="Тарифные единицы")
 
-        start_datetime = booking.datetimestart
-        end_datetime = booking.datetimeend
+        start_datetime = timezone.localtime(booking.datetimestart)
+        end_datetime = timezone.localtime(booking.datetimeend)
 
         weekdays = {
             0: "понедельник",

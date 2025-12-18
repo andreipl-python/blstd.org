@@ -98,17 +98,13 @@ def add_blocks_datetime_range_and_room_name(
 
     result = []
     for reservation in reservation_objects:
+        local_start = timezone.localtime(reservation.datetimestart)
+        local_end = timezone.localtime(reservation.datetimeend)
         datetime_str_list = [
-            str(reservation.datetimestart + timedelta(minutes=i))[:-6]
+            (local_start + timedelta(minutes=i)).strftime("%Y-%m-%d %H:%M:%S")
             for i in range(
                 0,
-                int(
-                    (
-                        reservation.datetimeend - reservation.datetimestart
-                    ).total_seconds()
-                    // 60
-                )
-                + 1,
+                int((local_end - local_start).total_seconds() // 60) + 1,
                 default_block_length_minutes,
             )
         ]
@@ -259,7 +255,7 @@ def user_index_view(request):
     scenarios_json = serialize("json", scenarios, use_natural_primary_keys=True)
 
     tariff_units = TariffUnit.objects.all()
-    tariff_units_json = serialize("json", tariff_units, use_natural_primary_keys=True)
+    tariff_units_json = serialize("json", tariff_units)
 
     payment_types = PaymentType.objects.all().order_by("id")
     payment_types_json = json.dumps(
@@ -568,6 +564,88 @@ def get_room_bookings_for_date(request):
             "success": True,
             "bookings": bookings_in_range,
             "room_id": room_id_int,
+            "date": date_str,
+        }
+    )
+
+
+@login_required(login_url="login")
+def get_busy_specialists_for_date(request):
+    """Возвращает список занятых специалистов на указанную дату с их временными интервалами.
+
+    Используется в модалке создания брони для проверки доступности преподавателей.
+    Возвращает всех специалистов, у которых есть брони на эту дату (вне зависимости
+    от комнаты, сценария или помещения).
+
+    Ожидает параметры GET:
+      - date (YYYY-MM-DD, обязательный)
+    """
+
+    date_str = request.GET.get("date")
+
+    if not date_str:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Параметр date обязателен",
+            },
+            status=400,
+        )
+
+    try:
+        target_date = timezone.datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Некорректный формат даты, ожидается YYYY-MM-DD",
+            },
+            status=400,
+        )
+
+    start_dt = timezone.datetime.combine(target_date, timezone.datetime.min.time())
+    end_dt = timezone.datetime.combine(target_date, timezone.datetime.max.time())
+    start_dt = timezone.make_aware(start_dt)
+    end_dt = timezone.make_aware(end_dt)
+
+    # Все брони на дату с назначенным специалистом (исключаем отменённые, status_id=4)
+    bookings_qs = (
+        Reservation.objects.filter(
+            Q(datetimestart__lte=end_dt) & Q(datetimeend__gte=start_dt),
+            specialist__isnull=False,
+        )
+        .exclude(status_id=4)
+        .select_related("specialist")
+    )
+
+    # Собираем данные о занятости специалистов
+    busy_specialists = {}
+    for booking in bookings_qs:
+        spec_id = booking.specialist_id
+        if spec_id not in busy_specialists:
+            busy_specialists[spec_id] = {
+                "id": spec_id,
+                "name": booking.specialist.name,
+                "intervals": [],
+            }
+
+        # Конвертируем время в минуты от полуночи
+        local_start = timezone.localtime(booking.datetimestart)
+        local_end = timezone.localtime(booking.datetimeend)
+        start_minutes = local_start.hour * 60 + local_start.minute
+        end_minutes = local_end.hour * 60 + local_end.minute
+
+        busy_specialists[spec_id]["intervals"].append(
+            {
+                "startMinutes": start_minutes,
+                "endMinutes": end_minutes,
+            }
+        )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "busy_specialists": list(busy_specialists.values()),
             "date": date_str,
         }
     )

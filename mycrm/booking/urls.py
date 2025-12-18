@@ -34,6 +34,7 @@ from .views.user_index import (
     get_bookings_grid,
     get_calendar_grid,
     get_room_bookings_for_date,
+    get_busy_specialists_for_date,
 )
 from .views.edit_booking import (
     get_booking_details,
@@ -119,6 +120,11 @@ urlpatterns = [
         "booking/room-bookings-for-date/",
         get_room_bookings_for_date,
         name="get_room_bookings_for_date",
+    ),
+    path(
+        "booking/busy-specialists-for-date/",
+        get_busy_specialists_for_date,
+        name="get_busy_specialists_for_date",
     ),
     path("booking/edit/<int:booking_id>/", edit_booking_view, name="edit_booking"),
     path(
