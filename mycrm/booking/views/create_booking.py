@@ -47,7 +47,7 @@ def check_room_availability(
 
     existing_bookings = Reservation.objects.filter(
         room=room,
-    ).exclude(status_id=4)
+    ).exclude(status_id__in=[4, 1082])
 
     for booking in existing_bookings:
         booking_start = booking.datetimestart
@@ -77,7 +77,7 @@ def check_specialist_availability(
     """Проверка доступности специалиста"""
     existing_bookings = Reservation.objects.filter(
         specialist=specialist,
-    ).exclude(status_id=4)
+    ).exclude(status_id__in=[4, 1082])
     overlapping_bookings = existing_bookings.filter(
         datetimestart__lt=end_datetime, datetimeend__gt=start_datetime
     )

@@ -169,7 +169,7 @@ def user_index_view(request):
     # Брони в выбранном диапазоне с учётом дефолтного помещения и сценария
     bookings_in_range_qs = Reservation.objects.filter(
         Q(datetimestart__lte=end_date) & Q(datetimeend__gte=start_date)
-    ).exclude(status_id=4)
+    ).exclude(status_id__in=[4, 1082])
 
     if default_area is not None:
         bookings_in_range_qs = bookings_in_range_qs.filter(
@@ -358,7 +358,7 @@ def get_bookings_grid(request):
 
     bookings_qs = Reservation.objects.filter(
         Q(datetimestart__lte=end_dt) & Q(datetimeend__gte=start_dt)
-    ).exclude(status_id=4)
+    ).exclude(status_id__in=[4, 1082])
 
     # Дополнительная фильтрация по помещению и сценарию, если переданы
     area_id_int = None
@@ -462,7 +462,7 @@ def get_calendar_grid(request):
 
     bookings_qs = Reservation.objects.filter(
         Q(datetimestart__lte=end_dt) & Q(datetimeend__gte=start_dt)
-    ).exclude(status_id=4)
+    ).exclude(status_id__in=[4, 1082])
 
     if area_id_int is not None:
         bookings_qs = bookings_qs.filter(room__area_id=area_id_int)
@@ -555,7 +555,7 @@ def get_room_bookings_for_date(request):
     bookings_qs = Reservation.objects.filter(
         Q(datetimestart__lte=end_dt) & Q(datetimeend__gte=start_dt),
         room_id=room_id_int,
-    ).exclude(status_id=4)
+    ).exclude(status_id__in=[4, 1082])
 
     bookings_in_range = add_blocks_datetime_range_and_room_name(bookings_qs, 15)
 
@@ -614,7 +614,7 @@ def get_busy_specialists_for_date(request):
             Q(datetimestart__lte=end_dt) & Q(datetimeend__gte=start_dt),
             specialist__isnull=False,
         )
-        .exclude(status_id=4)
+        .exclude(status_id__in=[4, 1082])
         .select_related("specialist")
     )
 

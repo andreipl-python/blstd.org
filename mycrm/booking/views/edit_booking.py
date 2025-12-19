@@ -1,6 +1,7 @@
 import json
 from decimal import Decimal
 
+from django.db import transaction
 from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -233,6 +234,24 @@ def get_booking_details(request, booking_id):
 
 
 @csrf_exempt
+def delete_booking_view(request, booking_id):
+    """Удаление брони (soft-delete через статус cancelled)"""
+    if request.method != "POST":
+        return JsonResponse(
+            {"success": False, "error": "Метод не поддерживается"}, status=405
+        )
+
+    try:
+        booking = get_object_or_404(Reservation, id=booking_id)
+        cancelled_status = get_object_or_404(ReservationStatusType, id=1082)
+        booking.status = cancelled_status
+        booking.save()
+        return JsonResponse({"success": True})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@csrf_exempt
 def edit_booking_view(request, booking_id):
     """Редактирование брони"""
     try:
@@ -270,11 +289,15 @@ def edit_booking_view(request, booking_id):
                 )
 
             # Проверяем, не занят ли специалист в это время
-            conflicting_bookings = Reservation.objects.filter(
-                specialist=specialist,
-                datetimestart__lt=booking.datetimeend,
-                datetimeend__gt=booking.datetimestart,
-            ).exclude(id=booking_id)
+            conflicting_bookings = (
+                Reservation.objects.filter(
+                    specialist=specialist,
+                    datetimestart__lt=booking.datetimeend,
+                    datetimeend__gt=booking.datetimestart,
+                )
+                .exclude(id=booking_id)
+                .exclude(status_id__in=[4, 1082])
+            )
 
             if conflicting_bookings.exists():
                 return JsonResponse(
@@ -432,6 +455,7 @@ def get_available_specialists(request, booking_id):
                 datetimeend__gt=booking.datetimestart,
             )
             .exclude(id=booking_id)
+            .exclude(status_id__in=[4, 1082])
             .values_list("specialist_id", flat=True)
         )
 

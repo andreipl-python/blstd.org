@@ -1538,6 +1538,84 @@
             var infoModal = new bootstrap.Modal(infoModalElement);
             infoModal.show();
         }
+
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        async function deleteCurrentBooking() {
+            var bookingId = window.currentBookingId;
+            if (!bookingId) {
+                return;
+            }
+
+            try {
+                var response = await fetch(`/booking/delete/${bookingId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                var data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error((data && data.error) ? data.error : 'Не удалось удалить бронь');
+                }
+
+                var infoModalEl = document.getElementById('infoBookingModal');
+                var infoModal = infoModalEl ? bootstrap.Modal.getInstance(infoModalEl) : null;
+                if (infoModal) {
+                    infoModal.hide();
+                }
+
+                if (typeof window.refreshBookingsGrid === 'function') {
+                    await window.refreshBookingsGrid({ silent: true });
+                }
+            } catch (error) {
+                console.error('Ошибка при удалении брони:', error);
+                Swal.fire({
+                    title: 'Ошибка!',
+                    text: error.message || 'Ошибка при удалении брони',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var deleteBtn = document.getElementById('infoDeleteButton');
+            if (!deleteBtn) {
+                return;
+            }
+
+            deleteBtn.addEventListener('click', function () {
+                if (!window.currentBookingId) {
+                    return;
+                }
+                Swal.fire({
+                    title: 'Удалить бронь?',
+                    text: 'Бронь будет отменена и исчезнет из календаря.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Удалить',
+                    cancelButtonText: 'Отмена'
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        deleteCurrentBooking();
+                    }
+                });
+            });
+        });
     </script>
 
 </body>

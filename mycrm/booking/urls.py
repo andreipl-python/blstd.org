@@ -38,6 +38,7 @@ from .views.user_index import (
 )
 from .views.edit_booking import (
     get_booking_details,
+    delete_booking_view,
     edit_booking_view,
     cancel_booking_view,
     confirm_booking_view,
@@ -105,6 +106,11 @@ urlpatterns = [
         "booking/get-booking-details/<int:booking_id>/",
         get_booking_details,
         name="get_booking_details",
+    ),
+    path(
+        "booking/delete/<int:booking_id>/",
+        delete_booking_view,
+        name="delete_booking",
     ),
     path(
         "booking/bookings-grid/",
