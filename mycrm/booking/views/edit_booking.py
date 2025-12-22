@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.db import transaction
@@ -8,8 +9,10 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
+from .create_booking import check_room_availability, check_specialist_availability
 from ..models import (
     Reservation,
+    Room,
     Service,
     Specialist,
     ReservationStatusType,
@@ -19,6 +22,7 @@ from ..models import (
     Subscription,
     TariffUnit,
     Client,
+    Direction,
 )
 
 
@@ -66,10 +70,11 @@ def get_booking_details(request, booking_id):
             f"{start_datetime.strftime('%H:%M')} - {end_datetime.strftime('%H:%M')}"
         )
 
-        duration_hours = (booking.datetimeend - booking.datetimestart).seconds // 3600
-        duration_minutes = (
-            (booking.datetimeend - booking.datetimestart).seconds % 3600
-        ) // 60
+        duration_total_minutes = int(
+            (booking.datetimeend - booking.datetimestart).total_seconds() // 60
+        )
+        duration_hours = duration_total_minutes // 60
+        duration_minutes = duration_total_minutes % 60
 
         duration_str = ""
         if duration_hours > 0:
@@ -181,6 +186,10 @@ def get_booking_details(request, booking_id):
             "date": date_str,
             "time": time_str,
             "duration": duration_str,
+            "date_iso": start_datetime.date().isoformat(),
+            "start_time_hm": start_datetime.strftime("%H:%M"),
+            "end_time_hm": end_datetime.strftime("%H:%M"),
+            "duration_hhmm": f"{duration_hours:02d}:{duration_minutes:02d}",
             "room_id": booking.room.id if booking.room else None,
             "room_name": booking.room.name if booking.room else "Не указано",
             "client_id": booking.client.id if booking.client else None,
@@ -205,6 +214,8 @@ def get_booking_details(request, booking_id):
                 if getattr(booking, "direction", None)
                 else "Не указано"
             ),
+            "service_ids": list(booking.services.values_list("id", flat=True)),
+            "scenario_id": booking.scenario_id,
             "services_by_group": services_by_group,
             "total_services_cost": str(total_services_cost),
             "total_cost": str(booking.total_cost) if booking.total_cost else "0",
@@ -260,65 +271,167 @@ def edit_booking_view(request, booking_id):
                 {"success": False, "error": "Метод не поддерживается"}, status=405
             )
 
-        # Получаем данные из запроса
-        data = json.loads(request.body)
-        specialist_id = data.get("specialist_id")
+        data = json.loads(request.body or "{}")
 
-        # Получаем бронь
         booking = get_object_or_404(Reservation, id=booking_id)
 
-        if specialist_id:
-            # Проверяем существование специалиста
-            specialist = get_object_or_404(Specialist, id=specialist_id)
+        date_iso = data.get("date_iso") or data.get("date")
+        start_time_hm = data.get("start_time_hm") or data.get("start_time")
+        duration_hhmm = data.get("duration_hhmm") or data.get("duration")
 
-            # Проверяем, активен ли специалист
+        room_id = data.get("room_id")
+        specialist_id = data.get("specialist_id")
+        direction_id = data.get("direction_id")
+        comment = data.get("comment", "")
+        total_cost_raw = data.get("total_cost")
+        service_ids = data.get("service_ids")
+
+        if not all([date_iso, start_time_hm, duration_hhmm, room_id]):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Не все обязательные поля заполнены",
+                },
+                status=400,
+            )
+
+        try:
+            room_id_int = int(room_id)
+        except (TypeError, ValueError):
+            return JsonResponse(
+                {"success": False, "error": "Некорректный room_id"}, status=400
+            )
+
+        try:
+            duration_hours, duration_minutes = map(int, str(duration_hhmm).split(":"))
+        except Exception:
+            return JsonResponse(
+                {"success": False, "error": "Некорректный формат длительности"},
+                status=400,
+            )
+
+        try:
+            start_datetime_naive = datetime.strptime(
+                f"{date_iso} {start_time_hm}:00", "%Y-%m-%d %H:%M:%S"
+            )
+        except ValueError:
+            return JsonResponse(
+                {"success": False, "error": "Некорректный формат даты/времени"},
+                status=400,
+            )
+
+        start_datetime = timezone.make_aware(
+            start_datetime_naive, timezone.get_current_timezone()
+        )
+        end_datetime = start_datetime + timedelta(
+            hours=duration_hours, minutes=duration_minutes
+        )
+
+        room = get_object_or_404(Room, id=room_id_int)
+
+        direction = None
+        if direction_id:
+            direction = get_object_or_404(Direction, id=direction_id)
+
+        specialist = None
+        if specialist_id:
+            specialist = get_object_or_404(Specialist, id=specialist_id)
             if not specialist.active:
                 return JsonResponse(
                     {"success": False, "error": "Выбранный специалист неактивен"},
                     status=400,
                 )
+            # Проверяем привязку к сценарию только при СМЕНЕ специалиста
+            # Если специалист не меняется — он по определению валиден для этой брони
+            is_specialist_changed = booking.specialist_id != int(specialist_id)
+            if is_specialist_changed:
+                if not specialist.scenario.filter(id=booking.scenario_id).exists():
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "error": "Специалист не может работать с данным типом брони",
+                        },
+                        status=400,
+                    )
 
-            # Проверяем, может ли специалист работать с данным сценарием бронирования
-            if not specialist.scenario.filter(id=booking.scenario_id).exists():
+        total_cost = None
+        if total_cost_raw is not None and str(total_cost_raw).strip() != "":
+            try:
+                total_cost = Decimal(str(total_cost_raw))
+            except Exception:
                 return JsonResponse(
-                    {
-                        "success": False,
-                        "error": "Специалист не может работать с данным типом брони",
-                    },
+                    {"success": False, "error": "Некорректный формат стоимости"},
                     status=400,
                 )
 
-            # Проверяем, не занят ли специалист в это время
-            conflicting_bookings = (
-                Reservation.objects.filter(
-                    specialist=specialist,
-                    datetimestart__lt=booking.datetimeend,
-                    datetimeend__gt=booking.datetimestart,
+        service_ids_list: list[int] = []
+        if isinstance(service_ids, list):
+            for v in service_ids:
+                try:
+                    service_ids_list.append(int(v))
+                except (TypeError, ValueError):
+                    continue
+
+        try:
+            check_room_availability(
+                room,
+                start_datetime,
+                end_datetime,
+                exclude_reservation_id=booking_id,
+            )
+            if specialist:
+                check_specialist_availability(
+                    specialist,
+                    start_datetime,
+                    end_datetime,
+                    exclude_reservation_id=booking_id,
                 )
-                .exclude(id=booking_id)
-                .exclude(status_id__in=[4, 1082])
+        except Exception as e:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": (
+                        getattr(e, "messages", [str(e)])[0]
+                        if getattr(e, "messages", None)
+                        else str(e)
+                    ),
+                },
+                status=400,
             )
 
-            if conflicting_bookings.exists():
-                return JsonResponse(
-                    {"success": False, "error": "Специалист занят в выбранное время"},
-                    status=400,
-                )
-
-            # Обновляем специалиста
+        with transaction.atomic():
+            booking.datetimestart = start_datetime
+            booking.datetimeend = end_datetime
+            booking.room = room
             booking.specialist = specialist
-        else:
-            # Если specialist_id не указан, убираем специалиста
-            booking.specialist = None
+            booking.direction = direction
+            booking.comment = comment
+            booking.total_cost = total_cost
+            booking.save()
 
-        booking.save()
+            if service_ids is None:
+                pass
+            else:
+                services_qs = Service.objects.filter(id__in=service_ids_list)
+                booking.services.set(list(services_qs))
 
+        local_start = timezone.localtime(booking.datetimestart)
+        local_end = timezone.localtime(booking.datetimeend)
         return JsonResponse(
             {
                 "success": True,
-                "specialist_name": (
-                    booking.specialist.name if booking.specialist else None
-                ),
+                "booking": {
+                    "id": booking.id,
+                    "room_id": booking.room_id,
+                    "specialist_id": booking.specialist_id,
+                    "specialist_name": (
+                        booking.specialist.name if booking.specialist else None
+                    ),
+                    "direction_id": booking.direction_id,
+                    "date_iso": local_start.date().isoformat(),
+                    "start_time_hm": local_start.strftime("%H:%M"),
+                    "end_time_hm": local_end.strftime("%H:%M"),
+                },
             }
         )
 

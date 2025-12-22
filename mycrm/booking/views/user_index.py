@@ -637,6 +637,7 @@ def get_busy_specialists_for_date(request):
 
         busy_specialists[spec_id]["intervals"].append(
             {
+                "booking_id": booking.id,
                 "startMinutes": start_minutes,
                 "endMinutes": end_minutes,
             }

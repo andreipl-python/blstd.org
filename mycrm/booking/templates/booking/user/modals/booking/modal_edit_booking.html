@@ -57,13 +57,14 @@
                             </div>
                         </div>
 
-                        <!--Направление и помещение-->
+                        <!--Направление и комната-->
                         <div class="row mb-4">
                             <!-- Выпадающий список "Направление" -->
                             <div class="col-md-6">
                                 <label for="edit-direction" class="form-label">Направление</label>
-                                <div class="custom-select" id="edit-direction" name="edit-direction">
+                                <div class="custom-select custom-select--clearable" id="edit-direction" name="edit-direction" data-placeholder="Выберите направление">
                                     <span class="selected">Выберите направление</span>
+                                    <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -71,20 +72,18 @@
                                         </svg>
                                     </span>
                                     <ul class="options">
-                                        <li data-value="1">Гитара</li>
-                                        <li data-value="2">Фортепиано</li>
-                                        <li data-value="3">Бубен</li>
-                                        <li data-value="4">Контрабас</li>
-                                        <li data-value="5">Труба</li>
+                                        {% for direction in directions %}
+                                            <li data-value="{{ direction.id }}">{{ direction.name }}</li>
+                                        {% endfor %}
                                     </ul>
                                 </div>
                             </div>
 
-                            <!-- Выпадающий список "Помещение" -->
+                            <!-- Выпадающий список "Комната" -->
                             <div class="col-md-6">
-                                <label for="edit-room" class="form-label">Помещение</label>
+                                <label for="edit-room" class="form-label">Комната</label>
                                 <div class="custom-select" id="edit-room" name="edit-room">
-                                    <span class="selected">Выберите помещение</span>
+                                    <span class="selected">Выберите комнату</span>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -92,11 +91,9 @@
                                         </svg>
                                     </span>
                                     <ul class="options">
-                                        <li data-value="1">Помещение 1</li>
-                                        <li data-value="2">Помещение 2</li>
-                                        <li data-value="3">Помещение 3</li>
-                                        <li data-value="4">Помещение 4</li>
-                                        <li data-value="5">Помещение 5</li>
+                                        {% for room in rooms %}
+                                            <li data-value="{{ room.id }}">{{ room.name }}</li>
+                                        {% endfor %}
                                     </ul>
                                 </div>
                             </div>
@@ -107,16 +104,61 @@
                             <!--Календарь дата-->
                             <div class="col-md-3">
                                 <label for="edit-date" class="form-label">Дата</label>
-                                <div id="edit-date-field" style="padding: 0; border: none; background: none;">
-                                    <input type="date" id="edit-date" name="edit-date" class="form-control" />
+                                <div class="modal-datepicker" id="edit-modal-datepicker">
+                                    <input type="hidden" id="edit-date" name="edit-date" />
+                                    <div class="modal-datepicker__trigger" id="edit-datepicker-trigger">
+                                        <span id="edit-datepicker-display">Выберите дату</span>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <rect x="3" y="4" width="18" height="18" rx="2" stroke="#818EA2" stroke-width="2"/>
+                                            <path d="M16 2V6" stroke="#818EA2" stroke-width="2" stroke-linecap="round"/>
+                                            <path d="M8 2V6" stroke="#818EA2" stroke-width="2" stroke-linecap="round"/>
+                                            <path d="M3 10H21" stroke="#818EA2" stroke-width="2"/>
+                                        </svg>
+                                    </div>
+                                    <div class="modal-datepicker__popup" id="edit-datepicker-popup">
+                                        <div class="modal-datepicker__header">
+                                            <button type="button" class="modal-datepicker__nav-btn" id="edit-datepicker-prev">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                            </button>
+                                            <div class="modal-datepicker__selects">
+                                                <select class="modal-datepicker__select" id="edit-datepicker-month"></select>
+                                                <select class="modal-datepicker__select" id="edit-datepicker-year"></select>
+                                            </div>
+                                            <button type="button" class="modal-datepicker__nav-btn" id="edit-datepicker-next">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <div class="modal-datepicker__weekdays">
+                                            <div class="modal-datepicker__weekday">Пн</div>
+                                            <div class="modal-datepicker__weekday">Вт</div>
+                                            <div class="modal-datepicker__weekday">Ср</div>
+                                            <div class="modal-datepicker__weekday">Чт</div>
+                                            <div class="modal-datepicker__weekday">Пт</div>
+                                            <div class="modal-datepicker__weekday">Сб</div>
+                                            <div class="modal-datepicker__weekday">Вс</div>
+                                        </div>
+                                        <div class="modal-datepicker__grid" id="edit-datepicker-grid"></div>
+                                        <div class="modal-datepicker__footer">
+                                            <button type="button" class="modal-datepicker__today-btn" id="edit-datepicker-today">Сегодня</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <!--Выпадающий список Время начала-->
                             <div class="col-md-3">
                                 <label for="edit-start-time" class="form-label">Время начала</label>
-                                <div class="custom-select" id="edit-start-time" name="edit-start-time">
-                                    <span class="selected">9:00</span>
+                                <div class="custom-select custom-select--clearable" id="edit-start-time" name="edit-start-time" data-placeholder="Выберите время">
+                                    <span class="selected">Выберите время</span>
+                                    <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
+                                    <span id="edit-start-time-warning-icon" class="start-time-warning-icon" style="display: none;">
+                                        <span class="warning-tooltip">Это время начала недоступно для выбранной даты.</span>
+                                        ⚠
+                                    </span>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -124,11 +166,6 @@
                                         </svg>
                                     </span>
                                     <ul class="options">
-                                        <li data-value="1">10:00</li>
-                                        <li data-value="2">11:00</li>
-                                        <li data-value="3">12:00</li>
-                                        <li data-value="4">13:00</li>
-                                        <li data-value="5">14:00</li>
                                     </ul>
                                 </div>
                             </div>
@@ -136,8 +173,13 @@
                             <!--Выпадающий список Время окончания-->
                             <div class="col-md-3">
                                 <label for="edit-end-time" class="form-label">Время окончания</label>
-                                <div class="custom-select" id="edit-end-time" name="edit-end-time">
-                                    <span class="selected">10:00</span>
+                                <div class="custom-select custom-select--clearable" id="edit-end-time" name="edit-end-time" data-placeholder="Выберите время">
+                                    <span class="selected">Выберите время</span>
+                                    <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
+                                    <span id="edit-end-time-warning-icon" class="start-time-warning-icon" style="display: none;">
+                                        <span class="warning-tooltip">Это время окончания недоступно для выбранной даты.</span>
+                                        ⚠
+                                    </span>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -145,11 +187,6 @@
                                         </svg>
                                     </span>
                                     <ul class="options">
-                                        <li data-value="1">11:00</li>
-                                        <li data-value="2">12:00</li>
-                                        <li data-value="3">13:00</li>
-                                        <li data-value="4">14:00</li>
-                                        <li data-value="5">15:00</li>
                                     </ul>
                                 </div>
                             </div>
@@ -157,8 +194,9 @@
                             <!--Выпадающий список Длительность-->
                             <div class="col-md-3">
                                 <label for="edit-duration" class="form-label">Длительность</label>
-                                <div class="custom-select" id="edit-duration" name="edit-duration">
-                                    <span class="selected">1 час</span>
+                                <div class="custom-select custom-select--clearable" id="edit-duration" name="edit-duration" data-placeholder="Выберите длительность">
+                                    <span class="selected">Выберите длительность</span>
+                                    <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -166,11 +204,6 @@
                                         </svg>
                                     </span>
                                     <ul class="options">
-                                        <li data-value="1">2 часа</li>
-                                        <li data-value="2">3 часа</li>
-                                        <li data-value="3">4 часа</li>
-                                        <li data-value="4">5 часов</li>
-                                        <li data-value="5">6 часов</li>
                                     </ul>
                                 </div>
                             </div>
@@ -181,8 +214,13 @@
                             <!--Выпадающий список Преподаватель-->
                             <div class="col-md-6">
                                 <label for="edit-teacher" class="form-label">Преподаватель</label>
-                                <div class="custom-select" id="edit-teacher" name="edit-teacher">
+                                <div class="custom-select custom-select--clearable" id="edit-teacher" name="edit-teacher" data-placeholder="Выберите преподавателя">
                                     <span class="selected">Выберите преподавателя</span>
+                                    <span id="edit-teacher-warning-icon" class="teacher-warning-icon" style="display: none;">
+                                        <span class="warning-tooltip">Этот преподаватель занят в выбранное время.</span>
+                                        ⚠
+                                    </span>
+                                    <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -190,11 +228,11 @@
                                         </svg>
                                     </span>
                                     <ul class="options">
-                                        <li data-value="1">Иван Иванов</li>
-                                        <li data-value="2">Пётр Петров</li>
-                                        <li data-value="3">Сергей Сергеев</li>
-                                        <li data-value="4">Анна Анновна</li>
-                                        <li data-value="5">Мария Мариновна</li>
+                                        {% for specialist in specialists %}
+                                            {% if specialist.active %}
+                                                <li data-value="{{ specialist.id }}" data-directions="{% for direction in specialist.directions.all %}{{ direction.id }}{% if not forloop.last %},{% endif %}{% endfor %}">{{ specialist.name }}</li>
+                                            {% endif %}
+                                        {% endfor %}
                                     </ul>
                                 </div>
                             </div>
@@ -211,11 +249,11 @@
                                         </svg>
                                     </span>
                                     <ul class="options">
-                                        <li data-value="1">Услуга 1</li>
-                                        <li data-value="2">Услуга 2</li>
-                                        <li data-value="3">Услуга 3</li>
-                                        <li data-value="4">Услуга 4</li>
-                                        <li data-value="5">Услуга 5</li>
+                                        {% for service in services %}
+                                            {% if service.active %}
+                                                <li data-value="{{ service.id }}" data-cost="{{ service.cost|default_if_none:'0' }}" data-scenario-id="{{ service.scenario_id|default_if_none:'' }}" data-room-id="{{ service.room_id|default_if_none:'' }}">{{ service.name }}</li>
+                                            {% endif %}
+                                        {% endfor %}
                                     </ul>
                                 </div>
                             </div>
@@ -224,26 +262,7 @@
                         <!--Выбранные услуги и сброс-->
                         <div class="row mb-3">
                             <div class="col-md-12 d-flex align-items-center gap-3 flex-wrap">
-                                <div class="selected-services d-flex gap-2 flex-wrap">
-                                    <span class="service-badge">Самостоятельные занятия
-                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
-                                            xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M15 5L5 15" stroke="#818EA2" stroke-width="1.5"
-                                                stroke-linecap="round" stroke-linejoin="round" />
-                                            <path d="M5 5L15 15" stroke="#818EA2" stroke-width="1.5"
-                                                stroke-linecap="round" stroke-linejoin="round" />
-                                        </svg>
-                                    </span>
-                                    <span class="service-badge">Акустическая гитара
-                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
-                                            xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M15 5L5 15" stroke="#818EA2" stroke-width="1.5"
-                                                stroke-linecap="round" stroke-linejoin="round" />
-                                            <path d="M5 5L15 15" stroke="#818EA2" stroke-width="1.5"
-                                                stroke-linecap="round" stroke-linejoin="round" />
-                                        </svg>
-                                    </span>
-                                </div>
+                                <div class="selected-services d-flex gap-2 flex-wrap" id="edit-selected-services"></div>
                                 <a href="#" id="reset-services">Сбросить всё</a>
                             </div>
                         </div>
@@ -287,7 +306,7 @@
                         <!--Кнопки Сохранить и Отмена-->
                         <div class="row mb-2">
                             <div class="col-md-3">
-                                <button type="button" class="button-primary w-100">Сохранить</button>
+                                <button type="button" class="button-primary w-100" id="editBookingSubmitBtn">Сохранить</button>
                             </div>
                             <div class="col-md-3">
                                 <button type="button" class="button-sec w-100" data-bs-dismiss="modal">Отмена</button>
@@ -297,6 +316,17 @@
                     </div>
                 </form>
             </div>
+            <!-- Значок предупреждения в нижнем правом углу модалки -->
+            <span id="edit-submit-warning-icon" class="submit-warning-icon" style="display: none;">
+                <span class="submit-warning-tooltip">
+                    <ul id="edit-submit-checklist"></ul>
+                </span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 9V13" stroke="#E53935" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 17H12.01" stroke="#E53935" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10.29 3.86L1.82 18C1.64 18.3 1.55 18.64 1.55 19C1.55 19.36 1.64 19.7 1.82 20C2 20.3 2.26 20.56 2.56 20.74C2.86 20.92 3.2 21.01 3.55 21H20.45C20.8 21.01 21.14 20.92 21.44 20.74C21.74 20.56 22 20.3 22.18 20C22.36 19.7 22.45 19.36 22.45 19C22.45 18.64 22.36 18.3 22.18 18L13.71 3.86C13.53 3.56 13.27 3.32 12.97 3.15C12.67 2.98 12.34 2.89 12 2.89C11.66 2.89 11.33 2.98 11.03 3.15C10.73 3.32 10.47 3.56 10.29 3.86Z" stroke="#E53935" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </span>
         </div>
     </div>
 </div>
@@ -313,93 +343,1371 @@
     // Обработчики для editBookingModal: закрытие и инициализация custom-select
     const editModal = document.getElementById('editBookingModal');
     editModal.addEventListener('hidden.bs.modal', function () {
+        if (window._editModalShouldOpenInfo === false) {
+            window._editModalShouldOpenInfo = true;
+            return;
+        }
         const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
         infoModal.show();
     });
 
     editModal.addEventListener('shown.bs.modal', function () {
-        document.querySelectorAll('#editBookingModal .custom-select').forEach(select => {
-            const selected = select.querySelector('.selected');
-            const optionsContainer = select.querySelector('.options');
-            const optionsList = optionsContainer ? optionsContainer.querySelectorAll('li') : [];
-            if (!selected || !optionsContainer) return;
+        if (!window._editModalSelectsInitialized) {
+            window._editModalSelectsInitialized = true;
+            initializeEditModalSelects();
+        }
+        loadAndPrefillEditBookingModal();
+    });
 
-            // Мультиселект "Услуги"
-            if (select.id === 'edit-services') {
-                const chevron = select.querySelector('.chevron');
-                const toggleOpen = () => select.classList.toggle('open');
-                let selectedOptions = new Set();
+    function getSelectedValue(selectEl) {
+        if (!selectEl) return '';
+        const selectedLi = selectEl.querySelector('ul.options li.selected');
+        return selectedLi ? (selectedLi.getAttribute('data-value') || '') : '';
+    }
 
-                // Открытие/закрытие по клику вне опций
-                select.addEventListener('click', (e) => {
-                    if (e.target.tagName !== 'LI') {
-                        toggleOpen();
+    function setCustomSelectValue(selectEl, value, placeholderText) {
+        if (!selectEl) return;
+        const selectedSpan = selectEl.querySelector('.selected');
+        const options = Array.from(selectEl.querySelectorAll('ul.options li'));
+        options.forEach(li => li.classList.toggle('selected', String(li.getAttribute('data-value')) === String(value)));
+        const chosen = options.find(li => String(li.getAttribute('data-value')) === String(value));
+        if (selectedSpan) {
+            selectedSpan.textContent = chosen ? chosen.textContent : (placeholderText || selectedSpan.textContent);
+        }
+        // Добавляем класс has-selection для показа крестика сброса
+        if (chosen) {
+            selectEl.classList.add('has-selection');
+        } else {
+            selectEl.classList.remove('has-selection');
+        }
+    }
+
+    function setMultiSelectedValues(selectEl, values) {
+        if (!selectEl) return;
+        const selectedSpan = selectEl.querySelector('.selected');
+        const options = Array.from(selectEl.querySelectorAll('ul.options li'));
+        const valuesSet = new Set((values || []).map(String));
+        selectEl._selectedOptions = new Set();
+
+        options.forEach(li => {
+            const isSelected = valuesSet.has(String(li.getAttribute('data-value')));
+            li.classList.toggle('selected', isSelected);
+            if (isSelected) {
+                selectEl._selectedOptions.add(li);
+            }
+        });
+
+        updateServicesSummaryText();
+        updateServicesBadges();
+
+        function updateServicesSummaryText() {
+            if (!selectedSpan) return;
+            const count = selectEl._selectedOptions.size;
+            if (count === 0) {
+                selectedSpan.textContent = 'Выберите услугу';
+            } else if (count === 1) {
+                selectedSpan.textContent = Array.from(selectEl._selectedOptions)[0].textContent;
+            } else {
+                selectedSpan.textContent = `${count} выбрано`;
+            }
+        }
+    }
+
+    function updateServicesBadges() {
+        const container = document.getElementById('edit-selected-services');
+        const servicesSelect = document.getElementById('edit-services');
+        const resetBtn = document.getElementById('reset-services');
+        if (!container || !servicesSelect) return;
+        container.innerHTML = '';
+        const selectedLis = servicesSelect._selectedOptions ? Array.from(servicesSelect._selectedOptions) : [];
+
+        // Показываем/скрываем кнопку "Сбросить всё" в зависимости от количества услуг
+        if (resetBtn) {
+            resetBtn.style.display = selectedLis.length > 0 ? 'inline' : 'none';
+        }
+
+        selectedLis.forEach(li => {
+            const badge = document.createElement('span');
+            badge.className = 'service-badge';
+            badge.textContent = li.textContent;
+
+            // Крестик удаления услуги
+            const removeBtn = document.createElement('span');
+            removeBtn.className = 'service-badge-remove';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.style.marginLeft = '6px';
+            removeBtn.style.cursor = 'pointer';
+            removeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                // Убираем услугу из выбранных
+                li.classList.remove('selected');
+                servicesSelect._selectedOptions.delete(li);
+                updateServicesBadges();
+                calculateAndUpdateBookingCost();
+                // Обновляем текст в селекте
+                const selected = servicesSelect.querySelector('.selected');
+                const count = servicesSelect._selectedOptions.size;
+                if (selected) {
+                    if (count === 0) {
+                        selected.textContent = 'Выберите услугу';
+                    } else if (count === 1) {
+                        selected.textContent = Array.from(servicesSelect._selectedOptions)[0].textContent;
+                    } else {
+                        selected.textContent = count + ' выбрано';
                     }
-                });
+                }
+            });
+            badge.appendChild(removeBtn);
+            container.appendChild(badge);
+        });
+    }
 
-                [selected, chevron].forEach(el => {
-                    if (!el) return;
-                    el.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        toggleOpen();
-                    });
-                });
+    function parseHmToMinutes(hm) {
+        if (!hm) return null;
+        const parts = String(hm).split(':');
+        if (parts.length < 2) return null;
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+        return h * 60 + m;
+    }
 
-                optionsList.forEach(option => {
-                    option.addEventListener('mousedown', (e) => e.stopPropagation());
-                    option.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (option.classList.contains('selected')) {
-                            option.classList.remove('selected');
-                            selectedOptions.delete(option);
-                        } else {
-                            option.classList.add('selected');
-                            selectedOptions.add(option);
-                        }
+    function formatMinutesToHm(totalMinutes) {
+        const m = parseInt(totalMinutes, 10);
+        if (!Number.isFinite(m) || m < 0) return '';
+        const h = Math.floor(m / 60) % 24;
+        const mm = m % 60;
+        return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    }
 
-                        if (selectedOptions.size === 0) {
-                            selected.textContent = 'Выберите услугу';
-                        } else if (selectedOptions.size === 1) {
-                            selected.textContent = Array.from(selectedOptions)[0].textContent;
-                        } else {
-                            selected.textContent = `${selectedOptions.size} выбрано`;
-                        }
-                    });
-                });
+    function getScenarioWorkStartMinutes(scenarioId) {
+        if (!scenarioId || !Array.isArray(window.SCENARIOS)) return 0;
+        const s = window.SCENARIOS.find(x => String(x.pk) === String(scenarioId));
+        if (!s || !s.fields || !s.fields.work_time_start) return 0;
+        return parseHmToMinutes(String(s.fields.work_time_start).slice(0, 5)) || 0;
+    }
 
-                document.addEventListener('click', (e) => {
-                    if (!select.contains(e.target)) {
-                        select.classList.remove('open');
+    function getScenarioWorkEndMinutes(scenarioId) {
+        if (!scenarioId || !Array.isArray(window.SCENARIOS)) return 24 * 60;
+        const s = window.SCENARIOS.find(x => String(x.pk) === String(scenarioId));
+        if (!s || !s.fields || !s.fields.work_time_end) return 24 * 60;
+        return parseHmToMinutes(String(s.fields.work_time_end).slice(0, 5)) || (24 * 60);
+    }
+
+    function getScenarioMinDurationMinutes(scenarioId) {
+        const fallback = 60;
+        if (!scenarioId || !Array.isArray(window.TARIFF_UNITS)) return fallback;
+        const tu = window.TARIFF_UNITS.find(t => t.fields && String(t.fields.scenario) === String(scenarioId));
+        if (!tu || !tu.fields || !tu.fields.min_reservation_time) return fallback;
+        const parts = String(tu.fields.min_reservation_time).split(':');
+        if (parts.length < 2) return fallback;
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (!Number.isFinite(h) || !Number.isFinite(m)) return fallback;
+        const total = h * 60 + m;
+        return total > 0 ? total : fallback;
+    }
+
+    function getScenarioTariffUnitCost(scenarioId) {
+        if (!scenarioId || !Array.isArray(window.TARIFF_UNITS)) return 0;
+        const tu = window.TARIFF_UNITS.find(t => t.fields && String(t.fields.scenario) === String(scenarioId));
+        if (!tu || !tu.fields || tu.fields.tariff_unit_cost === undefined || tu.fields.tariff_unit_cost === null) return 0;
+        const v = parseFloat(String(tu.fields.tariff_unit_cost));
+        return Number.isFinite(v) ? v : 0;
+    }
+
+    // Получить суммарную стоимость выбранных услуг
+    function getSelectedServicesCost() {
+        var servicesSelect = document.getElementById('edit-services');
+        if (!servicesSelect || !servicesSelect._selectedOptions) return 0;
+        var total = 0;
+        servicesSelect._selectedOptions.forEach(function(li) {
+            var cost = parseFloat(li.getAttribute('data-cost') || '0');
+            if (Number.isFinite(cost)) total += cost;
+        });
+        return total;
+    }
+
+    // Рассчитать и обновить стоимость брони
+    function calculateAndUpdateBookingCost() {
+        var costElement = document.getElementById('editBookingCostValue');
+        if (!costElement) return;
+        
+        var modalEl = document.getElementById('editBookingModal');
+        var scenarioId = modalEl ? modalEl.getAttribute('data-scenario-id') : null;
+        var ctrl = modalEl ? modalEl._editTimeController : null;
+        var currentSelectedPeriods = ctrl ? ctrl._currentSelectedPeriods : null;
+        
+        // Если длительность не выбрана — стоимость 0
+        if (currentSelectedPeriods === null || currentSelectedPeriods === undefined) {
+            costElement.textContent = '0 BYN';
+            return;
+        }
+        
+        var periodCost = getScenarioTariffUnitCost(scenarioId);
+        var periodsTotalCost = currentSelectedPeriods * periodCost;
+        var servicesCost = getSelectedServicesCost();
+        var totalCost = periodsTotalCost + servicesCost;
+        
+        // Форматируем с 2 знаками после запятой, убираем лишние нули
+        var formatted = totalCost.toFixed(2).replace(/\.00$/, '');
+        costElement.textContent = formatted + ' BYN';
+    }
+
+    function buildTimeSlots(scenarioId) {
+        const start = getScenarioWorkStartMinutes(scenarioId);
+        const end = getScenarioWorkEndMinutes(scenarioId);
+        const result = [];
+        for (let t = start; t <= end; t += 15) {
+            result.push(formatMinutesToHm(t));
+        }
+        return result;
+    }
+
+    // Форматирование номера телефона с разделителями (+375 44 444 44 44)
+    function formatPhoneNumber(phone) {
+        if (!phone) return '';
+        // Убираем всё кроме цифр и +
+        var cleaned = phone.replace(/[^\d+]/g, '');
+        // Формат для белорусских номеров: +375 XX XXX XX XX
+        if (cleaned.startsWith('+375') && cleaned.length === 13) {
+            return cleaned.slice(0, 4) + ' ' + cleaned.slice(4, 6) + ' ' + cleaned.slice(6, 9) + ' ' + cleaned.slice(9, 11) + ' ' + cleaned.slice(11);
+        }
+        // Формат для номеров без +: 375 XX XXX XX XX
+        if (cleaned.startsWith('375') && cleaned.length === 12) {
+            return '+' + cleaned.slice(0, 3) + ' ' + cleaned.slice(3, 5) + ' ' + cleaned.slice(5, 8) + ' ' + cleaned.slice(8, 10) + ' ' + cleaned.slice(10);
+        }
+        // Для других форматов возвращаем как есть
+        return phone;
+    }
+
+    function rebuildTimeSelect(selectEl, timesHm, placeholderText) {
+        if (!selectEl) return;
+        const ul = selectEl.querySelector('ul.options');
+        const selectedSpan = selectEl.querySelector('.selected');
+        if (!ul || !selectedSpan) return;
+        ul.innerHTML = '';
+        selectedSpan.textContent = placeholderText;
+        timesHm.forEach(hm => {
+            const li = document.createElement('li');
+            li.textContent = hm;
+            li.setAttribute('data-value', hm);
+            ul.appendChild(li);
+        });
+    }
+
+    function ensureEditTimeController() {
+        const modalEl = document.getElementById('editBookingModal');
+        if (!modalEl) return null;
+        if (modalEl._editTimeController) return modalEl._editTimeController;
+        if (!window.BookingTimeUtils) return null;
+
+        const utils = window.BookingTimeUtils;
+
+        const startTimeSelect = document.getElementById('edit-start-time');
+        const endTimeSelect = document.getElementById('edit-end-time');
+        const durationSelect = document.getElementById('edit-duration');
+        const startWarn = document.getElementById('edit-start-time-warning-icon');
+        const endWarn = document.getElementById('edit-end-time-warning-icon');
+        const submitBtn = document.getElementById('editBookingSubmitBtn');
+        const dateInput = document.getElementById('edit-date');
+
+        let scenarioId = null;
+        let roomId = null;
+        let dateIso = null;
+        let bookingId = null;
+
+        let minMinutes = 60;
+        let workStart = 0;
+        let workEnd = 24 * 60;
+
+        let roomBookings = [];
+        let currentStartTimeMinutes = null;
+        let currentEndTimeMinutes = null;
+        let currentSelectedPeriods = null;
+
+        function hideWarnings() {
+            if (startWarn) startWarn.style.display = 'none';
+            if (endWarn) endWarn.style.display = 'none';
+        }
+
+        function updateSubmitButtonState() {
+            if (!submitBtn) return;
+            
+            var checklist = [];
+            var hasStartTime = currentStartTimeMinutes !== null;
+            var hasEndTime = currentEndTimeMinutes !== null;
+            
+            // Проверяем наличие предупреждений
+            var teacherWarning = document.getElementById('edit-teacher-warning-icon');
+            var hasStartWarning = startWarn && startWarn.style.display !== 'none';
+            var hasEndWarning = endWarn && endWarn.style.display !== 'none';
+            var hasTeacherWarning = teacherWarning && teacherWarning.style.display !== 'none';
+            
+            // Проверяем преподавателя и направление
+            var teacherSelect = document.getElementById('edit-teacher');
+            var directionSelect = document.getElementById('edit-direction');
+            var teacherSelectedLi = teacherSelect ? teacherSelect.querySelector('ul.options li.selected') : null;
+            var directionSelectedLi = directionSelect ? directionSelect.querySelector('ul.options li.selected') : null;
+            var hasTeacher = teacherSelectedLi !== null;
+            var hasDirection = directionSelectedLi !== null;
+            
+            // Формируем чек-лист
+            if (!hasStartTime) {
+                checklist.push('Выберите время начала');
+            } else if (hasStartWarning) {
+                checklist.push('Выберите доступное время начала');
+            }
+            
+            if (!hasEndTime) {
+                checklist.push('Выберите время окончания');
+            } else if (hasEndWarning) {
+                checklist.push('Выберите доступное время окончания');
+            }
+            
+            if (!hasTeacher) {
+                checklist.push('Выберите преподавателя');
+            } else if (hasTeacherWarning) {
+                checklist.push('Выберите доступного преподавателя');
+            }
+            
+            if (!hasDirection) {
+                checklist.push('Выберите направление');
+            }
+            
+            // Обновляем чек-лист в тултипе
+            var submitWarning = document.getElementById('edit-submit-warning-icon');
+            var submitChecklist = document.getElementById('edit-submit-checklist');
+            
+            if (checklist.length > 0) {
+                // Кнопка неактивна
+                submitBtn.disabled = true;
+                if (submitWarning) submitWarning.style.display = 'inline-block';
+                if (submitChecklist) {
+                    submitChecklist.innerHTML = checklist.map(function(item) {
+                        return '<li>' + item + '</li>';
+                    }).join('');
+                }
+            } else {
+                // Все условия выполнены
+                submitBtn.disabled = false;
+                if (submitWarning) submitWarning.style.display = 'none';
+            }
+        }
+
+        function validateWarnings() {
+            if (!utils) return;
+            hideWarnings();
+            let startValid = true;
+            let endValid = true;
+
+            if (currentStartTimeMinutes !== null) {
+                const mp = utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes);
+                if (mp < 1) {
+                    startValid = false;
+                    if (startWarn) startWarn.style.display = 'inline-block';
+                }
+            }
+
+            if (currentEndTimeMinutes !== null) {
+                if (!startValid) {
+                    endValid = false;
+                    if (endWarn) endWarn.style.display = 'inline-block';
+                } else if (currentStartTimeMinutes !== null) {
+                    const mpStart = utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes);
+                    const maxEndTime = currentStartTimeMinutes + (minMinutes * mpStart);
+                    if (currentEndTimeMinutes > maxEndTime) {
+                        endValid = false;
+                        if (endWarn) endWarn.style.display = 'inline-block';
                     }
-                });
+                } else {
+                    const possibleStarts = utils.getStartTimesForEndTime(currentEndTimeMinutes, roomBookings, workStart, workEnd, minMinutes);
+                    if (!possibleStarts || possibleStarts.length === 0) {
+                        endValid = false;
+                        if (endWarn) endWarn.style.display = 'inline-block';
+                    }
+                }
+            }
 
+            if (startValid && endValid && currentSelectedPeriods !== null && currentStartTimeMinutes !== null) {
+                const mpStart = utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes);
+                if (currentSelectedPeriods > mpStart) {
+                    if (endWarn) endWarn.style.display = 'inline-block';
+                }
+            }
+        }
+
+        function rebuildAll() {
+            if (!utils || !durationSelect || !startTimeSelect || !endTimeSelect) return;
+
+            const maxPeriods = (currentStartTimeMinutes !== null)
+                ? utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes)
+                : (currentEndTimeMinutes !== null)
+                    ? utils.getMaxPeriodsForEndTime(currentEndTimeMinutes, roomBookings, workStart, workEnd, minMinutes)
+                    : utils.getGlobalMaxPeriods(roomBookings, workStart, workEnd, minMinutes);
+
+            utils.rebuildDurationSelect(durationSelect, currentSelectedPeriods, maxPeriods, minMinutes, function (periods) {
+                currentSelectedPeriods = periods;
+                hideWarnings();
+
+                const durationMinutes = minMinutes * currentSelectedPeriods;
+                if (currentStartTimeMinutes !== null) {
+                    const mpStart = utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes);
+                    if (currentSelectedPeriods <= mpStart) {
+                        currentEndTimeMinutes = currentStartTimeMinutes + durationMinutes;
+                    } else {
+                        currentStartTimeMinutes = null;
+                        currentEndTimeMinutes = null;
+                    }
+                } else if (currentEndTimeMinutes !== null) {
+                    const potentialStart = currentEndTimeMinutes - durationMinutes;
+                    const filteredStart = utils.getStartTimeSlotsForPeriods(currentSelectedPeriods, roomBookings, workStart, workEnd, minMinutes);
+                    if (filteredStart.indexOf(potentialStart) !== -1) {
+                        currentStartTimeMinutes = potentialStart;
+                    } else {
+                        currentEndTimeMinutes = null;
+                    }
+                }
+
+                rebuildAll();
+                calculateAndUpdateBookingCost();
+            });
+
+            const filteredStartSlots = (currentSelectedPeriods !== null)
+                ? utils.getStartTimeSlotsForPeriods(currentSelectedPeriods, roomBookings, workStart, workEnd, minMinutes)
+                : (currentEndTimeMinutes !== null)
+                    ? utils.getStartTimesForEndTime(currentEndTimeMinutes, roomBookings, workStart, workEnd, minMinutes)
+                    : utils.getStartTimeSlotsForPeriods(1, roomBookings, workStart, workEnd, minMinutes);
+
+            const filteredEndTimes = (currentSelectedPeriods !== null)
+                ? utils.getAllEndTimesForPeriods(currentSelectedPeriods, roomBookings, workStart, workEnd, minMinutes)
+                : (currentStartTimeMinutes !== null)
+                    ? utils.getEndTimesForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes)
+                    : utils.getAllEndTimesForPeriods(1, roomBookings, workStart, workEnd, minMinutes);
+
+            utils.rebuildStartTimeSelect(startTimeSelect, filteredStartSlots, currentStartTimeMinutes, function (minutes) {
+                hideWarnings();
+                currentStartTimeMinutes = minutes;
+
+                const maxPeriodsForStart = utils.getMaxPeriodsForStartTime(minutes, roomBookings, workEnd, minMinutes);
+                const endTimesForStart = utils.getEndTimesForStartTime(minutes, roomBookings, workEnd, minMinutes);
+
+                if (currentSelectedPeriods !== null) {
+                    const newEnd = minutes + (minMinutes * currentSelectedPeriods);
+                    if (currentSelectedPeriods <= maxPeriodsForStart && endTimesForStart.indexOf(newEnd) !== -1) {
+                        currentEndTimeMinutes = newEnd;
+                    } else {
+                        currentEndTimeMinutes = null;
+                    }
+                } else if (currentEndTimeMinutes !== null) {
+                    const periodsBetween = Math.round((currentEndTimeMinutes - minutes) / minMinutes);
+                    if (periodsBetween >= 1 && periodsBetween <= maxPeriodsForStart && endTimesForStart.indexOf(currentEndTimeMinutes) !== -1) {
+                        currentSelectedPeriods = periodsBetween;
+                    } else if (maxPeriodsForStart === 1) {
+                        currentSelectedPeriods = 1;
+                        currentEndTimeMinutes = minutes + minMinutes;
+                    } else {
+                        currentEndTimeMinutes = null;
+                        currentSelectedPeriods = null;
+                    }
+                } else {
+                    if (maxPeriodsForStart === 1) {
+                        currentSelectedPeriods = 1;
+                        currentEndTimeMinutes = minutes + minMinutes;
+                    }
+                }
+
+                rebuildAll();
+                calculateAndUpdateBookingCost();
+                // Проверяем занятость специалиста при изменении времени начала
+                if (typeof applyEditTeacherDirectionFilters === 'function') {
+                    applyEditTeacherDirectionFilters();
+                }
+            });
+
+            utils.rebuildEndTimeSelect(endTimeSelect, filteredEndTimes, currentEndTimeMinutes, function (minutes) {
+                hideWarnings();
+                currentEndTimeMinutes = minutes;
+
+                const startTimesForEnd = utils.getStartTimesForEndTime(minutes, roomBookings, workStart, workEnd, minMinutes);
+                const maxPeriodsForEnd = utils.getMaxPeriodsForEndTime(minutes, roomBookings, workStart, workEnd, minMinutes);
+
+                if (currentSelectedPeriods !== null) {
+                    const newStart = minutes - (minMinutes * currentSelectedPeriods);
+                    if (startTimesForEnd.indexOf(newStart) !== -1) {
+                        currentStartTimeMinutes = newStart;
+                    } else {
+                        currentStartTimeMinutes = null;
+                    }
+                } else if (currentStartTimeMinutes !== null) {
+                    const periodsBetween = Math.round((minutes - currentStartTimeMinutes) / minMinutes);
+                    if (periodsBetween >= 1 && periodsBetween <= maxPeriodsForEnd && startTimesForEnd.indexOf(currentStartTimeMinutes) !== -1) {
+                        currentSelectedPeriods = periodsBetween;
+                    } else if (maxPeriodsForEnd === 1) {
+                        currentSelectedPeriods = 1;
+                        currentStartTimeMinutes = minutes - minMinutes;
+                    } else {
+                        currentStartTimeMinutes = null;
+                        currentSelectedPeriods = null;
+                    }
+                } else {
+                    if (maxPeriodsForEnd === 1) {
+                        currentSelectedPeriods = 1;
+                        currentStartTimeMinutes = minutes - minMinutes;
+                    }
+                }
+
+                rebuildAll();
+                calculateAndUpdateBookingCost();
+                // Проверяем занятость специалиста при изменении времени окончания
+                if (typeof applyEditTeacherDirectionFilters === 'function') {
+                    applyEditTeacherDirectionFilters();
+                }
+            });
+
+            validateWarnings();
+            updateSubmitButtonState();
+        }
+
+        function loadRoomBookingsAndRebuild() {
+            if (!roomId || !dateIso) {
+                roomBookings = [];
+                rebuildAll();
                 return;
             }
 
-            // Открытие/закрытие по клику
-            select.addEventListener('click', () => {
-                select.classList.toggle('open');
-            });
+            // Принудительно перезагружаем данные при смене даты (forceReload=true)
+            utils.loadRoomBookingsForDate(roomId, dateIso, bookingId, function (bookings) {
+                roomBookings = bookings || [];
+                rebuildAll();
+                // После загрузки данных вызываем валидацию и обновление кнопки
+                validateWarnings();
+                updateSubmitButtonState();
+                // Также обновляем фильтры преподавателей
+                if (typeof applyEditTeacherDirectionFilters === 'function') {
+                    applyEditTeacherDirectionFilters();
+                }
+            }, true);
+        }
 
-            // Выбор опции
-            optionsList.forEach(option => {
-                option.addEventListener('click', (e) => {
+        function resetStartTime() {
+            currentStartTimeMinutes = null;
+            if (startWarn) startWarn.style.display = 'none';
+
+            if (currentEndTimeMinutes !== null) {
+                currentSelectedPeriods = null;
+            } else {
+                currentSelectedPeriods = null;
+                currentEndTimeMinutes = null;
+            }
+            rebuildAll();
+            calculateAndUpdateBookingCost();
+        }
+
+        function resetEndTime() {
+            currentEndTimeMinutes = null;
+            if (endWarn) endWarn.style.display = 'none';
+
+            if (currentStartTimeMinutes !== null) {
+                currentSelectedPeriods = null;
+            } else {
+                currentSelectedPeriods = null;
+                currentStartTimeMinutes = null;
+            }
+            rebuildAll();
+            calculateAndUpdateBookingCost();
+        }
+
+        function resetDuration() {
+            currentSelectedPeriods = null;
+            hideWarnings();
+
+            if (currentStartTimeMinutes !== null) {
+                currentEndTimeMinutes = null;
+            } else if (currentEndTimeMinutes !== null) {
+                currentStartTimeMinutes = null;
+            }
+
+            rebuildAll();
+            calculateAndUpdateBookingCost();
+        }
+
+        function bindClearButtons() {
+            const startClear = startTimeSelect ? startTimeSelect.querySelector('.custom-select-clear') : null;
+            const endClear = endTimeSelect ? endTimeSelect.querySelector('.custom-select-clear') : null;
+            const durationClear = durationSelect ? durationSelect.querySelector('.custom-select-clear') : null;
+
+            if (startClear && !startClear._bound) {
+                startClear._bound = true;
+                startClear.addEventListener('click', function (e) {
+                    e.preventDefault();
                     e.stopPropagation();
-                    optionsList.forEach(opt => opt.classList.remove('selected'));
-                    option.classList.add('selected');
-                    selected.textContent = option.textContent;
-                    select.classList.remove('open');
+                    resetStartTime();
+                    if (startTimeSelect) startTimeSelect.classList.remove('open');
                 });
+            }
+
+            if (endClear && !endClear._bound) {
+                endClear._bound = true;
+                endClear.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    resetEndTime();
+                    if (endTimeSelect) endTimeSelect.classList.remove('open');
+                });
+            }
+
+            if (durationClear && !durationClear._bound) {
+                durationClear._bound = true;
+                durationClear.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    resetDuration();
+                    if (durationSelect) durationSelect.classList.remove('open');
+                });
+            }
+        }
+
+        bindClearButtons();
+
+        const controller = {
+            // Геттеры для доступа к текущим значениям извне
+            get _currentSelectedPeriods() { return currentSelectedPeriods; },
+            get _currentStartTimeMinutes() { return currentStartTimeMinutes; },
+            get _currentEndTimeMinutes() { return currentEndTimeMinutes; },
+            updateSubmitButtonState: updateSubmitButtonState,
+            loadFromBooking: function (booking) {
+                bookingId = booking && booking.id ? booking.id : null;
+                scenarioId = booking && booking.scenario_id ? String(booking.scenario_id) : modalEl.getAttribute('data-scenario-id');
+                roomId = booking && booking.room_id ? String(booking.room_id) : getSelectedValue(document.getElementById('edit-room'));
+                dateIso = booking && booking.date_iso ? String(booking.date_iso) : (dateInput ? dateInput.value : null);
+
+                minMinutes = utils.getScenarioMinDurationMinutes(scenarioId);
+                workStart = utils.getScenarioWorkTimeStartMinutes(scenarioId);
+                workEnd = utils.getScenarioWorkTimeEndMinutes(scenarioId);
+
+                currentStartTimeMinutes = booking && booking.start_time_hm ? utils.parseTimeToMinutes(booking.start_time_hm) : null;
+                currentEndTimeMinutes = booking && booking.end_time_hm ? utils.parseTimeToMinutes(booking.end_time_hm) : null;
+
+                currentSelectedPeriods = null;
+                if (booking && booking.duration_hhmm) {
+                    const durMin = utils.parseTimeToMinutes(booking.duration_hhmm);
+                    if (durMin && minMinutes && durMin % minMinutes === 0) {
+                        currentSelectedPeriods = durMin / minMinutes;
+                    }
+                }
+
+                loadRoomBookingsAndRebuild();
+            },
+            handleRoomOrDateChange: function () {
+                roomId = getSelectedValue(document.getElementById('edit-room'));
+                dateIso = dateInput ? dateInput.value : null;
+                loadRoomBookingsAndRebuild();
+            }
+        };
+
+        modalEl._editTimeController = controller;
+        return controller;
+    }
+
+    // --- Кэш занятых специалистов на дату ---
+    var editBusySpecialistsCache = {
+        date: null,
+        specialists: [] // [{id, name, intervals: [{startMinutes, endMinutes}]}]
+    };
+
+    // Загрузить занятых специалистов на дату через AJAX
+    function loadEditBusySpecialistsForDate(dateIso, callback) {
+        if (editBusySpecialistsCache.date === dateIso) {
+            if (callback) callback(editBusySpecialistsCache.specialists);
+            return;
+        }
+        
+        var url = '/booking/busy-specialists-for-date/?date=' + encodeURIComponent(dateIso);
+        
+        fetch(url, {
+            method: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success && Array.isArray(data.busy_specialists)) {
+                editBusySpecialistsCache.date = dateIso;
+                editBusySpecialistsCache.specialists = data.busy_specialists;
+                if (callback) callback(data.busy_specialists);
+            } else {
+                if (callback) callback([]);
+            }
+        })
+        .catch(function(error) {
+            console.error('Ошибка загрузки занятых специалистов:', error);
+            if (callback) callback([]);
+        });
+    }
+
+    // Проверить, занят ли специалист в указанное время
+    function isEditSpecialistBusy(specialistId, startMinutes, endMinutes, excludeBookingId) {
+        var busySpecs = editBusySpecialistsCache.specialists || [];
+        for (var i = 0; i < busySpecs.length; i++) {
+            if (busySpecs[i].id === specialistId) {
+                var intervals = busySpecs[i].intervals || [];
+                for (var j = 0; j < intervals.length; j++) {
+                    var interval = intervals[j];
+                    if (excludeBookingId && interval.booking_id && interval.booking_id === excludeBookingId) {
+                        continue;
+                    }
+                    if (startMinutes < interval.endMinutes && endMinutes > interval.startMinutes) {
+                        return true;
+                    }
+                }
+                break;
+            }
+        }
+        return false;
+    }
+    window.isEditSpecialistBusy = isEditSpecialistBusy;
+
+    // Переменная для отслеживания последнего изменённого селекта (преподаватель или направление)
+    var editTeacherDirectionLastChanged = 'edit-teacher';
+    window.setEditTeacherDirectionLastChanged = function(id) { editTeacherDirectionLastChanged = id; };
+
+    // Применить фильтры преподавателей и направлений по доступности и взаимосвязи
+    function applyEditTeacherDirectionFilters() {
+        var modalEl = document.getElementById('editBookingModal');
+        if (!modalEl) return;
+        
+        var teacherSelect = modalEl.querySelector('#edit-teacher');
+        var directionSelect = modalEl.querySelector('#edit-direction');
+        if (!teacherSelect || !directionSelect) return;
+
+        var selectedTeacherId = getSelectedValue(teacherSelect);
+        var selectedDirectionId = getSelectedValue(directionSelect);
+        var teacherLis = teacherSelect.querySelectorAll('ul.options li');
+        var directionLis = directionSelect.querySelectorAll('ul.options li');
+
+        var ctrl = modalEl._editTimeController;
+        var startMinutes = ctrl && ctrl._currentStartTimeMinutes !== undefined ? ctrl._currentStartTimeMinutes : null;
+        var endMinutes = ctrl && ctrl._currentEndTimeMinutes !== undefined ? ctrl._currentEndTimeMinutes : null;
+        var currentBookingId = window.currentBookingId;
+        var teacherWarning = document.getElementById('edit-teacher-warning-icon');
+        
+        var checkStartMinutes = startMinutes;
+        var checkEndMinutes = endMinutes;
+        if (startMinutes !== null && endMinutes === null) {
+            checkEndMinutes = startMinutes + 30;
+        } else if (startMinutes === null && endMinutes !== null) {
+            checkStartMinutes = endMinutes - 30;
+        }
+
+        // 1) Собираем доступных специалистов и их направления
+        var availableTeacherIds = [];
+        var availableDirectionIds = new Set();
+        teacherLis.forEach(function(li) {
+            var tid = parseInt(li.getAttribute('data-value'), 10);
+            var dirsRaw = li.getAttribute('data-directions') || '';
+            var dirs = dirsRaw ? dirsRaw.split(',').map(function(v) { return v.trim(); }).filter(Boolean) : [];
+            var timeOk = true;
+            if (checkStartMinutes !== null && checkEndMinutes !== null) {
+                timeOk = !isEditSpecialistBusy(tid, checkStartMinutes, checkEndMinutes, currentBookingId);
+            }
+            if (timeOk && !isNaN(tid)) {
+                availableTeacherIds.push(tid);
+                dirs.forEach(function(d) { availableDirectionIds.add(d); });
+            }
+        });
+
+        // 2) Проверка на конфликт: если оба выбраны, но не совместимы — сбрасываем один
+        if (selectedTeacherId && selectedDirectionId) {
+            var selTeacherLi = teacherSelect.querySelector('ul.options li.selected');
+            var tDirsRaw = selTeacherLi ? (selTeacherLi.getAttribute('data-directions') || '') : '';
+            var tDirs = tDirsRaw ? tDirsRaw.split(',').map(function(v) { return v.trim(); }).filter(Boolean) : [];
+            if (tDirs.indexOf(String(selectedDirectionId)) === -1) {
+                if (editTeacherDirectionLastChanged === 'edit-direction') {
+                    teacherLis.forEach(function(li) { li.classList.remove('selected'); });
+                    var ts = teacherSelect.querySelector('.selected');
+                    if (ts) ts.textContent = 'Выберите преподавателя';
+                    selectedTeacherId = '';
+                } else {
+                    directionLis.forEach(function(li) { li.classList.remove('selected'); });
+                    var ds = directionSelect.querySelector('.selected');
+                    if (ds) ds.textContent = 'Выберите направление';
+                    selectedDirectionId = '';
+                }
+            }
+        }
+
+        // 3) Фильтрация направлений
+        var visibleDirCount = 0, lastVisibleDirLi = null;
+        var dirSpan = directionSelect.querySelector('span.selected');
+        if (selectedTeacherId) {
+            var tLi = teacherSelect.querySelector('ul.options li.selected');
+            var dRaw = tLi ? (tLi.getAttribute('data-directions') || '') : '';
+            var allowedDirs = dRaw ? dRaw.split(',').map(function(v) { return v.trim(); }).filter(Boolean) : [];
+            directionLis.forEach(function(li) {
+                var dirId = li.getAttribute('data-value') || '';
+                var vis = allowedDirs.indexOf(String(dirId)) !== -1;
+                li.style.display = vis ? '' : 'none';
+                if (vis) { visibleDirCount++; lastVisibleDirLi = li; }
+            });
+        } else {
+            directionLis.forEach(function(li) {
+                var dirId = li.getAttribute('data-value') || '';
+                var vis = availableDirectionIds.has(dirId);
+                li.style.display = vis ? '' : 'none';
+                if (vis) { visibleDirCount++; lastVisibleDirLi = li; }
+            });
+        }
+        // Авто-подстановка единственного направления
+        if (visibleDirCount === 1 && !selectedDirectionId && lastVisibleDirLi) {
+            lastVisibleDirLi.classList.add('selected');
+            if (dirSpan) dirSpan.textContent = lastVisibleDirLi.textContent;
+            selectedDirectionId = lastVisibleDirLi.getAttribute('data-value');
+        }
+
+        // 4) Фильтрация преподавателей
+        var visibleTeacherCount = 0, lastVisibleTeacherLi = null;
+        var teacherSpan = teacherSelect.querySelector('span.selected');
+        teacherLis.forEach(function(li) {
+            var tid = parseInt(li.getAttribute('data-value'), 10);
+            var dRaw = li.getAttribute('data-directions') || '';
+            var dirs = dRaw ? dRaw.split(',').map(function(v) { return v.trim(); }).filter(Boolean) : [];
+            var dirMatch = !selectedDirectionId || dirs.indexOf(String(selectedDirectionId)) !== -1;
+            var timeOk = availableTeacherIds.indexOf(tid) !== -1;
+            var vis = dirMatch && timeOk;
+            li.style.display = vis ? '' : 'none';
+            if (vis) { visibleTeacherCount++; lastVisibleTeacherLi = li; }
+        });
+        // Авто-подстановка единственного специалиста
+        if (visibleTeacherCount === 1 && !selectedTeacherId && lastVisibleTeacherLi) {
+            lastVisibleTeacherLi.classList.add('selected');
+            if (teacherSpan) teacherSpan.textContent = lastVisibleTeacherLi.textContent;
+            selectedTeacherId = lastVisibleTeacherLi.getAttribute('data-value');
+            var sDirsRaw = lastVisibleTeacherLi.getAttribute('data-directions') || '';
+            var sDirs = sDirsRaw ? sDirsRaw.split(',').map(function(v) { return v.trim(); }).filter(Boolean) : [];
+            if (sDirs.length === 1 && !selectedDirectionId) {
+                directionLis.forEach(function(li) {
+                    if (li.getAttribute('data-value') === sDirs[0]) {
+                        li.classList.add('selected');
+                        if (dirSpan) dirSpan.textContent = li.textContent;
+                    }
+                });
+            }
+        }
+
+        // 5) Предупреждение о занятости преподавателя
+        if (selectedTeacherId && checkStartMinutes !== null && checkEndMinutes !== null) {
+            var teacherIdInt = parseInt(selectedTeacherId, 10);
+            if (isEditSpecialistBusy(teacherIdInt, checkStartMinutes, checkEndMinutes, currentBookingId)) {
+                if (teacherWarning) teacherWarning.style.display = 'inline-block';
+            } else {
+                if (teacherWarning) teacherWarning.style.display = 'none';
+            }
+        } else {
+            if (teacherWarning) teacherWarning.style.display = 'none';
+        }
+        
+        // 6) Обновляем состояние кнопки сохранения
+        var ctrl2 = modalEl._editTimeController;
+        if (ctrl2 && typeof ctrl2.updateSubmitButtonState === 'function') {
+            ctrl2.updateSubmitButtonState();
+        }
+    }
+    window.applyEditTeacherDirectionFilters = applyEditTeacherDirectionFilters;
+
+    // =====================================================
+    // МОДУЛЬ КАЛЕНДАРЯ (DATEPICKER) ДЛЯ РЕДАКТИРОВАНИЯ
+    // =====================================================
+    var editDatepickerCurrentMonth = new Date();
+    var editDatepickerSelectedDate = new Date();
+    var editMonthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    var editMonthNamesGenitive = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+    function formatEditDateDisplay(date) {
+        return date.getDate() + ' ' + editMonthNamesGenitive[date.getMonth()] + ' ' + date.getFullYear();
+    }
+
+    function formatEditDateIso(date) {
+        var y = date.getFullYear();
+        var m = String(date.getMonth() + 1).padStart(2, '0');
+        var d = String(date.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + d;
+    }
+
+    function initEditDatepicker(initialDateIso) {
+        var trigger = document.getElementById('edit-datepicker-trigger');
+        var popup = document.getElementById('edit-datepicker-popup');
+        var display = document.getElementById('edit-datepicker-display');
+        var grid = document.getElementById('edit-datepicker-grid');
+        var monthSel = document.getElementById('edit-datepicker-month');
+        var yearSel = document.getElementById('edit-datepicker-year');
+        var prevBtn = document.getElementById('edit-datepicker-prev');
+        var nextBtn = document.getElementById('edit-datepicker-next');
+        var todayBtn = document.getElementById('edit-datepicker-today');
+        var input = document.getElementById('edit-date');
+        if (!trigger || !popup || !grid) return;
+
+        if (initialDateIso) {
+            editDatepickerSelectedDate = new Date(initialDateIso);
+            editDatepickerCurrentMonth = new Date(initialDateIso);
+        }
+
+        function populateMonthSelect() {
+            if (!monthSel) return;
+            monthSel.innerHTML = '';
+            for (var i = 0; i < 12; i++) {
+                var opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = editMonthNames[i];
+                if (i === editDatepickerCurrentMonth.getMonth()) opt.selected = true;
+                monthSel.appendChild(opt);
+            }
+        }
+
+        function populateYearSelect() {
+            if (!yearSel) return;
+            yearSel.innerHTML = '';
+            var currentYear = new Date().getFullYear();
+            for (var y = currentYear - 2; y <= currentYear + 3; y++) {
+                var opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                if (y === editDatepickerCurrentMonth.getFullYear()) opt.selected = true;
+                yearSel.appendChild(opt);
+            }
+        }
+
+        function buildGrid() {
+            grid.innerHTML = '';
+            var year = editDatepickerCurrentMonth.getFullYear();
+            var month = editDatepickerCurrentMonth.getMonth();
+            var firstDay = new Date(year, month, 1);
+            var startDow = (firstDay.getDay() + 6) % 7;
+            var daysInMonth = new Date(year, month + 1, 0).getDate();
+            var prevLast = new Date(year, month, 0).getDate();
+            var today = new Date(); today.setHours(0,0,0,0);
+
+            for (var i = startDow - 1; i >= 0; i--) {
+                var cell = document.createElement('div');
+                cell.className = 'modal-datepicker__day modal-datepicker__day--outside';
+                cell.textContent = prevLast - i;
+                grid.appendChild(cell);
+            }
+            for (var d = 1; d <= daysInMonth; d++) {
+                var cell = document.createElement('div');
+                cell.className = 'modal-datepicker__day';
+                cell.textContent = d;
+                var cellDate = new Date(year, month, d); cellDate.setHours(0,0,0,0);
+                if (cellDate.getTime() === today.getTime()) cell.classList.add('modal-datepicker__day--today');
+                if (editDatepickerSelectedDate && cellDate.getFullYear() === editDatepickerSelectedDate.getFullYear() &&
+                    cellDate.getMonth() === editDatepickerSelectedDate.getMonth() && cellDate.getDate() === editDatepickerSelectedDate.getDate()) {
+                    cell.classList.add('modal-datepicker__day--selected');
+                }
+                (function(dt) { cell.addEventListener('click', function() { onDateSelected(dt); }); })(cellDate);
+                grid.appendChild(cell);
+            }
+            var total = grid.children.length;
+            var remaining = (7 - (total % 7)) % 7;
+            for (var n = 1; n <= remaining; n++) {
+                var cell = document.createElement('div');
+                cell.className = 'modal-datepicker__day modal-datepicker__day--outside';
+                cell.textContent = n;
+                grid.appendChild(cell);
+            }
+        }
+
+        function render() { populateMonthSelect(); populateYearSelect(); buildGrid(); }
+
+        function onDateSelected(newDate) {
+            editDatepickerSelectedDate = newDate;
+            var iso = formatEditDateIso(newDate);
+            if (display) display.textContent = formatEditDateDisplay(newDate);
+            if (input) input.value = iso;
+            popup.classList.remove('open');
+            var ctrl = ensureEditTimeController();
+            if (ctrl && ctrl.handleRoomOrDateChange) ctrl.handleRoomOrDateChange();
+            loadEditBusySpecialistsForDate(iso, function() { applyEditTeacherDirectionFilters(); });
+        }
+
+        if (!trigger._bound) {
+            trigger._bound = true;
+            trigger.addEventListener('click', function(e) {
+                e.stopPropagation();
+                popup.classList.toggle('open');
+                if (popup.classList.contains('open')) {
+                    editDatepickerCurrentMonth = new Date(editDatepickerSelectedDate.getFullYear(), editDatepickerSelectedDate.getMonth(), 1);
+                    render();
+                }
+            });
+        }
+        if (prevBtn && !prevBtn._bound) {
+            prevBtn._bound = true;
+            prevBtn.addEventListener('click', function(e) { e.stopPropagation(); editDatepickerCurrentMonth.setMonth(editDatepickerCurrentMonth.getMonth() - 1); render(); });
+        }
+        if (nextBtn && !nextBtn._bound) {
+            nextBtn._bound = true;
+            nextBtn.addEventListener('click', function(e) { e.stopPropagation(); editDatepickerCurrentMonth.setMonth(editDatepickerCurrentMonth.getMonth() + 1); render(); });
+        }
+        if (monthSel && !monthSel._bound) {
+            monthSel._bound = true;
+            monthSel.addEventListener('change', function() { editDatepickerCurrentMonth.setMonth(parseInt(this.value, 10)); render(); });
+        }
+        if (yearSel && !yearSel._bound) {
+            yearSel._bound = true;
+            yearSel.addEventListener('change', function() { editDatepickerCurrentMonth.setFullYear(parseInt(this.value, 10)); render(); });
+        }
+        if (todayBtn && !todayBtn._bound) {
+            todayBtn._bound = true;
+            todayBtn.addEventListener('click', function(e) { e.stopPropagation(); onDateSelected(new Date()); });
+        }
+        if (!window._editDatepickerClickHandler) {
+            window._editDatepickerClickHandler = true;
+            document.addEventListener('click', function(e) {
+                var p = document.getElementById('edit-datepicker-popup');
+                var t = document.getElementById('edit-datepicker-trigger');
+                if (p && p.classList.contains('open') && !p.contains(e.target) && t && !t.contains(e.target)) {
+                    p.classList.remove('open');
+                }
+            });
+        }
+        if (display) display.textContent = formatEditDateDisplay(editDatepickerSelectedDate);
+        if (input) input.value = formatEditDateIso(editDatepickerSelectedDate);
+    }
+
+    // Инициализация кастомных селектов модалки редактирования
+    function initializeEditModalSelects() {
+        const modalEl = document.getElementById('editBookingModal');
+        if (!modalEl) return;
+
+        modalEl.querySelectorAll('.custom-select').forEach(select => {
+            if (select._handlersBound) return;
+            select._handlersBound = true;
+
+            const selected = select.querySelector('.selected');
+            const optionsContainer = select.querySelector('.options');
+            if (!selected || !optionsContainer) return;
+
+            const closeAll = () => {
+                modalEl.querySelectorAll('.custom-select.open').forEach(s => s.classList.remove('open'));
+            };
+
+            if (select.id === 'edit-services') {
+                select._selectedOptions = new Set();
+                select.addEventListener('click', function (e) {
+                    if (e.target && e.target.tagName === 'LI') return;
+                    // Если список уже открыт - закрываем его, иначе открываем
+                    var wasOpen = select.classList.contains('open');
+                    closeAll();
+                    if (!wasOpen) select.classList.add('open');
+                });
+
+                optionsContainer.addEventListener('click', function (e) {
+                    const li = e.target && e.target.closest ? e.target.closest('li') : null;
+                    if (!li) return;
+                    e.stopPropagation();
+                    if (li.classList.contains('selected')) {
+                        li.classList.remove('selected');
+                        select._selectedOptions.delete(li);
+                    } else {
+                        li.classList.add('selected');
+                        select._selectedOptions.add(li);
+                    }
+                    const count = select._selectedOptions.size;
+                    if (count === 0) {
+                        selected.textContent = 'Выберите услугу';
+                    } else if (count === 1) {
+                        selected.textContent = Array.from(select._selectedOptions)[0].textContent;
+                    } else {
+                        selected.textContent = `${count} выбрано`;
+                    }
+                    updateServicesBadges();
+                    calculateAndUpdateBookingCost();
+                });
+                return;
+            }
+
+            select.addEventListener('click', function (e) {
+                if (e.target && e.target.tagName === 'LI') {
+                    e.stopPropagation();
+                    optionsContainer.querySelectorAll('li').forEach(opt => opt.classList.remove('selected'));
+                    e.target.classList.add('selected');
+                    selected.textContent = e.target.textContent;
+                    select.classList.remove('open');
+                } else {
+                    // Если список уже открыт - закрываем его, иначе открываем
+                    var wasOpen = select.classList.contains('open');
+                    closeAll();
+                    if (!wasOpen) select.classList.add('open');
+                }
             });
 
-            // Закрытие по клику вне select
-            document.addEventListener('click', (e) => {
-                if (!select.contains(e.target)) {
-                    select.classList.remove('open');
+            optionsContainer.addEventListener('click', function (e) {
+                if (select.id === 'edit-start-time' || select.id === 'edit-end-time' || select.id === 'edit-duration') return;
+                const li = e.target && e.target.closest ? e.target.closest('li') : null;
+                if (!li) return;
+                e.stopPropagation();
+                optionsContainer.querySelectorAll('li').forEach(opt => opt.classList.remove('selected'));
+                li.classList.add('selected');
+                selected.textContent = li.textContent;
+                select.classList.remove('open');
+                // Добавляем класс для показа крестика сброса
+                select.classList.add('has-selection');
+
+                if (select.id === 'edit-room') {
+                    const controller = ensureEditTimeController();
+                    if (controller && typeof controller.handleRoomOrDateChange === 'function') {
+                        controller.handleRoomOrDateChange();
+                    }
+                }
+                if (select.id === 'edit-teacher' || select.id === 'edit-direction') {
+                    // Отслеживаем последний изменённый селект для корректного сброса при конфликте
+                    if (typeof window.setEditTeacherDirectionLastChanged === 'function') {
+                        window.setEditTeacherDirectionLastChanged(select.id);
+                    }
+                    applyEditTeacherDirectionFilters();
                 }
             });
         });
-    });
+
+        if (!window._editModalDocumentClickBound) {
+            window._editModalDocumentClickBound = true;
+            document.addEventListener('click', function (e) {
+                const modalEl = document.getElementById('editBookingModal');
+                if (!modalEl || !modalEl.contains(e.target)) return;
+                modalEl.querySelectorAll('.custom-select.open').forEach(s => {
+                    if (!s.contains(e.target)) s.classList.remove('open');
+                });
+            });
+        }
+
+        const resetServices = document.getElementById('reset-services');
+        if (resetServices && !resetServices._bound) {
+            resetServices._bound = true;
+            resetServices.addEventListener('click', function (e) {
+                e.preventDefault();
+                setMultiSelectedValues(document.getElementById('edit-services'), []);
+                calculateAndUpdateBookingCost();
+            });
+        }
+
+        // Обработчик сброса направления
+        const directionClear = document.querySelector('#edit-direction .custom-select-clear');
+        if (directionClear && !directionClear._bound) {
+            directionClear._bound = true;
+            directionClear.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const dirSelect = document.getElementById('edit-direction');
+                if (dirSelect) {
+                    dirSelect.querySelectorAll('ul.options li').forEach(li => li.classList.remove('selected'));
+                    const span = dirSelect.querySelector('.selected');
+                    if (span) span.textContent = 'Выберите направление';
+                    dirSelect.classList.remove('open');
+                    dirSelect.classList.remove('has-selection');
+                }
+                applyEditTeacherDirectionFilters();
+            });
+        }
+
+        // Обработчик сброса преподавателя
+        const teacherClear = document.querySelector('#edit-teacher .custom-select-clear');
+        if (teacherClear && !teacherClear._bound) {
+            teacherClear._bound = true;
+            teacherClear.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const teacherSelect = document.getElementById('edit-teacher');
+                if (teacherSelect) {
+                    teacherSelect.querySelectorAll('ul.options li').forEach(li => li.classList.remove('selected'));
+                    const span = teacherSelect.querySelector('.selected');
+                    if (span) span.textContent = 'Выберите преподавателя';
+                    teacherSelect.classList.remove('open');
+                    teacherSelect.classList.remove('has-selection');
+                }
+                applyEditTeacherDirectionFilters();
+            });
+        }
+
+        const dateInput = document.getElementById('edit-date');
+        if (dateInput && !dateInput._boundTimeRefresh) {
+            dateInput._boundTimeRefresh = true;
+            dateInput.addEventListener('change', function () {
+                const controller = ensureEditTimeController();
+                if (controller && typeof controller.handleRoomOrDateChange === 'function') {
+                    controller.handleRoomOrDateChange();
+                }
+            });
+        }
+
+        const submitBtn = document.getElementById('editBookingSubmitBtn');
+        if (submitBtn && !submitBtn._bound) {
+            submitBtn._bound = true;
+            submitBtn.addEventListener('click', submitEditBooking);
+        }
+    }
+
+    async function loadAndPrefillEditBookingModal() {
+        const bookingId = window.currentBookingId;
+        if (!bookingId) return;
+
+        try {
+            const response = await fetch(`/booking/get-booking-details/${bookingId}/`);
+            if (!response.ok) {
+                console.error('Не удалось получить детали брони для edit-модалки:', response.status);
+                return;
+            }
+            const data = await response.json();
+            if (!data.success || !data.booking) {
+                console.error('Некорректный ответ при загрузке деталей брони для edit-модалки:', data);
+                return;
+            }
+            prefillEditBookingModal(data.booking);
+        } catch (err) {
+            console.error('Ошибка при загрузке деталей брони для edit-модалки:', err);
+        }
+    }
+
+    function prefillEditBookingModal(booking) {
+        const modalEl = document.getElementById('editBookingModal');
+        if (!modalEl) return;
+
+        const publicIdEl = modalEl.querySelector('#publicID');
+        if (publicIdEl) {
+            publicIdEl.textContent = booking.id;
+        }
+
+        const scenarioNameEl = modalEl.querySelector('#scenarioName');
+        if (scenarioNameEl) {
+            scenarioNameEl.textContent = booking.reservation_type || '';
+        }
+
+        const clientNameEl = modalEl.querySelector('#clientName');
+        if (clientNameEl) {
+            clientNameEl.textContent = booking.client_name || '';
+        }
+
+        const clientPhoneEl = modalEl.querySelector('#clientPhone');
+        if (clientPhoneEl) {
+            clientPhoneEl.textContent = formatPhoneNumber(booking.client_phone || '');
+        }
+
+        if (booking.scenario_id) {
+            modalEl.setAttribute('data-scenario-id', booking.scenario_id);
+        }
+
+        const dateInput = modalEl.querySelector('#edit-date');
+        if (dateInput && booking.date_iso) {
+            dateInput.value = booking.date_iso;
+        }
+
+        // Инициализация датапикера с датой из брони
+        initEditDatepicker(booking.date_iso);
+
+        // Загрузка занятых специалистов на дату брони
+        if (booking.date_iso) {
+            loadEditBusySpecialistsForDate(booking.date_iso, function() {
+                applyEditTeacherDirectionFilters();
+            });
+        }
+
+        setCustomSelectValue(modalEl.querySelector('#edit-direction'), booking.direction_id, 'Выберите направление');
+        setCustomSelectValue(modalEl.querySelector('#edit-room'), booking.room_id, 'Выберите комнату');
+        setCustomSelectValue(modalEl.querySelector('#edit-teacher'), booking.specialist_id, 'Выберите преподавателя');
+
+        const controller = ensureEditTimeController();
+        if (controller && typeof controller.loadFromBooking === 'function') {
+            controller.loadFromBooking(booking);
+        }
+
+        const commentEl = modalEl.querySelector('#editBookingComment');
+        if (commentEl) {
+            commentEl.value = booking.comment || '';
+        }
+        initCommentCounter();
+
+        setMultiSelectedValues(modalEl.querySelector('#edit-services'), Array.isArray(booking.service_ids) ? booking.service_ids : []);
+
+        const costEl = modalEl.querySelector('#editBookingCostValue');
+        if (costEl && booking.total_cost !== undefined && booking.total_cost !== null) {
+            costEl.textContent = `${booking.total_cost} BYN`;
+        }
+        calculateAndUpdateBookingCost();
+    }
+
+    async function submitEditBooking() {
+        const bookingId = window.currentBookingId;
+        if (!bookingId) return;
+
+        const scenarioId = document.getElementById('editBookingModal')?.getAttribute('data-scenario-id') || null;
+        if (!scenarioId) {
+            console.error('Не удалось определить тип брони (scenario)');
+            return;
+        }
+
+        const dateIso = document.getElementById('edit-date')?.value;
+        const startTimeHm = getSelectedValue(document.getElementById('edit-start-time'));
+        const durationHhmm = getSelectedValue(document.getElementById('edit-duration'));
+        const roomId = getSelectedValue(document.getElementById('edit-room'));
+        const specialistId = getSelectedValue(document.getElementById('edit-teacher'));
+        const directionId = getSelectedValue(document.getElementById('edit-direction'));
+        const comment = document.getElementById('editBookingComment')?.value || '';
+        const serviceIds = Array.from((document.getElementById('edit-services')?._selectedOptions || new Set())).map(li => li.getAttribute('data-value')).filter(Boolean);
+
+        const costText = document.getElementById('editBookingCostValue')?.textContent || '';
+        const totalCost = (costText || '').replace('BYN', '').trim();
+
+        const payload = {
+            date_iso: dateIso,
+            start_time_hm: startTimeHm,
+            duration_hhmm: durationHhmm,
+            room_id: roomId,
+            specialist_id: specialistId || null,
+            direction_id: directionId || null,
+            service_ids: serviceIds,
+            comment: comment,
+            total_cost: totalCost,
+        };
+
+        try {
+            const response = await fetch(`/booking/edit/${bookingId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': (typeof getCookie === 'function' ? getCookie('csrftoken') : '')
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data || !data.success) {
+                const msg = (data && data.error) ? data.error : 'Не удалось сохранить изменения';
+                throw new Error(msg);
+            }
+
+            if (typeof window.reloadCalendarGridForCurrentState === 'function') {
+                await window.reloadCalendarGridForCurrentState();
+            } else if (typeof window.refreshBookingsGrid === 'function') {
+                await window.refreshBookingsGrid({ silent: true });
+            }
+
+            window._editModalShouldOpenInfo = false;
+            const editModalInst = bootstrap.Modal.getInstance(document.getElementById('editBookingModal'));
+            if (editModalInst) {
+                editModalInst.hide();
+            }
+
+            setTimeout(function () {
+                if (typeof window.openInfoModal === 'function') {
+                    window.openInfoModal();
+                } else {
+                    const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
+                    infoModal.show();
+                }
+            }, 50);
+
+        } catch (err) {
+            console.error('Ошибка при сохранении изменений брони:', err);
+        }
+    }
 
     // Счетчик символов для textarea 'Комментарий'
     function initCommentCounter() {

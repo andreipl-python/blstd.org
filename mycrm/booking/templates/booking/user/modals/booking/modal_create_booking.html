@@ -368,6 +368,9 @@
 
     // Функция открытия модального окна: подставляет комнату и сценарий в шапку + базовые hidden-поля
     function openModal(date, time, roomName, roomId, cell) {
+        if (typeof window.resetCreateBookingModalSelects === 'function') {
+            window.resetCreateBookingModalSelects();
+        }
         // Сбрасываем комментарий при каждом открытии
         var commentField = document.getElementById('bookingComment');
         if (commentField) {
@@ -463,80 +466,48 @@
                 // Данные берутся из TariffUnit.min_reservation_time (TimeField в формате "HH:MM:SS")
                 function getScenarioMinDurationMinutes() {
                     var fallback = 60;
-                    if (!window.currentScenarioFilterId || !Array.isArray(window.TARIFF_UNITS)) {
+                    if (!window.currentScenarioFilterId) {
                         return fallback;
                     }
-                    var scenarioId = String(window.currentScenarioFilterId);
-                    
-                    // Ищем тарифную единицу для текущего сценария
-                    var tariffUnit = window.TARIFF_UNITS.find(function (t) {
-                        return t.fields && String(t.fields.scenario) === scenarioId;
-                    });
-                    
-                    if (!tariffUnit || !tariffUnit.fields || !tariffUnit.fields.min_reservation_time) {
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getScenarioMinDurationMinutes !== 'function') {
                         return fallback;
                     }
-                    // Парсим TimeField формат "HH:MM:SS" в минуты
-                    var timeParts = String(tariffUnit.fields.min_reservation_time).split(':');
-                    if (timeParts.length < 2) return fallback;
-                    var hours = parseInt(timeParts[0], 10);
-                    var minutes = parseInt(timeParts[1], 10);
-                    if (isNaN(hours) || isNaN(minutes)) return fallback;
-                    var totalMinutes = hours * 60 + minutes;
-                    return totalMinutes > 0 ? totalMinutes : fallback;
+                    return window.BookingTimeUtils.getScenarioMinDurationMinutes(window.currentScenarioFilterId) || fallback;
                 }
                 // Делаем функцию доступной глобально
                 window.getScenarioMinDurationMinutes = getScenarioMinDurationMinutes;
 
                 // Получить work_time_start сценария в минутах от полуночи
                 function getScenarioWorkTimeStartMinutes() {
-                    if (!window.currentScenarioFilterId || !Array.isArray(window.SCENARIOS)) {
+                    if (!window.currentScenarioFilterId) {
                         return 0;
                     }
-                    var scenarioId = String(window.currentScenarioFilterId);
-                    var scenarioObj = window.SCENARIOS.find(function (s) { return String(s.pk) === scenarioId; });
-                    if (!scenarioObj || !scenarioObj.fields || !scenarioObj.fields.work_time_start) {
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getScenarioWorkTimeStartMinutes !== 'function') {
                         return 0;
                     }
-                    var parts = String(scenarioObj.fields.work_time_start).split(':');
-                    if (parts.length < 2) return 0;
-                    var h = parseInt(parts[0], 10);
-                    var m = parseInt(parts[1], 10);
-                    if (isNaN(h) || isNaN(m)) return 0;
-                    return h * 60 + m;
+                    return window.BookingTimeUtils.getScenarioWorkTimeStartMinutes(window.currentScenarioFilterId);
                 }
 
                 // Получить work_time_end сценария в минутах от полуночи
                 function getScenarioWorkTimeEndMinutes() {
-                    if (!window.currentScenarioFilterId || !Array.isArray(window.SCENARIOS)) {
+                    if (!window.currentScenarioFilterId) {
                         return 24 * 60;
                     }
-                    var scenarioId = String(window.currentScenarioFilterId);
-                    var scenarioObj = window.SCENARIOS.find(function (s) { return String(s.pk) === scenarioId; });
-                    if (!scenarioObj || !scenarioObj.fields || !scenarioObj.fields.work_time_end) {
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getScenarioWorkTimeEndMinutes !== 'function') {
                         return 24 * 60;
                     }
-                    var parts = String(scenarioObj.fields.work_time_end).split(':');
-                    if (parts.length < 2) return 24 * 60;
-                    var h = parseInt(parts[0], 10);
-                    var m = parseInt(parts[1], 10);
-                    if (isNaN(h) || isNaN(m)) return 24 * 60;
-                    return h * 60 + m;
+                    return window.BookingTimeUtils.getScenarioWorkTimeEndMinutes(window.currentScenarioFilterId);
                 }
 
                 // Получить стоимость одного периода (тарифной единицы) для текущего сценария
                 function getScenarioTariffUnitCost() {
-                    if (!window.currentScenarioFilterId || !Array.isArray(window.TARIFF_UNITS)) {
+                    if (!window.currentScenarioFilterId) {
                         return 0;
                     }
-                    var scenarioId = String(window.currentScenarioFilterId);
-                    var tariffUnit = window.TARIFF_UNITS.find(function (t) {
-                        return t.fields && String(t.fields.scenario) === scenarioId;
-                    });
-                    if (!tariffUnit || !tariffUnit.fields || !tariffUnit.fields.tariff_unit_cost) {
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getScenarioTariffUnitCost !== 'function') {
                         return 0;
                     }
-                    return parseFloat(tariffUnit.fields.tariff_unit_cost) || 0;
+                    return window.BookingTimeUtils.getScenarioTariffUnitCost(window.currentScenarioFilterId) || 0;
                 }
 
                 // Получить сумму стоимости выбранных услуг
@@ -595,65 +566,50 @@
 
                 // Преобразовать datetime строку "YYYY-MM-DD HH:MM:SS" в объект Date
                 function parseDatetimeStr(dtStr) {
-                    if (!dtStr) return null;
-                    var parts = dtStr.split(' ');
-                    if (parts.length < 2) return null;
-                    var dateParts = parts[0].split('-');
-                    var timeParts = parts[1].split(':');
-                    if (dateParts.length < 3 || timeParts.length < 2) return null;
-                    return new Date(
-                        parseInt(dateParts[0], 10),
-                        parseInt(dateParts[1], 10) - 1,
-                        parseInt(dateParts[2], 10),
-                        parseInt(timeParts[0], 10),
-                        parseInt(timeParts[1], 10),
-                        timeParts[2] ? parseInt(timeParts[2], 10) : 0
-                    );
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.parseDatetimeStr !== 'function') {
+                        return null;
+                    }
+                    return window.BookingTimeUtils.parseDatetimeStr(dtStr);
                 }
 
                 // Форматирование времени из минут от полуночи в HH:MM
                 function formatTimeHHMM(totalMinutes) {
-                    var m = parseInt(totalMinutes, 10);
-                    if (isNaN(m) || m < 0) return '';
-                    var h = Math.floor(m / 60) % 24;
-                    var mm = m % 60;
-                    return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.formatTimeHHMM !== 'function') {
+                        return '';
+                    }
+                    return window.BookingTimeUtils.formatTimeHHMM(totalMinutes);
                 }
 
                 // Парсинг времени HH:MM в минуты от полуночи
                 function parseTimeToMinutes(timeStr) {
-                    if (!timeStr) return 0;
-                    var parts = String(timeStr).split(':');
-                    if (parts.length < 2) return 0;
-                    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.parseTimeToMinutes !== 'function') {
+                        return 0;
+                    }
+                    return window.BookingTimeUtils.parseTimeToMinutes(timeStr);
                 }
 
                 // Форматирование длительности для отображения
                 function formatDurationHuman(totalMinutes) {
-                    var m = parseInt(totalMinutes, 10);
-                    if (isNaN(m) || m <= 0) return '';
-                    var h = Math.floor(m / 60);
-                    var mm = m % 60;
-                    if (h > 0 && mm > 0) return h + ' ч ' + mm + ' мин';
-                    if (h > 0) return h + ' ч';
-                    return mm + ' мин';
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.formatDurationHuman !== 'function') {
+                        return '';
+                    }
+                    return window.BookingTimeUtils.formatDurationHuman(totalMinutes);
                 }
 
                 // Форматирование длительности в HH:MM для отправки на сервер
                 function formatDurationHHMM(totalMinutes) {
-                    var m = parseInt(totalMinutes, 10);
-                    if (isNaN(m) || m < 0) return '';
-                    var h = Math.floor(m / 60);
-                    var mm = m % 60;
-                    return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.formatDurationHHMM !== 'function') {
+                        return '';
+                    }
+                    return window.BookingTimeUtils.formatDurationHHMM(totalMinutes);
                 }
 
                 // Склонение слова "период"
                 function formatPeriodsLabel(n) {
-                    var k = parseInt(n, 10);
-                    if (k === 1) return 'период';
-                    if (k >= 2 && k <= 4) return 'периода';
-                    return 'периодов';
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.formatPeriodsLabel !== 'function') {
+                        return '';
+                    }
+                    return window.BookingTimeUtils.formatPeriodsLabel(n);
                 }
 
                 // Кэш броней комнаты на дату (загружается через AJAX, содержит ВСЕ брони комнаты без фильтра по сценарию)
@@ -673,60 +629,22 @@
                         if (callback) callback(roomBookingsCache.bookings);
                         return;
                     }
-                    
-                    var url = '/booking/room-bookings-for-date/?room_id=' + encodeURIComponent(roomId) + '&date=' + encodeURIComponent(dateIso);
-                    
-                    fetch(url, {
-                        method: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(function(response) {
-                        return response.json();
-                    })
-                    .then(function(data) {
-                        if (data.success && Array.isArray(data.bookings)) {
-                            // Преобразуем в формат {startMinutes, endMinutes}
-                            var parsed = [];
-                            data.bookings.forEach(function(booking) {
-                                if (!booking.blocks_datetime_range || !booking.blocks_datetime_range.length) return;
-                                
-                                // Фильтруем только блоки на запрошенную дату
-                                var blocksOnDate = booking.blocks_datetime_range.filter(function(block) {
-                                    return block.startsWith(dateIso);
-                                });
-                                
-                                if (blocksOnDate.length === 0) return;
-                                
-                                var startDt = parseDatetimeStr(blocksOnDate[0]);
-                                var endDt = parseDatetimeStr(blocksOnDate[blocksOnDate.length - 1]);
-                                if (!startDt || !endDt) return;
-                                
-                                // Добавляем 15 минут к endDt, т.к. последний блок - это начало последнего 15-мин интервала
-                                var endMinutes = endDt.getHours() * 60 + endDt.getMinutes() + 15;
-                                
-                                parsed.push({
-                                    startMinutes: startDt.getHours() * 60 + startDt.getMinutes(),
-                                    endMinutes: endMinutes
-                                });
-                            });
-                            
-                            // Сохраняем в кэш
-                            roomBookingsCache.roomId = roomIdStr;
-                            roomBookingsCache.date = dateIso;
-                            roomBookingsCache.bookings = parsed;
-                            
-                            if (callback) callback(parsed);
-                        } else {
-                            console.error('Ошибка загрузки броней комнаты:', data.error || 'unknown');
-                            if (callback) callback([]);
-                        }
-                    })
-                    .catch(function(error) {
-                        console.error('Сетевая ошибка при загрузке броней комнаты:', error);
+
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.loadRoomBookingsForDate !== 'function') {
+                        roomBookingsCache.roomId = roomIdStr;
+                        roomBookingsCache.date = dateIso;
+                        roomBookingsCache.bookings = [];
                         if (callback) callback([]);
-                    });
+                        return;
+                    }
+
+                    // Принудительно перезагружаем данные при смене даты (forceReload=true)
+                    window.BookingTimeUtils.loadRoomBookingsForDate(roomIdStr, dateIso, null, function (intervals) {
+                        roomBookingsCache.roomId = roomIdStr;
+                        roomBookingsCache.date = dateIso;
+                        roomBookingsCache.bookings = Array.isArray(intervals) ? intervals : [];
+                        if (callback) callback(roomBookingsCache.bookings);
+                    }, true);
                 }
                 
                 // --- Кэш занятых специалистов на дату ---
@@ -812,115 +730,41 @@
                     // Fallback на старый способ если кэш пуст
                     var bookings = window.bookingsInRange || (typeof bookingsInRange !== 'undefined' ? bookingsInRange : []);
                     if (!Array.isArray(bookings)) return [];
-                    
-                    var result = [];
-                    bookings.forEach(function (booking) {
-                        if (String(booking.idroom) !== String(currentRoomId)) return;
-                        if (!booking.blocks_datetime_range || !booking.blocks_datetime_range.length) return;
-                        
-                        // Фильтруем только блоки на запрошенную дату
-                        var blocksOnDate = booking.blocks_datetime_range.filter(function(block) {
-                            return block.startsWith(dateIso);
+
+                    if (window.BookingTimeUtils && typeof window.BookingTimeUtils.normalizeRoomBookingsForDate === 'function') {
+                        var filtered = bookings.filter(function (booking) {
+                            return booking && String(booking.idroom) === String(currentRoomId);
                         });
-                        
-                        if (blocksOnDate.length === 0) return;
-                        
-                        var startDt = parseDatetimeStr(blocksOnDate[0]);
-                        var endDt = parseDatetimeStr(blocksOnDate[blocksOnDate.length - 1]);
-                        if (!startDt || !endDt) return;
-                        
-                        var startMinutes = startDt.getHours() * 60 + startDt.getMinutes();
-                        // Добавляем 15 минут к endMinutes, т.к. последний блок - это начало последнего 15-мин интервала
-                        var endMinutes = endDt.getHours() * 60 + endDt.getMinutes() + 15;
-                        
-                        result.push({
-                            startMinutes: startMinutes,
-                            endMinutes: endMinutes
-                        });
-                    });
-                    return result;
+                        return window.BookingTimeUtils.normalizeRoomBookingsForDate(filtered, dateIso, null);
+                    }
+
+                    return [];
                 }
 
                 // Вычислить доступные слоты времени начала для комнаты на дату
                 // Шаг = 15 минут (шаг сетки календаря), слот доступен если есть minMinutes до брони/конца дня
                 function getAvailableStartTimeSlots(currentRoomId, dateIso) {
-                    var minMinutes = getScenarioMinDurationMinutes();
                     var workStart = getScenarioWorkTimeStartMinutes();
                     var workEnd = getScenarioWorkTimeEndMinutes();
                     var roomBookings = getRoomBookingsForDate(currentRoomId, dateIso);
-                    var gridStep = 15; // Шаг сетки календаря в минутах
-                    
-                    var slots = [];
-                    
-                    // Сортируем брони по времени начала
-                    roomBookings.sort(function (a, b) { return a.startMinutes - b.startMinutes; });
-                    
-                    // Перебираем все временные слоты с шагом 15 минут
-                    for (var currentTime = workStart; currentTime + minMinutes <= workEnd; currentTime += gridStep) {
-                        var isBlocked = false;
-                        
-                        // Проверяем, не попадает ли слот внутрь существующей брони
-                        for (var i = 0; i < roomBookings.length; i++) {
-                            var booking = roomBookings[i];
-                            
-                            // Слот блокирован, если он начинается во время брони
-                            if (currentTime >= booking.startMinutes && currentTime < booking.endMinutes) {
-                                isBlocked = true;
-                                break;
-                            }
-                            
-                            // Слот блокирован, если минимальная бронь не помещается до начала следующей брони
-                            if (currentTime < booking.startMinutes && currentTime + minMinutes > booking.startMinutes) {
-                                isBlocked = true;
-                                break;
-                            }
-                        }
-                        
-                        if (!isBlocked) {
-                            slots.push(currentTime);
-                        }
+
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getAvailableStartTimeSlots !== 'function') {
+                        return [];
                     }
-                    
-                    return slots;
+
+                    return window.BookingTimeUtils.getAvailableStartTimeSlots(roomBookings, workStart, workEnd, minMinutes);
                 }
 
                 // Вычислить максимальное количество периодов для заданного времени начала
                 function getMaxPeriodsForStartTime(startTimeMinutes, currentRoomId, dateIso) {
-                    var minMinutes = getScenarioMinDurationMinutes();
                     var workEnd = getScenarioWorkTimeEndMinutes();
                     var roomBookings = getRoomBookingsForDate(currentRoomId, dateIso);
-                    
-                    // Ограничение 0: проверяем, что время начала не попадает внутрь существующей брони
-                    for (var i = 0; i < roomBookings.length; i++) {
-                        var booking = roomBookings[i];
-                        if (startTimeMinutes >= booking.startMinutes && startTimeMinutes < booking.endMinutes) {
-                            // Время начала внутри брони — недоступно
-                            return 0;
-                        }
+
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getMaxPeriodsForStartTime !== 'function') {
+                        return 0;
                     }
-                    
-                    // Ограничение 1: до конца рабочего времени
-                    var minutesToWorkEnd = workEnd - startTimeMinutes;
-                    if (minutesToWorkEnd <= 0) return 0;
-                    
-                    // Ограничение 2: до следующей брони
-                    var minutesToNextBooking = null;
-                    roomBookings.forEach(function (booking) {
-                        if (booking.startMinutes > startTimeMinutes) {
-                            var diff = booking.startMinutes - startTimeMinutes;
-                            if (minutesToNextBooking === null || diff < minutesToNextBooking) {
-                                minutesToNextBooking = diff;
-                            }
-                        }
-                    });
-                    
-                    // Итоговое ограничение
-                    var availableMinutes = minutesToWorkEnd;
-                    if (minutesToNextBooking !== null) {
-                        availableMinutes = Math.min(availableMinutes, minutesToNextBooking);
-                    }
-                    
-                    return Math.floor(availableMinutes / minMinutes);
+
+                    return window.BookingTimeUtils.getMaxPeriodsForStartTime(startTimeMinutes, roomBookings, workEnd, minMinutes);
                 }
 
                 // --- Состояние модуля ---
@@ -958,87 +802,79 @@
 
                 // Получить слоты времени начала, с которых доступно >= requiredPeriods периодов
                 function getStartTimeSlotsForPeriods(requiredPeriods) {
-                    var allSlots = getAvailableStartTimeSlots(currentRoomId, dateIso);
-                    if (requiredPeriods <= 1) return allSlots;
-                    
-                    return allSlots.filter(function (slotMinutes) {
-                        var maxPeriods = getMaxPeriodsForStartTime(slotMinutes, currentRoomId, dateIso);
-                        return maxPeriods >= requiredPeriods;
-                    });
+                    var workStart = getScenarioWorkTimeStartMinutes();
+                    var workEnd = getScenarioWorkTimeEndMinutes();
+                    var roomBookings = getRoomBookingsForDate(currentRoomId, dateIso);
+
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getStartTimeSlotsForPeriods !== 'function') {
+                        return [];
+                    }
+
+                    return window.BookingTimeUtils.getStartTimeSlotsForPeriods(requiredPeriods, roomBookings, workStart, workEnd, minMinutes);
                 }
 
                 // Получить все возможные времена окончания для заданного кол-ва периодов (глобально)
                 function getAllEndTimesForPeriods(requiredPeriods) {
-                    var slots = getStartTimeSlotsForPeriods(requiredPeriods);
-                    var endTimes = [];
-                    var duration = minMinutes * requiredPeriods;
-                    
-                    slots.forEach(function (startMinutes) {
-                        var endMinutes = startMinutes + duration;
-                        if (endTimes.indexOf(endMinutes) === -1) {
-                            endTimes.push(endMinutes);
-                        }
-                    });
-                    
-                    endTimes.sort(function (a, b) { return a - b; });
-                    return endTimes;
+                    var workStart = getScenarioWorkTimeStartMinutes();
+                    var workEnd = getScenarioWorkTimeEndMinutes();
+                    var roomBookings = getRoomBookingsForDate(currentRoomId, dateIso);
+
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getAllEndTimesForPeriods !== 'function') {
+                        return [];
+                    }
+
+                    return window.BookingTimeUtils.getAllEndTimesForPeriods(requiredPeriods, roomBookings, workStart, workEnd, minMinutes);
                 }
 
                 // Получить времена окончания "вправо" от заданного времени начала (для конкретного слота)
                 function getEndTimesForStartTime(startTimeMinutes) {
-                    var maxPeriods = getMaxPeriodsForStartTime(startTimeMinutes, currentRoomId, dateIso);
-                    var endTimes = [];
-                    
-                    for (var p = 1; p <= maxPeriods; p++) {
-                        var endMinutes = startTimeMinutes + (minMinutes * p);
-                        endTimes.push(endMinutes);
+                    var workEnd = getScenarioWorkTimeEndMinutes();
+                    var roomBookings = getRoomBookingsForDate(currentRoomId, dateIso);
+
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getEndTimesForStartTime !== 'function') {
+                        return [];
                     }
-                    
-                    return endTimes;
+
+                    return window.BookingTimeUtils.getEndTimesForStartTime(startTimeMinutes, roomBookings, workEnd, minMinutes);
                 }
 
                 // Получить времена начала "влево" от заданного времени окончания (для конкретного слота)
                 function getStartTimesForEndTime(endTimeMinutes) {
-                    var allSlots = getStartTimeSlotsForPeriods(1);
-                    var startTimes = [];
-                    
-                    allSlots.forEach(function (slotMinutes) {
-                        if (slotMinutes < endTimeMinutes) {
-                            var maxPeriods = getMaxPeriodsForStartTime(slotMinutes, currentRoomId, dateIso);
-                            var maxEndTime = slotMinutes + (minMinutes * maxPeriods);
-                            // Проверяем, что с этого слота можно дойти до нужного времени окончания
-                            if (maxEndTime >= endTimeMinutes) {
-                                startTimes.push(slotMinutes);
-                            }
-                        }
-                    });
-                    
-                    startTimes.sort(function (a, b) { return a - b; });
-                    return startTimes;
+                    var workStart = getScenarioWorkTimeStartMinutes();
+                    var workEnd = getScenarioWorkTimeEndMinutes();
+                    var roomBookings = getRoomBookingsForDate(currentRoomId, dateIso);
+
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getStartTimesForEndTime !== 'function') {
+                        return [];
+                    }
+
+                    return window.BookingTimeUtils.getStartTimesForEndTime(endTimeMinutes, roomBookings, workStart, workEnd, minMinutes);
                 }
 
                 // --- Вычислить глобальное максимальное количество периодов ---
                 function getGlobalMaxPeriods() {
-                    var allSlots = getStartTimeSlotsForPeriods(1);
-                    var maxPeriods = 0;
-                    allSlots.forEach(function (slotMinutes) {
-                        var mp = getMaxPeriodsForStartTime(slotMinutes, currentRoomId, dateIso);
-                        if (mp > maxPeriods) maxPeriods = mp;
-                    });
-                    return maxPeriods;
+                    var workStart = getScenarioWorkTimeStartMinutes();
+                    var workEnd = getScenarioWorkTimeEndMinutes();
+                    var roomBookings = getRoomBookingsForDate(currentRoomId, dateIso);
+
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getGlobalMaxPeriods !== 'function') {
+                        return 0;
+                    }
+
+                    return window.BookingTimeUtils.getGlobalMaxPeriods(roomBookings, workStart, workEnd, minMinutes);
                 }
 
                 // --- Вычислить максимальное количество периодов для времени окончания ---
                 function getMaxPeriodsForEndTime(endTimeMinutes) {
-                    var startTimesForEnd = getStartTimesForEndTime(endTimeMinutes);
-                    var maxPeriods = 0;
-                    for (var p = 1; p <= 20; p++) {
-                        var potentialStart = endTimeMinutes - (minMinutes * p);
-                        if (startTimesForEnd.indexOf(potentialStart) !== -1) {
-                            maxPeriods = p;
-                        }
+                    var workStart = getScenarioWorkTimeStartMinutes();
+                    var workEnd = getScenarioWorkTimeEndMinutes();
+                    var roomBookings = getRoomBookingsForDate(currentRoomId, dateIso);
+
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getMaxPeriodsForEndTime !== 'function') {
+                        return 0;
                     }
-                    return maxPeriods;
+
+                    return window.BookingTimeUtils.getMaxPeriodsForEndTime(endTimeMinutes, roomBookings, workStart, workEnd, minMinutes);
                 }
 
                 // --- Функции управления UI ---
@@ -1121,6 +957,10 @@
 
                 // Управляет отображением крестика сброса для селекта (класс has-selection)
                 function updateSelectHasSelection(selectEl, hasValue) {
+                    if (window.BookingTimeUtils && typeof window.BookingTimeUtils.updateSelectHasSelection === 'function') {
+                        window.BookingTimeUtils.updateSelectHasSelection(selectEl, hasValue);
+                        return;
+                    }
                     if (!selectEl) return;
                     if (hasValue) {
                         selectEl.classList.add('has-selection');
@@ -1135,383 +975,179 @@
                 // selectedPeriods = null — показывает плейсхолдер "выберите период"
                 function rebuildDurationSelect(selectedPeriods, maxPeriods) {
                     if (!durationSelect) return;
-                    
-                    var durationSelectedSpan = durationSelect.querySelector('.selected');
-                    var durationOptionsUl = durationSelect.querySelector('ul.options');
-                    var placeholder = durationSelect.getAttribute('data-placeholder') || 'Выберите период';
-                    
-                    if (durationOptionsUl) {
-                        durationOptionsUl.innerHTML = '';
-                    }
-                    
-                    if (maxPeriods <= 0) {
-                        if (durationSelectedSpan) {
-                            durationSelectedSpan.textContent = 'Нет доступных периодов';
-                        }
-                        durationSelect.classList.add('disabled');
-                        updateSelectHasSelection(durationSelect, false);
-                        return;
-                    }
-                    
-                    durationSelect.classList.remove('disabled');
-                    
-                    // Проверяем, есть ли выбранный период в доступном диапазоне
-                    var isInRange = selectedPeriods !== null && selectedPeriods >= 1 && selectedPeriods <= maxPeriods;
-                    
-                    // Если период не выбран — показываем плейсхолдер
-                    // Если выбран, но не в диапазоне — показываем номинально
-                    if (selectedPeriods === null) {
-                        if (durationSelectedSpan) {
-                            durationSelectedSpan.textContent = placeholder;
-                        }
-                    } else if (!isInRange) {
-                        // Номинальное отображение периода, которого нет в списке
-                        var nominalTotal = minMinutes * selectedPeriods;
-                        var nominalHuman = formatDurationHuman(nominalTotal);
-                        var nominalLabel = selectedPeriods + ' ' + formatPeriodsLabel(selectedPeriods) + ' — ' + nominalHuman;
-                        if (durationSelectedSpan) {
-                            durationSelectedSpan.textContent = nominalLabel;
-                        }
-                    }
-                    
-                    for (var i = 1; i <= maxPeriods; i++) {
-                        var total = minMinutes * i;
-                        var human = formatDurationHuman(total);
-                        var value = formatDurationHHMM(total);
-                        var label = i + ' ' + formatPeriodsLabel(i) + ' — ' + human;
-                        
-                        var li = document.createElement('li');
-                        li.textContent = label;
-                        li.setAttribute('data-value', value);
-                        li.setAttribute('data-periods', i);
-                        
-                        if (i === selectedPeriods) {
-                            li.classList.add('selected');
-                            if (durationSelectedSpan) {
-                                durationSelectedSpan.textContent = label;
-                            }
-                        }
-                        
-                        // Обработчик: при выборе длительности → обновить списки начала/конца
-                        (function (liEl, liLabel, periods) {
-                            liEl.addEventListener('click', function (e) {
-                                e.stopPropagation();
-                                durationOptionsUl.querySelectorAll('li').forEach(function (opt) {
-                                    opt.classList.remove('selected');
-                                });
-                                liEl.classList.add('selected');
-                                if (durationSelectedSpan) {
-                                    durationSelectedSpan.textContent = liLabel;
-                                }
-                                durationSelect.classList.remove('open');
-                                
-                                currentSelectedPeriods = periods;
-                                // Крестик сброса показываем при любом выбранном периоде
-                                updateSelectHasSelection(durationSelect, true);
-                                onDurationChanged();
-                            });
-                        })(li, label, i);
-                        
-                        durationOptionsUl.appendChild(li);
-                    }
-                    
-                    // Крестик сброса показываем при любом выбранном периоде
-                    updateSelectHasSelection(durationSelect, selectedPeriods !== null);
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.rebuildDurationSelect !== 'function') return;
+
+                    window.BookingTimeUtils.rebuildDurationSelect(durationSelect, selectedPeriods, maxPeriods, minMinutes, function (periods) {
+                        currentSelectedPeriods = periods;
+                        onDurationChanged();
+                    });
                 }
 
                 // Перестраивает селект "Время начала" с заданным списком слотов
                 function rebuildStartTimeSelect(slotsMinutes, selectedMinutes) {
                     if (!startTimeSelect) return;
-                    
-                    var startSelectedSpan = startTimeSelect.querySelector('.selected');
-                    var startOptionsUl = startTimeSelect.querySelector('ul.options');
-                    
-                    if (startOptionsUl) {
-                        startOptionsUl.innerHTML = '';
-                    }
-                    
-                    var placeholder = startTimeSelect.getAttribute('data-placeholder') || 'Выберите время';
-                    
-                    // hasValue = время установлено (может быть номинальным)
-                    var hasValue = selectedMinutes !== null;
-                    
-                    if (slotsMinutes.length === 0) {
-                        if (startSelectedSpan) {
-                            // Показываем номинальное время даже если список пуст
-                            startSelectedSpan.textContent = hasValue ? formatTimeHHMM(selectedMinutes) : placeholder;
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.rebuildStartTimeSelect !== 'function') return;
+
+                    window.BookingTimeUtils.rebuildStartTimeSelect(startTimeSelect, slotsMinutes, selectedMinutes, function (liMinutes, liTimeStr) {
+                        currentStartTimeMinutes = liMinutes;
+                        if (timeField) timeField.value = liTimeStr;
+
+                        // Скрываем предупреждения (выбрано доступное время из списка)
+                        var startTimeWarning = document.getElementById('start-time-warning-icon');
+                        var endTimeWarning = document.getElementById('end-time-warning-icon');
+                        if (startTimeWarning) startTimeWarning.style.display = 'none';
+                        if (endTimeWarning) endTimeWarning.style.display = 'none';
+
+                        // Пересчитываем список длительностей для этого времени начала
+                        var maxPeriodsForStart = getMaxPeriodsForStartTime(liMinutes, currentRoomId, dateIso);
+
+                        // Обновляем список окончаний "вправо" от времени начала
+                        var endTimesForStart = getEndTimesForStartTime(liMinutes);
+
+                        if (currentSelectedPeriods !== null) {
+                            // Длительность выбрана — подставляем окончание по длительности
+                            var newEndTime = liMinutes + (minMinutes * currentSelectedPeriods);
+                            if (currentSelectedPeriods <= maxPeriodsForStart && endTimesForStart.indexOf(newEndTime) !== -1) {
+                                // Длительность помещается — подставляем окончание
+                                currentEndTimeMinutes = newEndTime;
+                                rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
+                            } else {
+                                // Длительность не помещается — сбрасываем окончание, сохраняем длительность
+                                currentEndTimeMinutes = null;
+                                rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
+                            }
+                            // Список окончаний фильтруем по длительности
+                            var filteredEndTimes = getAllEndTimesForPeriods(currentSelectedPeriods);
+                            rebuildEndTimeSelect(filteredEndTimes, currentEndTimeMinutes);
+                        } else if (currentEndTimeMinutes !== null) {
+                            // Длительность не выбрана, но есть окончание — вычисляем длительность
+                            var periodsBetween = Math.round((currentEndTimeMinutes - liMinutes) / minMinutes);
+                            if (periodsBetween >= 1 && periodsBetween <= maxPeriodsForStart && endTimesForStart.indexOf(currentEndTimeMinutes) !== -1) {
+                                // Время окончания валидно для нового начала
+                                currentSelectedPeriods = periodsBetween;
+                                rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
+                                rebuildEndTimeSelect(endTimesForStart, currentEndTimeMinutes);
+                            } else if (maxPeriodsForStart === 1) {
+                                // Время окончания не валидно, но единственный вариант длительности — автоподстановка
+                                currentSelectedPeriods = 1;
+                                currentEndTimeMinutes = liMinutes + minMinutes;
+                                rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
+                                var filteredEndTimes = getAllEndTimesForPeriods(currentSelectedPeriods);
+                                rebuildEndTimeSelect(filteredEndTimes, currentEndTimeMinutes);
+                            } else {
+                                // Время окончания не валидно — сбрасываем его
+                                currentEndTimeMinutes = null;
+                                rebuildDurationSelect(null, maxPeriodsForStart);
+                                rebuildEndTimeSelect(endTimesForStart, currentEndTimeMinutes);
+                            }
+                        } else {
+                            // Ничего не выбрано
+                            if (maxPeriodsForStart === 1) {
+                                // Единственный вариант длительности — автоподстановка
+                                currentSelectedPeriods = 1;
+                                currentEndTimeMinutes = liMinutes + minMinutes;
+                                rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
+                                var filteredEndTimes = getAllEndTimesForPeriods(currentSelectedPeriods);
+                                rebuildEndTimeSelect(filteredEndTimes, currentEndTimeMinutes);
+                            } else {
+                                rebuildDurationSelect(null, maxPeriodsForStart);
+                                rebuildEndTimeSelect(endTimesForStart, currentEndTimeMinutes);
+                            }
                         }
-                        // Список пуст, но селект остаётся активным (можно открыть, просто нет вариантов)
-                        startTimeSelect.classList.remove('disabled');
-                        // Крестик показываем если есть номинальное значение
-                        updateSelectHasSelection(startTimeSelect, hasValue);
-                        return;
-                    }
-                    
-                    startTimeSelect.classList.remove('disabled');
-                    
-                    // hasSelection = время есть в списке доступных
-                    var hasSelection = selectedMinutes !== null && slotsMinutes.indexOf(selectedMinutes) !== -1;
-                    
-                    if (startSelectedSpan) {
-                        // Показываем время даже если его нет в списке (номинальное отображение)
-                        startSelectedSpan.textContent = hasValue ? formatTimeHHMM(selectedMinutes) : placeholder;
-                    }
-                    
-                    slotsMinutes.forEach(function (slotMinutes) {
-                        var slotTimeStr = formatTimeHHMM(slotMinutes);
-                        var li = document.createElement('li');
-                        li.textContent = slotTimeStr;
-                        li.setAttribute('data-value', slotTimeStr);
-                        li.setAttribute('data-minutes', slotMinutes);
-                        
-                        if (slotMinutes === selectedMinutes) {
-                            li.classList.add('selected');
+                        // Обновляем фильтрацию преподавателей по новому времени
+                        window.currentStartTimeMinutes = currentStartTimeMinutes;
+                        window.currentEndTimeMinutes = currentEndTimeMinutes;
+                        applyTeacherDirectionFilters();
+                        updateSubmitButtonState();
+
+                        // Пересчитываем стоимость брони
+                        if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                            window.calculateAndUpdateBookingCost();
                         }
-                        
-                        // Обработчик: при выборе времени начала → подставить время конца
-                        (function (liEl, liTimeStr, liMinutes) {
-                            liEl.addEventListener('click', function (e) {
-                                e.stopPropagation();
-                                startOptionsUl.querySelectorAll('li').forEach(function (opt) {
-                                    opt.classList.remove('selected');
-                                });
-                                liEl.classList.add('selected');
-                                if (startSelectedSpan) {
-                                    startSelectedSpan.textContent = liTimeStr;
-                                }
-                                startTimeSelect.classList.remove('open');
-                                updateSelectHasSelection(startTimeSelect, true);
-                                
-                                currentStartTimeMinutes = liMinutes;
-                                if (timeField) timeField.value = liTimeStr;
-                                
-                                // Скрываем предупреждения (выбрано доступное время из списка)
-                                var startTimeWarning = document.getElementById('start-time-warning-icon');
-                                var endTimeWarning = document.getElementById('end-time-warning-icon');
-                                if (startTimeWarning) startTimeWarning.style.display = 'none';
-                                if (endTimeWarning) endTimeWarning.style.display = 'none';
-                                
-                                // Пересчитываем список длительностей для этого времени начала
-                                var maxPeriodsForStart = getMaxPeriodsForStartTime(liMinutes, currentRoomId, dateIso);
-                                
-                                // Обновляем список окончаний "вправо" от времени начала
-                                var endTimesForStart = getEndTimesForStartTime(liMinutes);
-                                
-                                if (currentSelectedPeriods !== null) {
-                                    // Длительность выбрана — подставляем окончание по длительности
-                                    var newEndTime = liMinutes + (minMinutes * currentSelectedPeriods);
-                                    if (currentSelectedPeriods <= maxPeriodsForStart && endTimesForStart.indexOf(newEndTime) !== -1) {
-                                        // Длительность помещается — подставляем окончание
-                                        currentEndTimeMinutes = newEndTime;
-                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
-                                    } else {
-                                        // Длительность не помещается — сбрасываем окончание, сохраняем длительность
-                                        currentEndTimeMinutes = null;
-                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
-                                    }
-                                    // Список окончаний фильтруем по длительности
-                                    var filteredEndTimes = getAllEndTimesForPeriods(currentSelectedPeriods);
-                                    rebuildEndTimeSelect(filteredEndTimes, currentEndTimeMinutes);
-                                } else if (currentEndTimeMinutes !== null) {
-                                    // Длительность не выбрана, но есть окончание — вычисляем длительность
-                                    var periodsBetween = Math.round((currentEndTimeMinutes - liMinutes) / minMinutes);
-                                    if (periodsBetween >= 1 && periodsBetween <= maxPeriodsForStart && endTimesForStart.indexOf(currentEndTimeMinutes) !== -1) {
-                                        // Время окончания валидно для нового начала
-                                        currentSelectedPeriods = periodsBetween;
-                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
-                                        rebuildEndTimeSelect(endTimesForStart, currentEndTimeMinutes);
-                                    } else if (maxPeriodsForStart === 1) {
-                                        // Время окончания не валидно, но единственный вариант длительности — автоподстановка
-                                        currentSelectedPeriods = 1;
-                                        currentEndTimeMinutes = liMinutes + minMinutes;
-                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
-                                        var filteredEndTimes = getAllEndTimesForPeriods(currentSelectedPeriods);
-                                        rebuildEndTimeSelect(filteredEndTimes, currentEndTimeMinutes);
-                                    } else {
-                                        // Время окончания не валидно — сбрасываем его
-                                        currentEndTimeMinutes = null;
-                                        rebuildDurationSelect(null, maxPeriodsForStart);
-                                        rebuildEndTimeSelect(endTimesForStart, currentEndTimeMinutes);
-                                    }
-                                } else {
-                                    // Ничего не выбрано
-                                    if (maxPeriodsForStart === 1) {
-                                        // Единственный вариант длительности — автоподстановка
-                                        currentSelectedPeriods = 1;
-                                        currentEndTimeMinutes = liMinutes + minMinutes;
-                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForStart);
-                                        var filteredEndTimes = getAllEndTimesForPeriods(currentSelectedPeriods);
-                                        rebuildEndTimeSelect(filteredEndTimes, currentEndTimeMinutes);
-                                    } else {
-                                        rebuildDurationSelect(null, maxPeriodsForStart);
-                                        rebuildEndTimeSelect(endTimesForStart, currentEndTimeMinutes);
-                                    }
-                                }
-                                // Обновляем фильтрацию преподавателей по новому времени
-                                window.currentStartTimeMinutes = currentStartTimeMinutes;
-                                window.currentEndTimeMinutes = currentEndTimeMinutes;
-                                applyTeacherDirectionFilters();
-                                updateSubmitButtonState();
-                                
-                                // Пересчитываем стоимость брони
-                                if (typeof window.calculateAndUpdateBookingCost === 'function') {
-                                    window.calculateAndUpdateBookingCost();
-                                }
-                            });
-                        })(li, slotTimeStr, slotMinutes);
-                        
-                        startOptionsUl.appendChild(li);
                     });
-                    
-                    // Крестик показываем если есть любое значение (в т.ч. номинальное)
-                    updateSelectHasSelection(startTimeSelect, hasValue);
                 }
 
                 // Перестраивает селект "Время окончания" с заданным списком времен
                 function rebuildEndTimeSelect(endTimesMinutes, selectedMinutes) {
                     if (!endTimeSelect) return;
-                    
-                    var endTimeSelectedSpan = endTimeSelect.querySelector('.selected');
-                    var endTimeOptionsUl = endTimeSelect.querySelector('ul.options');
-                    
-                    if (endTimeOptionsUl) {
-                        endTimeOptionsUl.innerHTML = '';
-                    }
-                    
-                    var placeholder = endTimeSelect.getAttribute('data-placeholder') || 'Выберите время';
-                    
-                    // hasValue = время установлено (может быть номинальным)
-                    var hasValue = selectedMinutes !== null;
-                    
-                    if (endTimesMinutes.length === 0) {
-                        if (endTimeSelectedSpan) {
-                            // Показываем номинальное время даже если список пуст
-                            endTimeSelectedSpan.textContent = hasValue ? formatTimeHHMM(selectedMinutes) : placeholder;
+                    if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.rebuildEndTimeSelect !== 'function') return;
+
+                    window.BookingTimeUtils.rebuildEndTimeSelect(endTimeSelect, endTimesMinutes, selectedMinutes, function (liMinutes, liTimeStr) {
+                        currentEndTimeMinutes = liMinutes;
+
+                        // Обновляем список начала "влево" от времени окончания
+                        var startTimesForEnd = getStartTimesForEndTime(liMinutes);
+                        var maxPeriodsForEnd = getMaxPeriodsForEndTime(liMinutes);
+
+                        // Скрываем предупреждения (выбрано доступное время из списка)
+                        var startTimeWarning = document.getElementById('start-time-warning-icon');
+                        var endTimeWarning = document.getElementById('end-time-warning-icon');
+                        if (startTimeWarning) startTimeWarning.style.display = 'none';
+                        if (endTimeWarning) endTimeWarning.style.display = 'none';
+
+                        if (currentSelectedPeriods !== null) {
+                            // Длительность выбрана — подставляем начало по длительности
+                            var newStartTime = liMinutes - (minMinutes * currentSelectedPeriods);
+                            if (startTimesForEnd.indexOf(newStartTime) !== -1) {
+                                // Длительность помещается — подставляем начало
+                                currentStartTimeMinutes = newStartTime;
+                                if (timeField) timeField.value = formatTimeHHMM(currentStartTimeMinutes);
+                                rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
+                            } else {
+                                // Длительность не помещается — сбрасываем начало, сохраняем длительность
+                                currentStartTimeMinutes = null;
+                                rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
+                            }
+                            // Список начала фильтруем по длительности
+                            var filteredStartTimes = getStartTimeSlotsForPeriods(currentSelectedPeriods);
+                            rebuildStartTimeSelect(filteredStartTimes, currentStartTimeMinutes);
+                        } else if (currentStartTimeMinutes !== null) {
+                            // Длительность не выбрана, но есть начало — вычисляем длительность
+                            var periodsBetween = Math.round((liMinutes - currentStartTimeMinutes) / minMinutes);
+                            if (periodsBetween >= 1 && periodsBetween <= maxPeriodsForEnd && startTimesForEnd.indexOf(currentStartTimeMinutes) !== -1) {
+                                // Время начала валидно для нового окончания
+                                currentSelectedPeriods = periodsBetween;
+                                rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
+                                rebuildStartTimeSelect(startTimesForEnd, currentStartTimeMinutes);
+                            } else if (maxPeriodsForEnd === 1) {
+                                // Время начала не валидно, но единственный вариант длительности — автоподстановка
+                                currentSelectedPeriods = 1;
+                                currentStartTimeMinutes = liMinutes - minMinutes;
+                                if (timeField) timeField.value = formatTimeHHMM(currentStartTimeMinutes);
+                                rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
+                                var filteredStartTimes = getStartTimeSlotsForPeriods(currentSelectedPeriods);
+                                rebuildStartTimeSelect(filteredStartTimes, currentStartTimeMinutes);
+                            } else {
+                                // Время начала не валидно — сбрасываем его
+                                currentStartTimeMinutes = null;
+                                rebuildDurationSelect(null, maxPeriodsForEnd);
+                                rebuildStartTimeSelect(startTimesForEnd, currentStartTimeMinutes);
+                            }
+                        } else {
+                            // Ничего не выбрано
+                            if (maxPeriodsForEnd === 1) {
+                                // Единственный вариант длительности — автоподстановка
+                                currentSelectedPeriods = 1;
+                                currentStartTimeMinutes = liMinutes - minMinutes;
+                                if (timeField) timeField.value = formatTimeHHMM(currentStartTimeMinutes);
+                                rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
+                                var filteredStartTimes = getStartTimeSlotsForPeriods(currentSelectedPeriods);
+                                rebuildStartTimeSelect(filteredStartTimes, currentStartTimeMinutes);
+                            } else {
+                                rebuildDurationSelect(null, maxPeriodsForEnd);
+                                rebuildStartTimeSelect(startTimesForEnd, currentStartTimeMinutes);
+                            }
                         }
-                        // Список пуст, но селект остаётся активным (можно открыть, просто нет вариантов)
-                        endTimeSelect.classList.remove('disabled');
-                        // Крестик показываем если есть номинальное значение
-                        updateSelectHasSelection(endTimeSelect, hasValue);
-                        return;
-                    }
-                    
-                    endTimeSelect.classList.remove('disabled');
-                    
-                    // Показываем выбранное время даже если его нет в списке (номинальное значение)
-                    var hasSelection = selectedMinutes !== null;
-                    var isInList = endTimesMinutes.indexOf(selectedMinutes) !== -1;
-                    
-                    if (endTimeSelectedSpan) {
-                        endTimeSelectedSpan.textContent = hasSelection ? formatTimeHHMM(selectedMinutes) : placeholder;
-                    }
-                    
-                    // Крестик показываем если есть любое значение (в т.ч. номинальное)
-                    updateSelectHasSelection(endTimeSelect, hasSelection);
-                    
-                    endTimesMinutes.forEach(function (endMinutes) {
-                        var endTimeStr = formatTimeHHMM(endMinutes);
-                        var li = document.createElement('li');
-                        li.textContent = endTimeStr;
-                        li.setAttribute('data-value', endTimeStr);
-                        li.setAttribute('data-minutes', endMinutes);
-                        
-                        if (endMinutes === selectedMinutes) {
-                            li.classList.add('selected');
+                        // Обновляем фильтрацию преподавателей по новому времени
+                        window.currentStartTimeMinutes = currentStartTimeMinutes;
+                        window.currentEndTimeMinutes = currentEndTimeMinutes;
+                        applyTeacherDirectionFilters();
+                        updateSubmitButtonState();
+
+                        // Пересчитываем стоимость брони
+                        if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                            window.calculateAndUpdateBookingCost();
                         }
-                        
-                        // Обработчик: при выборе времени окончания → подставить время начала
-                        (function (liEl, liTimeStr, liMinutes) {
-                            liEl.addEventListener('click', function (e) {
-                                e.stopPropagation();
-                                endTimeOptionsUl.querySelectorAll('li').forEach(function (opt) {
-                                    opt.classList.remove('selected');
-                                });
-                                liEl.classList.add('selected');
-                                if (endTimeSelectedSpan) {
-                                    endTimeSelectedSpan.textContent = liTimeStr;
-                                }
-                                endTimeSelect.classList.remove('open');
-                                updateSelectHasSelection(endTimeSelect, true);
-                                
-                                currentEndTimeMinutes = liMinutes;
-                                
-                                // Обновляем список начала "влево" от времени окончания
-                                var startTimesForEnd = getStartTimesForEndTime(liMinutes);
-                                var maxPeriodsForEnd = getMaxPeriodsForEndTime(liMinutes);
-                                
-                                // Скрываем предупреждения (выбрано доступное время из списка)
-                                var startTimeWarning = document.getElementById('start-time-warning-icon');
-                                var endTimeWarning = document.getElementById('end-time-warning-icon');
-                                if (startTimeWarning) startTimeWarning.style.display = 'none';
-                                if (endTimeWarning) endTimeWarning.style.display = 'none';
-                                
-                                if (currentSelectedPeriods !== null) {
-                                    // Длительность выбрана — подставляем начало по длительности
-                                    var newStartTime = liMinutes - (minMinutes * currentSelectedPeriods);
-                                    if (startTimesForEnd.indexOf(newStartTime) !== -1) {
-                                        // Длительность помещается — подставляем начало
-                                        currentStartTimeMinutes = newStartTime;
-                                        if (timeField) timeField.value = formatTimeHHMM(currentStartTimeMinutes);
-                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
-                                    } else {
-                                        // Длительность не помещается — сбрасываем начало, сохраняем длительность
-                                        currentStartTimeMinutes = null;
-                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
-                                    }
-                                    // Список начала фильтруем по длительности
-                                    var filteredStartTimes = getStartTimeSlotsForPeriods(currentSelectedPeriods);
-                                    rebuildStartTimeSelect(filteredStartTimes, currentStartTimeMinutes);
-                                } else if (currentStartTimeMinutes !== null) {
-                                    // Длительность не выбрана, но есть начало — вычисляем длительность
-                                    var periodsBetween = Math.round((liMinutes - currentStartTimeMinutes) / minMinutes);
-                                    if (periodsBetween >= 1 && periodsBetween <= maxPeriodsForEnd && startTimesForEnd.indexOf(currentStartTimeMinutes) !== -1) {
-                                        // Время начала валидно для нового окончания
-                                        currentSelectedPeriods = periodsBetween;
-                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
-                                        rebuildStartTimeSelect(startTimesForEnd, currentStartTimeMinutes);
-                                    } else if (maxPeriodsForEnd === 1) {
-                                        // Время начала не валидно, но единственный вариант длительности — автоподстановка
-                                        currentSelectedPeriods = 1;
-                                        currentStartTimeMinutes = liMinutes - minMinutes;
-                                        if (timeField) timeField.value = formatTimeHHMM(currentStartTimeMinutes);
-                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
-                                        var filteredStartTimes = getStartTimeSlotsForPeriods(currentSelectedPeriods);
-                                        rebuildStartTimeSelect(filteredStartTimes, currentStartTimeMinutes);
-                                    } else {
-                                        // Время начала не валидно — сбрасываем его
-                                        currentStartTimeMinutes = null;
-                                        rebuildDurationSelect(null, maxPeriodsForEnd);
-                                        rebuildStartTimeSelect(startTimesForEnd, currentStartTimeMinutes);
-                                    }
-                                } else {
-                                    // Ничего не выбрано
-                                    if (maxPeriodsForEnd === 1) {
-                                        // Единственный вариант длительности — автоподстановка
-                                        currentSelectedPeriods = 1;
-                                        currentStartTimeMinutes = liMinutes - minMinutes;
-                                        if (timeField) timeField.value = formatTimeHHMM(currentStartTimeMinutes);
-                                        rebuildDurationSelect(currentSelectedPeriods, maxPeriodsForEnd);
-                                        var filteredStartTimes = getStartTimeSlotsForPeriods(currentSelectedPeriods);
-                                        rebuildStartTimeSelect(filteredStartTimes, currentStartTimeMinutes);
-                                    } else {
-                                        rebuildDurationSelect(null, maxPeriodsForEnd);
-                                        rebuildStartTimeSelect(startTimesForEnd, currentStartTimeMinutes);
-                                    }
-                                }
-                                // Обновляем фильтрацию преподавателей по новому времени
-                                window.currentStartTimeMinutes = currentStartTimeMinutes;
-                                window.currentEndTimeMinutes = currentEndTimeMinutes;
-                                applyTeacherDirectionFilters();
-                                updateSubmitButtonState();
-                                
-                                // Пересчитываем стоимость брони
-                                if (typeof window.calculateAndUpdateBookingCost === 'function') {
-                                    window.calculateAndUpdateBookingCost();
-                                }
-                            });
-                        })(li, endTimeStr, endMinutes);
-                        
-                        endTimeOptionsUl.appendChild(li);
                     });
                 }
 
@@ -2732,15 +2368,6 @@
         modalElement.addEventListener('shown.bs.modal', function () {
             applyTeacherDirectionFilters();
             applyServicesFilters();
-            
-            // Сбрасываем все селекты при открытии модалки
-            resetAllSelects();
-            
-            // Сбрасываем стоимость брони на 0 при открытии
-            var costElement = document.getElementById('bookingCostValue');
-            if (costElement) {
-                costElement.textContent = '0 BYN';
-            }
         });
         
         // Функция сброса всех селектов в модалке
@@ -2804,17 +2431,37 @@
             if (commentField) {
                 commentField.value = '';
             }
+            var trialCheckbox = document.getElementById('trialLessonCheckbox');
+            if (trialCheckbox) {
+                trialCheckbox.checked = false;
+            }
             // Сбрасываем счётчик символов
             var commentCounter = document.getElementById('bookingCommentCounter');
             if (commentCounter) {
                 commentCounter.textContent = '0/1000';
             }
+
+            var costElement = document.getElementById('bookingCostValue');
+            if (costElement) {
+                costElement.textContent = '0 BYN';
+            }
+
+            var startTimeWarning = document.getElementById('start-time-warning-icon');
+            var endTimeWarning = document.getElementById('end-time-warning-icon');
+            var teacherWarning = document.getElementById('teacher-warning-icon');
+            var submitWarning = document.getElementById('submit-warning-icon');
+            if (startTimeWarning) startTimeWarning.style.display = 'none';
+            if (endTimeWarning) endTimeWarning.style.display = 'none';
+            if (teacherWarning) teacherWarning.style.display = 'none';
+            if (submitWarning) submitWarning.style.display = 'none';
             
             // Сбрасываем глобальные переменные времени
             window.currentStartTimeMinutes = null;
             window.currentEndTimeMinutes = null;
             window.currentSelectedPeriods = null;
         }
+
+        window.resetCreateBookingModalSelects = resetAllSelects;
 
         // --- Обработчик отправки формы создания брони ---
         var submitBtn = document.getElementById('createBookingSubmitBtn');
@@ -2880,10 +2527,15 @@
             var modalDateInput = document.getElementById('modal-create-date');
             var startTime = window.currentStartTimeMinutes;
             if (modalDateInput && modalDateInput.value && startTime !== null && startTime !== undefined) {
-                var hours = Math.floor(startTime / 60);
-                var mins = startTime % 60;
-                var timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0') + ':00';
-                formData.append('full_datetime', modalDateInput.value + ' ' + timeStr);
+                var timeHm = null;
+                if (window.BookingTimeUtils && typeof window.BookingTimeUtils.formatTimeHHMM === 'function') {
+                    timeHm = window.BookingTimeUtils.formatTimeHHMM(startTime);
+                } else {
+                    var hours = Math.floor(startTime / 60);
+                    var mins = startTime % 60;
+                    timeHm = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+                }
+                formData.append('full_datetime', modalDateInput.value + ' ' + timeHm + ':00');
             }
 
             // Duration (длительность в формате HH:MM)
@@ -2896,9 +2548,14 @@
                 endMinutesForDuration > startMinutesForDuration
             ) {
                 var durationMinutes = endMinutesForDuration - startMinutesForDuration;
-                var durationHours = Math.floor(durationMinutes / 60);
-                var durationMins = durationMinutes % 60;
-                var durationStr = String(durationHours).padStart(2, '0') + ':' + String(durationMins).padStart(2, '0');
+                var durationStr = null;
+                if (window.BookingTimeUtils && typeof window.BookingTimeUtils.formatDurationHHMM === 'function') {
+                    durationStr = window.BookingTimeUtils.formatDurationHHMM(durationMinutes);
+                } else {
+                    var durationHours = Math.floor(durationMinutes / 60);
+                    var durationMins = durationMinutes % 60;
+                    durationStr = String(durationHours).padStart(2, '0') + ':' + String(durationMins).padStart(2, '0');
+                }
                 formData.append('duration', durationStr);
             } else if (durationSelect) {
                 var selectedDuration = durationSelect.querySelector('ul.options li.selected');
@@ -2908,9 +2565,13 @@
                         var periods = parseInt(selectedDuration.getAttribute('data-periods'), 10);
                         var minMinutes = window.getScenarioMinDurationMinutes ? window.getScenarioMinDurationMinutes() : 60;
                         var totalMinutes = periods * minMinutes;
-                        var durationHours = Math.floor(totalMinutes / 60);
-                        var durationMins = totalMinutes % 60;
-                        durationStr = String(durationHours).padStart(2, '0') + ':' + String(durationMins).padStart(2, '0');
+                        if (window.BookingTimeUtils && typeof window.BookingTimeUtils.formatDurationHHMM === 'function') {
+                            durationStr = window.BookingTimeUtils.formatDurationHHMM(totalMinutes);
+                        } else {
+                            var durationHours = Math.floor(totalMinutes / 60);
+                            var durationMins = totalMinutes % 60;
+                            durationStr = String(durationHours).padStart(2, '0') + ':' + String(durationMins).padStart(2, '0');
+                        }
                     }
                     formData.append('duration', durationStr);
                 }
@@ -2940,6 +2601,11 @@
             var commentField = document.getElementById('bookingComment');
             if (commentField && commentField.value) {
                 formData.append('comment', commentField.value);
+            }
+
+            var trialCheckbox = document.getElementById('trialLessonCheckbox');
+            if (trialCheckbox) {
+                formData.append('trialLesson', trialCheckbox.checked ? '1' : '0');
             }
 
             // Валидация обязательных полей

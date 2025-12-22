@@ -223,6 +223,8 @@
         </div>
     </div>
 
+    <script src="{% static 'js/booking_time_utils.js' %}?v={% now 'U' %}"></script>
+
     {% include "booking/user/modals/booking/modal_create_booking.html" %}
     {% include "booking/user/modals/booking/modal_edit_booking.html" %}
     {% include "booking/user/modals/booking/modal_info_booking.html" %}

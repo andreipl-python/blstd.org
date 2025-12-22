@@ -20,7 +20,10 @@ from ..models import (
 
 
 def check_room_availability(
-    room: Room, start_datetime: datetime, end_datetime: datetime
+    room: Room,
+    start_datetime: datetime,
+    end_datetime: datetime,
+    exclude_reservation_id: int | None = None,
 ) -> bool:
     """Проверка доступности помещения"""
     if timezone.is_naive(start_datetime):
@@ -45,9 +48,11 @@ def check_room_availability(
             f"Запрошено: {start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}"
         )
 
-    existing_bookings = Reservation.objects.filter(
-        room=room,
-    ).exclude(status_id__in=[4, 1082])
+    existing_bookings = Reservation.objects.filter(room=room).exclude(
+        status_id__in=[4, 1082]
+    )
+    if exclude_reservation_id is not None:
+        existing_bookings = existing_bookings.exclude(id=exclude_reservation_id)
 
     for booking in existing_bookings:
         booking_start = booking.datetimestart
@@ -72,12 +77,17 @@ def check_room_availability(
 
 
 def check_specialist_availability(
-    specialist: Specialist, start_datetime: datetime, end_datetime: datetime
+    specialist: Specialist,
+    start_datetime: datetime,
+    end_datetime: datetime,
+    exclude_reservation_id: int | None = None,
 ) -> bool:
     """Проверка доступности специалиста"""
     existing_bookings = Reservation.objects.filter(
         specialist=specialist,
     ).exclude(status_id__in=[4, 1082])
+    if exclude_reservation_id is not None:
+        existing_bookings = existing_bookings.exclude(id=exclude_reservation_id)
     overlapping_bookings = existing_bookings.filter(
         datetimestart__lt=end_datetime, datetimeend__gt=start_datetime
     )

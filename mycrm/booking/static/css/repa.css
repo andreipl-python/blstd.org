@@ -238,14 +238,14 @@
     top: 100%;
     left: 0;
     width: 100%;
-    max-height: none;
+    max-height: 300px;
     margin: 4px 0 0 0;
     padding: 0;
     list-style: none;
     background: #fff;
     border: 1px solid #EBEBEC;
     border-radius: 16px;
-    overflow-y: visible;
+    overflow-y: auto;
     display: none;
     z-index: 1000;
   }
@@ -695,11 +695,13 @@
   }
 
   /* Анимация состояния кнопки "Оплатить" в модалке оплаты */
-  #paymentSubmitButton {
+  #paymentSubmitButton,
+  #editBookingSubmitBtn {
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
   }
 
-  #paymentSubmitButton:disabled {
+  #paymentSubmitButton:disabled,
+  #editBookingSubmitBtn:disabled {
     background-color: #C9B5FF;
     border-color: #C9B5FF;
     color: #F5F2FF;
@@ -1578,4 +1580,60 @@
 
   .modal-datepicker__today-btn:hover {
     background: #F5F2FF;
+  }
+
+  /* =====================================================
+     Стили прокрутки для селектов в модалке редактирования
+     ===================================================== */
+  #edit-duration ul.options::-webkit-scrollbar,
+  #edit-start-time ul.options::-webkit-scrollbar,
+  #edit-end-time ul.options::-webkit-scrollbar,
+  #edit-teacher ul.options::-webkit-scrollbar,
+  #edit-direction ul.options::-webkit-scrollbar,
+  #edit-room ul.options::-webkit-scrollbar,
+  #edit-services ul.options::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #edit-duration ul.options::-webkit-scrollbar-track,
+  #edit-start-time ul.options::-webkit-scrollbar-track,
+  #edit-end-time ul.options::-webkit-scrollbar-track,
+  #edit-teacher ul.options::-webkit-scrollbar-track,
+  #edit-direction ul.options::-webkit-scrollbar-track,
+  #edit-room ul.options::-webkit-scrollbar-track,
+  #edit-services ul.options::-webkit-scrollbar-track {
+    background: #F5F2FF;
+    border-radius: 3px;
+  }
+
+  #edit-duration ul.options::-webkit-scrollbar-thumb,
+  #edit-start-time ul.options::-webkit-scrollbar-thumb,
+  #edit-end-time ul.options::-webkit-scrollbar-thumb,
+  #edit-teacher ul.options::-webkit-scrollbar-thumb,
+  #edit-direction ul.options::-webkit-scrollbar-thumb,
+  #edit-room ul.options::-webkit-scrollbar-thumb,
+  #edit-services ul.options::-webkit-scrollbar-thumb {
+    background: #C9B5FF;
+    border-radius: 3px;
+  }
+
+  #edit-duration ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-start-time ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-end-time ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-teacher ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-direction ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-room ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-services ul.options::-webkit-scrollbar-thumb:hover {
+    background: #7A52FF;
+  }
+
+  #edit-duration ul.options,
+  #edit-start-time ul.options,
+  #edit-end-time ul.options,
+  #edit-teacher ul.options,
+  #edit-direction ul.options,
+  #edit-room ul.options,
+  #edit-services ul.options {
+    scrollbar-width: thin;
+    scrollbar-color: #C9B5FF #F5F2FF;
   }
