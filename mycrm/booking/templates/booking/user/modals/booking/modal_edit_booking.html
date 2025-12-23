@@ -511,6 +511,10 @@
                         selected.textContent = count + ' выбрано';
                     }
                 }
+                var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                    ctrl.updateSubmitButtonState();
+                }
             });
             badge.appendChild(removeBtn);
             container.appendChild(badge);
@@ -687,10 +691,10 @@
 
         function updateSubmitButtonState() {
             if (!submitBtn) return;
-            
-            var checklist = [];
-            var hasStartTime = currentStartTimeMinutes !== null;
-            var hasEndTime = currentEndTimeMinutes !== null;
+        
+        var checklist = [];
+        var hasStartTime = currentStartTimeMinutes !== null;
+        var hasEndTime = currentEndTimeMinutes !== null;
             
             // Определяем сценарий для условной валидации
             var modalEl = document.getElementById('editBookingModal');
@@ -741,6 +745,16 @@
                 if (!hasDirection) {
                     checklist.push('Выберите направление');
                 }
+            }
+            
+            var hasChanges = typeof window.hasEditChanges === 'function' ? window.hasEditChanges() : true;
+            if (!hasChanges) {
+                submitBtn.disabled = true;
+                var submitWarning = document.getElementById('edit-submit-warning-icon');
+                var submitChecklist = document.getElementById('edit-submit-checklist');
+                if (submitWarning) submitWarning.style.display = 'none';
+                if (submitChecklist) submitChecklist.innerHTML = '';
+                return;
             }
             
             // Обновляем чек-лист в тултипе
@@ -1007,7 +1021,7 @@
 
             if (startClear && !startClear._bound) {
                 startClear._bound = true;
-                startClear.addEventListener('click', function (e) {
+                startClear.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     resetStartTime();
@@ -1017,7 +1031,7 @@
 
             if (endClear && !endClear._bound) {
                 endClear._bound = true;
-                endClear.addEventListener('click', function (e) {
+                endClear.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     resetEndTime();
@@ -1027,7 +1041,7 @@
 
             if (durationClear && !durationClear._bound) {
                 durationClear._bound = true;
-                durationClear.addEventListener('click', function (e) {
+                durationClear.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     resetDuration();
@@ -1234,7 +1248,7 @@
 
         // 4) Фильтрация преподавателей
         var visibleTeacherCount = 0, lastVisibleTeacherLi = null;
-        var teacherSpan = teacherSelect.querySelector('span.selected');
+        var teacherSpan = teacherSelect.querySelector('.selected');
         teacherLis.forEach(function(li) {
             var tid = parseInt(li.getAttribute('data-value'), 10);
             var dRaw = li.getAttribute('data-directions') || '';
@@ -1489,6 +1503,10 @@
                     }
                     updateServicesBadges();
                     calculateAndUpdateBookingCost();
+                    var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                    if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                        ctrl.updateSubmitButtonState();
+                    }
                 });
                 return;
             }
@@ -1554,6 +1572,10 @@
                 e.preventDefault();
                 setMultiSelectedValues(document.getElementById('edit-services'), []);
                 calculateAndUpdateBookingCost();
+                var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                    ctrl.updateSubmitButtonState();
+                }
             });
         }
 
@@ -1716,7 +1738,87 @@
             costEl.textContent = `${booking.total_cost} BYN`;
         }
         calculateAndUpdateBookingCost();
+        setTimeout(function() {
+            saveOriginalEditValues(booking);
+        }, 150);
     }
+
+    var originalEditValues = null;
+
+    function saveOriginalEditValues(booking) {
+        originalEditValues = {
+            date_iso: booking.date_iso || '',
+            start_time: String(booking.start_time_hm || booking.start_time || '').slice(0, 5),
+            end_time: String(booking.end_time_hm || booking.end_time || '').slice(0, 5),
+            room_id: String(booking.room_id || ''),
+            specialist_id: String(booking.specialist_id || ''),
+            direction_id: String(booking.direction_id || ''),
+            comment: booking.comment || '',
+            service_ids: (Array.isArray(booking.service_ids) ? booking.service_ids.map(String).sort() : []).join(',')
+        };
+
+        var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+        if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+            ctrl.updateSubmitButtonState();
+        }
+    }
+
+    function getCurrentEditValues() {
+        var dateInput = document.getElementById('edit-date');
+        var startTimeSelect = document.getElementById('edit-start-time');
+        var endTimeSelect = document.getElementById('edit-end-time');
+        var roomSelect = document.getElementById('edit-room');
+        var teacherSelect = document.getElementById('edit-teacher');
+        var directionSelect = document.getElementById('edit-direction');
+        var commentEl = document.getElementById('editBookingComment');
+        var servicesSelect = document.getElementById('edit-services');
+
+        var currentServiceIds = [];
+        if (servicesSelect) {
+            if (servicesSelect._selectedOptions) {
+                servicesSelect._selectedOptions.forEach(function(li) {
+                    var val = li.getAttribute('data-value');
+                    if (val) currentServiceIds.push(String(val));
+                });
+            } else {
+                Array.from(servicesSelect.querySelectorAll('ul.options li.selected')).forEach(function(li) {
+                    var val = li.getAttribute('data-value');
+                    if (val) currentServiceIds.push(String(val));
+                });
+            }
+        }
+        currentServiceIds.sort();
+
+        return {
+            date_iso: dateInput ? dateInput.value : '',
+            start_time: getSelectedValue(startTimeSelect) || '',
+            end_time: getSelectedValue(endTimeSelect) || '',
+            room_id: String(getSelectedValue(roomSelect) || ''),
+            specialist_id: String(getSelectedValue(teacherSelect) || ''),
+            direction_id: String(getSelectedValue(directionSelect) || ''),
+            comment: commentEl ? commentEl.value : '',
+            service_ids: currentServiceIds.join(',')
+        };
+    }
+
+    function hasEditChanges() {
+        if (!originalEditValues) return false;
+
+        var current = getCurrentEditValues();
+
+        return (
+            current.date_iso !== originalEditValues.date_iso ||
+            current.start_time !== originalEditValues.start_time ||
+            current.end_time !== originalEditValues.end_time ||
+            current.room_id !== originalEditValues.room_id ||
+            current.specialist_id !== originalEditValues.specialist_id ||
+            current.direction_id !== originalEditValues.direction_id ||
+            current.comment !== originalEditValues.comment ||
+            current.service_ids !== originalEditValues.service_ids
+        );
+    }
+
+    window.hasEditChanges = hasEditChanges;
 
     // Функции показа/скрытия overlay сохранения
     function showBookingSavingOverlay() {
@@ -1825,6 +1927,10 @@
                 val.length >= 1000 ? '#FF0000' :
                     val.length >= 900 ? '#FFA500' :
                         '#818EA2';
+            var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+            if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                ctrl.updateSubmitButtonState();
+            }
         };
 
         textarea.addEventListener('input', updateCounter);
