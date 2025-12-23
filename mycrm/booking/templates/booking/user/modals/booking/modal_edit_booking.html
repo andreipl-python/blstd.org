@@ -538,14 +538,13 @@
         var ctrl = modalEl ? modalEl._editTimeController : null;
         var currentSelectedPeriods = ctrl ? ctrl._currentSelectedPeriods : null;
         
-        // Если длительность не выбрана — стоимость 0
-        if (currentSelectedPeriods === null || currentSelectedPeriods === undefined) {
-            costElement.textContent = '0 BYN';
-            return;
-        }
-        
+        // Базовая стоимость периодов (0 если периоды не выбраны)
         var periodCost = getScenarioTariffUnitCost(scenarioId);
-        var periodsTotalCost = currentSelectedPeriods * periodCost;
+        var periodsTotalCost = (currentSelectedPeriods !== null && currentSelectedPeriods !== undefined) 
+            ? currentSelectedPeriods * periodCost 
+            : 0;
+        
+        // Стоимость услуг всегда учитывается
         var servicesCost = getSelectedServicesCost();
         var totalCost = periodsTotalCost + servicesCost;
         
@@ -1633,9 +1632,22 @@
         calculateAndUpdateBookingCost();
     }
 
+    // Функции показа/скрытия overlay сохранения
+    function showBookingSavingOverlay() {
+        var overlay = document.getElementById('booking-saving-overlay');
+        if (overlay) overlay.classList.add('is-visible');
+    }
+    function hideBookingSavingOverlay() {
+        var overlay = document.getElementById('booking-saving-overlay');
+        if (overlay) overlay.classList.remove('is-visible');
+    }
+
     async function submitEditBooking() {
         const bookingId = window.currentBookingId;
         if (!bookingId) return;
+
+        // Показываем overlay сохранения
+        showBookingSavingOverlay();
 
         const scenarioId = document.getElementById('editBookingModal')?.getAttribute('data-scenario-id') || null;
         if (!scenarioId) {
@@ -1706,6 +1718,9 @@
 
         } catch (err) {
             console.error('Ошибка при сохранении изменений брони:', err);
+        } finally {
+            // Скрываем overlay после завершения
+            hideBookingSavingOverlay();
         }
     }
 

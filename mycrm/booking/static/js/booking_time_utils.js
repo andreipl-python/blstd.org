@@ -1,8 +1,37 @@
+/**
+ * BookingTimeUtils — модуль утилит для работы со временем бронирования
+ * 
+ * Этот модуль предоставляет функции для:
+ * - Парсинга и форматирования дат/времени
+ * - Получения параметров сценариев бронирования (рабочие часы, тарифы)
+ * - Загрузки и кэширования данных о бронированиях комнат
+ * - Расчёта доступных временных слотов с учётом существующих бронирований
+ * - Управления UI-селектами времени (длительность, начало, окончание)
+ * 
+ * Зависимости:
+ * - window.SCENARIOS — массив сценариев бронирования (из Django контекста)
+ * - window.TARIFF_UNITS — массив тарифных единиц (из Django контекста)
+ * 
+ * @namespace BookingTimeUtils
+ */
 (function () {
+    // Предотвращаем повторную инициализацию
     if (window.BookingTimeUtils) {
         return;
     }
 
+    /* =========================================================================
+     * СЕКЦИЯ 1: Парсинг и форматирование дат/времени
+     * ========================================================================= */
+
+    /**
+     * Парсит строку даты-времени в объект Date
+     * @param {string} datetimeStr - Строка формата "YYYY-MM-DD HH:MM:SS" или "YYYY-MM-DD HH:MM"
+     * @returns {Date|null} Объект Date или null при ошибке парсинга
+     * @example
+     * parseDatetimeStr("2025-12-22 14:30:00") // Date object
+     * parseDatetimeStr("invalid") // null
+     */
     function parseDatetimeStr(datetimeStr) {
         if (!datetimeStr) return null;
         var parts = String(datetimeStr).trim().split(' ');
@@ -20,6 +49,14 @@
         );
     }
 
+    /**
+     * Форматирует количество минут в строку времени HH:MM
+     * @param {number} totalMinutes - Общее количество минут от начала суток
+     * @returns {string} Строка формата "HH:MM" или пустая строка при ошибке
+     * @example
+     * formatTimeHHMM(90) // "01:30"
+     * formatTimeHHMM(600) // "10:00"
+     */
     function formatTimeHHMM(totalMinutes) {
         var m = parseInt(totalMinutes, 10);
         if (isNaN(m) || m < 0) return '';
@@ -28,6 +65,14 @@
         return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
     }
 
+    /**
+     * Парсит строку времени в количество минут от начала суток
+     * @param {string} timeStr - Строка времени формата "HH:MM"
+     * @returns {number} Количество минут от начала суток (0 при ошибке)
+     * @example
+     * parseTimeToMinutes("10:30") // 630
+     * parseTimeToMinutes("14:00") // 840
+     */
     function parseTimeToMinutes(timeStr) {
         if (!timeStr) return 0;
         var parts = String(timeStr).split(':');
@@ -35,6 +80,15 @@
         return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
     }
 
+    /**
+     * Форматирует длительность в человекочитаемый формат
+     * @param {number} totalMinutes - Длительность в минутах
+     * @returns {string} Строка вида "1 ч 30 мин", "2 ч" или "45 мин"
+     * @example
+     * formatDurationHuman(90) // "1 ч 30 мин"
+     * formatDurationHuman(120) // "2 ч"
+     * formatDurationHuman(45) // "45 мин"
+     */
     function formatDurationHuman(totalMinutes) {
         var m = parseInt(totalMinutes, 10);
         if (isNaN(m) || m <= 0) return '';
@@ -45,6 +99,14 @@
         return mm + ' мин';
     }
 
+    /**
+     * Форматирует длительность в формат HH:MM
+     * @param {number} totalMinutes - Длительность в минутах
+     * @returns {string} Строка формата "HH:MM"
+     * @example
+     * formatDurationHHMM(90) // "01:30"
+     * formatDurationHHMM(120) // "02:00"
+     */
     function formatDurationHHMM(totalMinutes) {
         var m = parseInt(totalMinutes, 10);
         if (isNaN(m) || m < 0) return '';
@@ -53,6 +115,15 @@
         return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
     }
 
+    /**
+     * Возвращает правильное склонение слова "период" для числа
+     * @param {number} n - Количество периодов
+     * @returns {string} "период", "периода" или "периодов"
+     * @example
+     * formatPeriodsLabel(1) // "период"
+     * formatPeriodsLabel(3) // "периода"
+     * formatPeriodsLabel(5) // "периодов"
+     */
     function formatPeriodsLabel(n) {
         var k = parseInt(n, 10);
         if (k === 1) return 'период';
@@ -60,6 +131,15 @@
         return 'периодов';
     }
 
+    /* =========================================================================
+     * СЕКЦИЯ 2: Получение параметров сценариев бронирования
+     * ========================================================================= */
+
+    /**
+     * Получает время начала рабочего дня для сценария в минутах
+     * @param {number|string} scenarioId - ID сценария бронирования
+     * @returns {number} Время начала в минутах от полуночи (0 по умолчанию)
+     */
     function getScenarioWorkTimeStartMinutes(scenarioId) {
         if (!scenarioId || !Array.isArray(window.SCENARIOS)) return 0;
         var s = window.SCENARIOS.find(function (x) {
@@ -69,6 +149,11 @@
         return parseTimeToMinutes(String(s.fields.work_time_start).slice(0, 5)) || 0;
     }
 
+    /**
+     * Получает время окончания рабочего дня для сценария в минутах
+     * @param {number|string} scenarioId - ID сценария бронирования
+     * @returns {number} Время окончания в минутах от полуночи (1440 = 24:00 по умолчанию)
+     */
     function getScenarioWorkTimeEndMinutes(scenarioId) {
         if (!scenarioId || !Array.isArray(window.SCENARIOS)) return 24 * 60;
         var s = window.SCENARIOS.find(function (x) {
@@ -78,6 +163,11 @@
         return parseTimeToMinutes(String(s.fields.work_time_end).slice(0, 5)) || (24 * 60);
     }
 
+    /**
+     * Получает минимальную длительность бронирования для сценария (один период)
+     * @param {number|string} scenarioId - ID сценария бронирования
+     * @returns {number} Минимальная длительность в минутах (60 по умолчанию)
+     */
     function getScenarioMinDurationMinutes(scenarioId) {
         var fallback = 60;
         if (!scenarioId || !Array.isArray(window.TARIFF_UNITS)) return fallback;
@@ -94,6 +184,11 @@
         return total > 0 ? total : fallback;
     }
 
+    /**
+     * Получает стоимость одного периода (тарифной единицы) для сценария
+     * @param {number|string} scenarioId - ID сценария бронирования
+     * @returns {number} Стоимость в валюте (0 по умолчанию)
+     */
     function getScenarioTariffUnitCost(scenarioId) {
         if (!scenarioId || !Array.isArray(window.TARIFF_UNITS)) return 0;
         var tu = window.TARIFF_UNITS.find(function (t) {
@@ -104,17 +199,41 @@
         return Number.isFinite(v) ? v : 0;
     }
 
+    /* =========================================================================
+     * СЕКЦИЯ 3: Загрузка и кэширование данных о бронированиях комнат
+     * ========================================================================= */
+
+    /**
+     * Внутренний кэш для хранения загруженных бронирований комнат
+     * Ключ: "roomId|dateIso|excludeBookingId"
+     * Значение: массив интервалов {bookingId, startMinutes, endMinutes}
+     * @private
+     */
     var _roomBookingsCache = new Map();
 
+    /**
+     * Генерирует ключ для кэша бронирований
+     * @private
+     */
     function _cacheKey(roomId, dateIso, excludeBookingId) {
         return String(roomId) + '|' + String(dateIso) + '|' + (excludeBookingId === undefined || excludeBookingId === null ? '' : String(excludeBookingId));
     }
 
-    // Очистить кэш бронирований (вызывается при необходимости принудительного обновления)
+    /**
+     * Очищает кэш бронирований комнат
+     * Вызывается при необходимости принудительного обновления данных
+     */
     function clearRoomBookingsCache() {
         _roomBookingsCache.clear();
     }
 
+    /**
+     * Нормализует массив бронирований в формат интервалов для указанной даты
+     * @param {Array} bookings - Массив бронирований с blocks_datetime_range
+     * @param {string} dateIso - Дата в формате ISO (YYYY-MM-DD)
+     * @param {number|string} [excludeBookingId] - ID брони для исключения (при редактировании)
+     * @returns {Array<{bookingId: number, startMinutes: number, endMinutes: number}>}
+     */
     function normalizeRoomBookingsForDate(bookings, dateIso, excludeBookingId) {
         if (!Array.isArray(bookings)) return [];
 
@@ -148,6 +267,16 @@
         return parsed;
     }
 
+    /**
+     * Загружает бронирования комнаты на указанную дату с сервера (AJAX)
+     * Результат кэшируется для повторных запросов
+     * 
+     * @param {number|string} roomId - ID комнаты
+     * @param {string} dateIso - Дата в формате ISO (YYYY-MM-DD)
+     * @param {number|string} [excludeBookingId] - ID брони для исключения
+     * @param {Function} [callback] - Колбэк, вызываемый с массивом интервалов
+     * @param {boolean} [forceReload=false] - Принудительная перезагрузка с сервера
+     */
     function loadRoomBookingsForDate(roomId, dateIso, excludeBookingId, callback, forceReload) {
         var key = _cacheKey(roomId, dateIso, excludeBookingId);
         
@@ -184,6 +313,20 @@
             });
     }
 
+    /* =========================================================================
+     * СЕКЦИЯ 4: Расчёт доступных временных слотов
+     * ========================================================================= */
+
+    /**
+     * Возвращает все доступные слоты времени начала бронирования
+     * Учитывает существующие бронирования и рабочие часы
+     * 
+     * @param {Array} roomBookings - Массив интервалов занятости комнаты
+     * @param {number} workStart - Начало рабочего дня в минутах
+     * @param {number} workEnd - Конец рабочего дня в минутах
+     * @param {number} minMinutes - Минимальная длительность бронирования (один период)
+     * @returns {Array<number>} Массив доступных времён начала в минутах
+     */
     function getAvailableStartTimeSlots(roomBookings, workStart, workEnd, minMinutes) {
         var gridStep = 15;
         var bookings = Array.isArray(roomBookings) ? roomBookings.slice() : [];
@@ -217,6 +360,15 @@
         return slots;
     }
 
+    /**
+     * Вычисляет максимальное количество периодов для указанного времени начала
+     * 
+     * @param {number} startTimeMinutes - Время начала в минутах
+     * @param {Array} roomBookings - Массив интервалов занятости
+     * @param {number} workEnd - Конец рабочего дня в минутах
+     * @param {number} minMinutes - Длительность одного периода в минутах
+     * @returns {number} Максимальное количество периодов (0 если слот занят)
+     */
     function getMaxPeriodsForStartTime(startTimeMinutes, roomBookings, workEnd, minMinutes) {
         var bookings = Array.isArray(roomBookings) ? roomBookings : [];
 
@@ -248,6 +400,16 @@
         return Math.floor(availableMinutes / minMinutes);
     }
 
+    /**
+     * Возвращает слоты времени начала, на которых возможно забронировать указанное количество периодов
+     * 
+     * @param {number} requiredPeriods - Требуемое количество периодов
+     * @param {Array} roomBookings - Массив интервалов занятости
+     * @param {number} workStart - Начало рабочего дня в минутах
+     * @param {number} workEnd - Конец рабочего дня в минутах
+     * @param {number} minMinutes - Длительность одного периода в минутах
+     * @returns {Array<number>} Массив времён начала в минутах
+     */
     function getStartTimeSlotsForPeriods(requiredPeriods, roomBookings, workStart, workEnd, minMinutes) {
         var allSlots = getAvailableStartTimeSlots(roomBookings, workStart, workEnd, minMinutes);
         if (requiredPeriods <= 1) return allSlots;
@@ -258,6 +420,16 @@
         });
     }
 
+    /**
+     * Возвращает все возможные времена окончания для указанного количества периодов
+     * 
+     * @param {number} requiredPeriods - Требуемое количество периодов
+     * @param {Array} roomBookings - Массив интервалов занятости
+     * @param {number} workStart - Начало рабочего дня в минутах
+     * @param {number} workEnd - Конец рабочего дня в минутах
+     * @param {number} minMinutes - Длительность одного периода в минутах
+     * @returns {Array<number>} Отсортированный массив времён окончания в минутах
+     */
     function getAllEndTimesForPeriods(requiredPeriods, roomBookings, workStart, workEnd, minMinutes) {
         var slots = getStartTimeSlotsForPeriods(requiredPeriods, roomBookings, workStart, workEnd, minMinutes);
         var endTimes = [];
@@ -276,6 +448,15 @@
         return endTimes;
     }
 
+    /**
+     * Возвращает все возможные времена окончания для указанного времени начала
+     * 
+     * @param {number} startTimeMinutes - Время начала в минутах
+     * @param {Array} roomBookings - Массив интервалов занятости
+     * @param {number} workEnd - Конец рабочего дня в минутах
+     * @param {number} minMinutes - Длительность одного периода в минутах
+     * @returns {Array<number>} Массив возможных времён окончания в минутах
+     */
     function getEndTimesForStartTime(startTimeMinutes, roomBookings, workEnd, minMinutes) {
         var maxPeriods = getMaxPeriodsForStartTime(startTimeMinutes, roomBookings, workEnd, minMinutes);
         var endTimes = [];
@@ -285,6 +466,16 @@
         return endTimes;
     }
 
+    /**
+     * Возвращает все возможные времена начала для указанного времени окончания
+     * 
+     * @param {number} endTimeMinutes - Время окончания в минутах
+     * @param {Array} roomBookings - Массив интервалов занятости
+     * @param {number} workStart - Начало рабочего дня в минутах
+     * @param {number} workEnd - Конец рабочего дня в минутах
+     * @param {number} minMinutes - Длительность одного периода в минутах
+     * @returns {Array<number>} Отсортированный массив времён начала в минутах
+     */
     function getStartTimesForEndTime(endTimeMinutes, roomBookings, workStart, workEnd, minMinutes) {
         var allSlots = getStartTimeSlotsForPeriods(1, roomBookings, workStart, workEnd, minMinutes);
         var startTimes = [];
@@ -305,6 +496,16 @@
         return startTimes;
     }
 
+    /**
+     * Вычисляет глобальный максимум периодов для данного дня
+     * Находит слот с максимально возможной длительностью
+     * 
+     * @param {Array} roomBookings - Массив интервалов занятости
+     * @param {number} workStart - Начало рабочего дня в минутах
+     * @param {number} workEnd - Конец рабочего дня в минутах
+     * @param {number} minMinutes - Длительность одного периода в минутах
+     * @returns {number} Максимальное количество периодов в любом доступном слоте
+     */
     function getGlobalMaxPeriods(roomBookings, workStart, workEnd, minMinutes) {
         var allSlots = getStartTimeSlotsForPeriods(1, roomBookings, workStart, workEnd, minMinutes);
         var maxPeriods = 0;
@@ -315,6 +516,16 @@
         return maxPeriods;
     }
 
+    /**
+     * Вычисляет максимальное количество периодов для указанного времени окончания
+     * 
+     * @param {number} endTimeMinutes - Время окончания в минутах
+     * @param {Array} roomBookings - Массив интервалов занятости
+     * @param {number} workStart - Начало рабочего дня в минутах
+     * @param {number} workEnd - Конец рабочего дня в минутах
+     * @param {number} minMinutes - Длительность одного периода в минутах
+     * @returns {number} Максимальное количество периодов
+     */
     function getMaxPeriodsForEndTime(endTimeMinutes, roomBookings, workStart, workEnd, minMinutes) {
         var startTimesForEnd = getStartTimesForEndTime(endTimeMinutes, roomBookings, workStart, workEnd, minMinutes);
         var maxPeriods = 0;
@@ -327,6 +538,17 @@
         return maxPeriods;
     }
 
+    /* =========================================================================
+     * СЕКЦИЯ 5: Управление UI-селектами времени
+     * ========================================================================= */
+
+    /**
+     * Обновляет CSS-класс has-selection на селекте
+     * Используется для показа/скрытия кнопки сброса
+     * 
+     * @param {HTMLElement} selectEl - DOM-элемент кастомного селекта
+     * @param {boolean} hasValue - Есть ли выбранное значение
+     */
     function updateSelectHasSelection(selectEl, hasValue) {
         if (!selectEl) return;
         if (hasValue) {
@@ -336,6 +558,16 @@
         }
     }
 
+    /**
+     * Перестраивает селект выбора длительности (количества периодов)
+     * Создаёт опции от 1 до maxPeriods периодов с человекочитаемыми метками
+     * 
+     * @param {HTMLElement} selectEl - DOM-элемент кастомного селекта длительности
+     * @param {number|null} selectedPeriods - Текущее выбранное количество периодов
+     * @param {number} maxPeriods - Максимально доступное количество периодов
+     * @param {number} minMinutes - Длительность одного периода в минутах
+     * @param {Function} [onPeriodsSelected] - Колбэк при выборе периодов (periods: number)
+     */
     function rebuildDurationSelect(selectEl, selectedPeriods, maxPeriods, minMinutes, onPeriodsSelected) {
         if (!selectEl) return;
         var durationSelectedSpan = selectEl.querySelector('.selected');
@@ -347,11 +579,22 @@
         }
 
         if (maxPeriods <= 0) {
-            if (durationSelectedSpan) {
-                durationSelectedSpan.textContent = 'Нет доступных периодов';
+            // Если есть выбранная длительность - показываем её номинально
+            if (selectedPeriods !== null && selectedPeriods >= 1) {
+                var nominalTotal = minMinutes * selectedPeriods;
+                var nominalHuman = formatDurationHuman(nominalTotal);
+                var nominalLabel = selectedPeriods + ' ' + formatPeriodsLabel(selectedPeriods) + ' — ' + nominalHuman;
+                if (durationSelectedSpan) {
+                    durationSelectedSpan.textContent = nominalLabel;
+                }
+                updateSelectHasSelection(selectEl, true);
+            } else {
+                if (durationSelectedSpan) {
+                    durationSelectedSpan.textContent = 'Нет доступных периодов';
+                }
+                updateSelectHasSelection(selectEl, false);
             }
             selectEl.classList.add('disabled');
-            updateSelectHasSelection(selectEl, false);
             return;
         }
 
@@ -419,6 +662,15 @@
         updateSelectHasSelection(selectEl, selectedPeriods !== null);
     }
 
+    /**
+     * Перестраивает селект выбора времени начала
+     * Создаёт опции для всех доступных временных слотов
+     * 
+     * @param {HTMLElement} selectEl - DOM-элемент кастомного селекта времени начала
+     * @param {Array<number>} slotsMinutes - Массив доступных времён начала в минутах
+     * @param {number|null} selectedMinutes - Текущее выбранное время в минутах
+     * @param {Function} [onTimeSelected] - Колбэк при выборе времени (minutes: number, timeStr: string)
+     */
     function rebuildStartTimeSelect(selectEl, slotsMinutes, selectedMinutes, onTimeSelected) {
         if (!selectEl) return;
 
@@ -487,6 +739,15 @@
         updateSelectHasSelection(selectEl, hasValue);
     }
 
+    /**
+     * Перестраивает селект выбора времени окончания
+     * Создаёт опции для всех доступных времён окончания
+     * 
+     * @param {HTMLElement} selectEl - DOM-элемент кастомного селекта времени окончания
+     * @param {Array<number>} endTimesMinutes - Массив доступных времён окончания в минутах
+     * @param {number|null} selectedMinutes - Текущее выбранное время в минутах
+     * @param {Function} [onTimeSelected] - Колбэк при выборе времени (minutes: number, timeStr: string)
+     */
     function rebuildEndTimeSelect(selectEl, endTimesMinutes, selectedMinutes, onTimeSelected) {
         if (!selectEl) return;
 
@@ -555,6 +816,14 @@
         });
     }
 
+    /* =========================================================================
+     * ЭКСПОРТ ПУБЛИЧНОГО API
+     * ========================================================================= */
+
+    /**
+     * Публичный API модуля BookingTimeUtils
+     * Все функции доступны через window.BookingTimeUtils
+     */
     window.BookingTimeUtils = {
         parseDatetimeStr: parseDatetimeStr,
         formatTimeHHMM: formatTimeHHMM,

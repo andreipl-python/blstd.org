@@ -694,37 +694,19 @@
     cursor: default;
   }
 
-  /* Анимация состояния кнопки "Оплатить" в модалке оплаты */
+  /* =====================================================
+     Анимация и disabled-состояние для кнопок форм
+     ===================================================== */
   #paymentSubmitButton,
-  #editBookingSubmitBtn {
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
-  }
-
-  #paymentSubmitButton:disabled,
-  #editBookingSubmitBtn:disabled {
-    background-color: #C9B5FF;
-    border-color: #C9B5FF;
-    color: #F5F2FF;
-    opacity: 0.7;
-  }
-
-  /* Кнопка "Сохранить" в модалке редактирования платежа — те же состояния, что и кнопка "Оплатить" */
-  #editPaymentSaveButton {
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
-  }
-
-  #editPaymentSaveButton:disabled {
-    background-color: #C9B5FF;
-    border-color: #C9B5FF;
-    color: #F5F2FF;
-    opacity: 0.7;
-  }
-
-  /* Кнопка "Добавить" в модалке создания брони — те же состояния, что и кнопка "Оплатить" */
+  #editBookingSubmitBtn,
+  #editPaymentSaveButton,
   #createBookingSubmitBtn {
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
   }
 
+  #paymentSubmitButton:disabled,
+  #editBookingSubmitBtn:disabled,
+  #editPaymentSaveButton:disabled,
   #createBookingSubmitBtn:disabled {
     background-color: #C9B5FF;
     border-color: #C9B5FF;
@@ -733,157 +715,96 @@
     cursor: default;
   }
 
-  /* Прокрутка для списка длительности (>4 элементов) */
-  #duration ul.options {
+  /* =====================================================
+     Стили прокрутки для временных селектов (общие)
+     ===================================================== */
+  #duration ul.options,
+  #start-time ul.options,
+  #end-time ul.options,
+  #edit-duration ul.options,
+  #edit-start-time ul.options,
+  #edit-end-time ul.options,
+  #edit-teacher ul.options,
+  #edit-direction ul.options,
+  #edit-room ul.options,
+  #edit-services ul.options {
     max-height: 200px;
     overflow-y: auto;
-  }
-
-  /* Стилизованный scrollbar для списка длительности */
-  #duration ul.options::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  #duration ul.options::-webkit-scrollbar-track {
-    background: #F5F2FF;
-    border-radius: 3px;
-  }
-
-  #duration ul.options::-webkit-scrollbar-thumb {
-    background: #C9B5FF;
-    border-radius: 3px;
-  }
-
-  #duration ul.options::-webkit-scrollbar-thumb:hover {
-    background: #7A52FF;
-  }
-
-  /* Firefox scrollbar */
-  #duration ul.options {
     scrollbar-width: thin;
     scrollbar-color: #C9B5FF #F5F2FF;
   }
 
-  /* Стиль для disabled селекта длительности */
-  #duration.disabled {
-    opacity: 0.6;
-    pointer-events: none;
-  }
-
-  #duration.disabled .selected {
-    color: #818EA2;
-  }
-
-  /* Прокрутка и стили для селекта "Время окончания" */
-  #end-time ul.options {
-    max-height: 200px;
-    overflow-y: auto;
-  }
-
-  #end-time ul.options::-webkit-scrollbar {
+  /* Webkit scrollbar (Chrome, Safari, Edge) */
+  #duration ul.options::-webkit-scrollbar,
+  #start-time ul.options::-webkit-scrollbar,
+  #end-time ul.options::-webkit-scrollbar,
+  #edit-duration ul.options::-webkit-scrollbar,
+  #edit-start-time ul.options::-webkit-scrollbar,
+  #edit-end-time ul.options::-webkit-scrollbar,
+  #edit-teacher ul.options::-webkit-scrollbar,
+  #edit-direction ul.options::-webkit-scrollbar,
+  #edit-room ul.options::-webkit-scrollbar,
+  #edit-services ul.options::-webkit-scrollbar {
     width: 6px;
   }
 
-  #end-time ul.options::-webkit-scrollbar-track {
+  #duration ul.options::-webkit-scrollbar-track,
+  #start-time ul.options::-webkit-scrollbar-track,
+  #end-time ul.options::-webkit-scrollbar-track,
+  #edit-duration ul.options::-webkit-scrollbar-track,
+  #edit-start-time ul.options::-webkit-scrollbar-track,
+  #edit-end-time ul.options::-webkit-scrollbar-track,
+  #edit-teacher ul.options::-webkit-scrollbar-track,
+  #edit-direction ul.options::-webkit-scrollbar-track,
+  #edit-room ul.options::-webkit-scrollbar-track,
+  #edit-services ul.options::-webkit-scrollbar-track {
     background: #F5F2FF;
     border-radius: 3px;
   }
 
-  #end-time ul.options::-webkit-scrollbar-thumb {
+  #duration ul.options::-webkit-scrollbar-thumb,
+  #start-time ul.options::-webkit-scrollbar-thumb,
+  #end-time ul.options::-webkit-scrollbar-thumb,
+  #edit-duration ul.options::-webkit-scrollbar-thumb,
+  #edit-start-time ul.options::-webkit-scrollbar-thumb,
+  #edit-end-time ul.options::-webkit-scrollbar-thumb,
+  #edit-teacher ul.options::-webkit-scrollbar-thumb,
+  #edit-direction ul.options::-webkit-scrollbar-thumb,
+  #edit-room ul.options::-webkit-scrollbar-thumb,
+  #edit-services ul.options::-webkit-scrollbar-thumb {
     background: #C9B5FF;
     border-radius: 3px;
   }
 
-  #end-time ul.options::-webkit-scrollbar-thumb:hover {
+  #duration ul.options::-webkit-scrollbar-thumb:hover,
+  #start-time ul.options::-webkit-scrollbar-thumb:hover,
+  #end-time ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-duration ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-start-time ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-end-time ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-teacher ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-direction ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-room ul.options::-webkit-scrollbar-thumb:hover,
+  #edit-services ul.options::-webkit-scrollbar-thumb:hover {
     background: #7A52FF;
   }
 
-  #end-time ul.options {
-    scrollbar-width: thin;
-    scrollbar-color: #C9B5FF #F5F2FF;
-  }
-
+  /* Стиль для disabled селектов */
+  #duration.disabled,
   #end-time.disabled {
     opacity: 0.6;
     pointer-events: none;
   }
 
+  #duration.disabled .selected,
   #end-time.disabled .selected {
     color: #818EA2;
   }
 
-  /* Прокрутка и стили для селекта "Время начала" */
-  #start-time ul.options {
-    max-height: 200px;
-    overflow-y: auto;
-  }
-
-  #start-time ul.options::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  #start-time ul.options::-webkit-scrollbar-track {
-    background: #F5F2FF;
-    border-radius: 3px;
-  }
-
-  #start-time ul.options::-webkit-scrollbar-thumb {
-    background: #C9B5FF;
-    border-radius: 3px;
-  }
-
-  #start-time ul.options::-webkit-scrollbar-thumb:hover {
-    background: #7A52FF;
-  }
-
-  #start-time ul.options {
-    scrollbar-width: thin;
-    scrollbar-color: #C9B5FF #F5F2FF;
-  }
-
-  /* Значок предупреждения о недоступном слоте */
-  .start-time-warning-icon {
-    position: absolute;
-    top: 50%;
-    right: 80px;
-    transform: translateY(-50%);
-    font-size: 16px;
-    color: #7A52FF;
-    cursor: help;
-    z-index: 5;
-  }
-
-  .start-time-warning-icon .warning-tooltip {
-    display: none;
-    position: absolute;
-    bottom: calc(100% + 10px);
-    right: -10px;
-    width: 220px;
-    padding: 10px 12px;
-    background: #3D3356;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 1.4;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(61, 51, 86, 0.25);
-    z-index: 100;
-  }
-
-  .start-time-warning-icon .warning-tooltip::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    right: 16px;
-    border: 6px solid transparent;
-    border-top-color: #3D3356;
-  }
-
-  .start-time-warning-icon:hover .warning-tooltip {
-    display: block;
-  }
-
-  /* Значок предупреждения для преподавателя */
+  /* =====================================================
+     Значки предупреждений в полях формы (время, специалист)
+     ===================================================== */
+  .start-time-warning-icon,
   .teacher-warning-icon {
     position: absolute;
     top: 50%;
@@ -895,6 +816,7 @@
     z-index: 5;
   }
 
+  .start-time-warning-icon .warning-tooltip,
   .teacher-warning-icon .warning-tooltip {
     display: none;
     position: absolute;
@@ -912,6 +834,7 @@
     z-index: 100;
   }
 
+  .start-time-warning-icon .warning-tooltip::after,
   .teacher-warning-icon .warning-tooltip::after {
     content: '';
     position: absolute;
@@ -921,6 +844,7 @@
     border-top-color: #3D3356;
   }
 
+  .start-time-warning-icon:hover .warning-tooltip,
   .teacher-warning-icon:hover .warning-tooltip {
     display: block;
   }
@@ -1168,6 +1092,20 @@
   }
 
   #calendar-loading-overlay.is-visible {
+    display: flex;
+  }
+
+  #booking-saving-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(24, 27, 34, 0.35);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1060;
+  }
+
+  #booking-saving-overlay.is-visible {
     display: flex;
   }
 
@@ -1580,60 +1518,4 @@
 
   .modal-datepicker__today-btn:hover {
     background: #F5F2FF;
-  }
-
-  /* =====================================================
-     Стили прокрутки для селектов в модалке редактирования
-     ===================================================== */
-  #edit-duration ul.options::-webkit-scrollbar,
-  #edit-start-time ul.options::-webkit-scrollbar,
-  #edit-end-time ul.options::-webkit-scrollbar,
-  #edit-teacher ul.options::-webkit-scrollbar,
-  #edit-direction ul.options::-webkit-scrollbar,
-  #edit-room ul.options::-webkit-scrollbar,
-  #edit-services ul.options::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  #edit-duration ul.options::-webkit-scrollbar-track,
-  #edit-start-time ul.options::-webkit-scrollbar-track,
-  #edit-end-time ul.options::-webkit-scrollbar-track,
-  #edit-teacher ul.options::-webkit-scrollbar-track,
-  #edit-direction ul.options::-webkit-scrollbar-track,
-  #edit-room ul.options::-webkit-scrollbar-track,
-  #edit-services ul.options::-webkit-scrollbar-track {
-    background: #F5F2FF;
-    border-radius: 3px;
-  }
-
-  #edit-duration ul.options::-webkit-scrollbar-thumb,
-  #edit-start-time ul.options::-webkit-scrollbar-thumb,
-  #edit-end-time ul.options::-webkit-scrollbar-thumb,
-  #edit-teacher ul.options::-webkit-scrollbar-thumb,
-  #edit-direction ul.options::-webkit-scrollbar-thumb,
-  #edit-room ul.options::-webkit-scrollbar-thumb,
-  #edit-services ul.options::-webkit-scrollbar-thumb {
-    background: #C9B5FF;
-    border-radius: 3px;
-  }
-
-  #edit-duration ul.options::-webkit-scrollbar-thumb:hover,
-  #edit-start-time ul.options::-webkit-scrollbar-thumb:hover,
-  #edit-end-time ul.options::-webkit-scrollbar-thumb:hover,
-  #edit-teacher ul.options::-webkit-scrollbar-thumb:hover,
-  #edit-direction ul.options::-webkit-scrollbar-thumb:hover,
-  #edit-room ul.options::-webkit-scrollbar-thumb:hover,
-  #edit-services ul.options::-webkit-scrollbar-thumb:hover {
-    background: #7A52FF;
-  }
-
-  #edit-duration ul.options,
-  #edit-start-time ul.options,
-  #edit-end-time ul.options,
-  #edit-teacher ul.options,
-  #edit-direction ul.options,
-  #edit-room ul.options,
-  #edit-services ul.options {
-    scrollbar-width: thin;
-    scrollbar-color: #C9B5FF #F5F2FF;
   }

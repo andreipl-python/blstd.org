@@ -20,6 +20,12 @@
             <div class="calendar-loading-text">Загрузка календаря...</div>
         </div>
     </div>
+    <div id="booking-saving-overlay">
+        <div class="calendar-loading-content">
+            <div class="calendar-loading-spinner"></div>
+            <div class="calendar-loading-text">Сохранение брони...</div>
+        </div>
+    </div>
 
     <script>
         window.ROOMS = JSON.parse('{{ rooms_json|escapejs }}');
@@ -224,6 +230,7 @@
     </div>
 
     <script src="{% static 'js/booking_time_utils.js' %}?v={% now 'U' %}"></script>
+    <script src="{% static 'js/booking_modal_utils.js' %}?v={% now 'U' %}"></script>
 
     {% include "booking/user/modals/booking/modal_create_booking.html" %}
     {% include "booking/user/modals/booking/modal_edit_booking.html" %}
