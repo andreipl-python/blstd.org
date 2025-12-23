@@ -1534,6 +1534,21 @@
                                 }
                             }
 
+                            // Заполняем название группы (для Репточки)
+                            var groupNameElement = infoModalElement.querySelector('#infoBookingGroupName');
+                            if (groupNameElement && booking.client_group_name) {
+                                groupNameElement.textContent = booking.client_group_name;
+                            }
+
+                            // Адаптируем модалку под сценарий
+                            var isGroup = !!booking.client_group_id;
+                            if (typeof window.adaptInfoModalForScenario === 'function') {
+                                window.adaptInfoModalForScenario(booking.reservation_type, isGroup);
+                            }
+
+                            // Отображаем услуги брони
+                            renderInfoModalServices(infoModalElement, booking.services_by_group);
+
                             updateInfoModalPaymentButtonState(booking);
                         }
                     } else {

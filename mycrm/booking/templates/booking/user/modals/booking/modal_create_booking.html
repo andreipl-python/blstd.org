@@ -343,8 +343,8 @@
                         </div>
                     </div>
 
-                    <!--Чекбокс пробное занятие-->
-                    <div class="row mb-5">
+                    <!--Чекбокс пробное занятие (только для Музыкальной школы)-->
+                    <div class="row mb-5" id="trial-lesson-container">
                         <div class="col-md-12 trial-checkbox-row">
                             <input class="form-check-input" type="checkbox" id="trialLessonCheckbox" name="trialLesson">
                             <label class="form-check-label" for="trialLessonCheckbox" id="trialLessonLabel">
@@ -408,40 +408,51 @@
         // Сохраняем название сценария глобально для валидации
         window.currentScenarioName = scenarioName;
         
+        // Определяем тип сценария
         var isRepPoint = (scenarioName === 'Репетиционная точка');
+        var isMusicClass = (scenarioName === 'Музыкальный класс');
+        var isMusicSchool = (scenarioName === 'Музыкальная школа');
+        // Репточка и Музкласс имеют похожую структуру (без направления, преподавателя, абонемента)
+        var isSimplifiedScenario = isRepPoint || isMusicClass;
         
         // Контейнеры полей
         var directionContainer = document.getElementById('direction-field-container');
         var teacherFieldContainer = document.getElementById('teacher-field-container');
         var tariffFieldContainer = document.getElementById('tariff-field-container');
         var abonementContainer = document.getElementById('abonement-row-container');
+        var trialLessonContainer = document.getElementById('trial-lesson-container');
         var clientLabel = document.getElementById('client-label');
         var clientSelect = document.getElementById('client');
         
-        // Показать/скрыть Направление
+        // Показать/скрыть Направление (только для Музыкальной школы)
         if (directionContainer) {
-            directionContainer.style.display = isRepPoint ? 'none' : '';
+            directionContainer.style.display = isSimplifiedScenario ? 'none' : '';
         }
         
-        // Показать/скрыть Абонемент (не нужен для Репетиционной точки)
+        // Показать/скрыть Абонемент (только для Музыкальной школы)
         if (abonementContainer) {
-            abonementContainer.style.display = isRepPoint ? 'none' : '';
+            abonementContainer.style.display = isSimplifiedScenario ? 'none' : '';
+        }
+        
+        // Показать/скрыть Пробное занятие (только для Музыкальной школы)
+        if (trialLessonContainer) {
+            trialLessonContainer.style.display = isSimplifiedScenario ? 'none' : '';
         }
         
         // Показать/скрыть Преподаватель vs Тариф
         if (teacherFieldContainer) {
-            teacherFieldContainer.style.display = isRepPoint ? 'none' : '';
+            teacherFieldContainer.style.display = isSimplifiedScenario ? 'none' : '';
         }
         if (tariffFieldContainer) {
-            tariffFieldContainer.style.display = isRepPoint ? '' : 'none';
+            tariffFieldContainer.style.display = isSimplifiedScenario ? '' : 'none';
         }
         
-        // Изменить лейбл клиента
+        // Изменить лейбл клиента (только для Репточки - с группами)
         if (clientLabel) {
             clientLabel.textContent = isRepPoint ? 'Клиент / группа' : 'Клиент';
         }
         
-        // Показать/скрыть группы в списке клиентов
+        // Показать/скрыть группы в списке клиентов (только для Репточки)
         if (clientSelect) {
             var groupOptions = clientSelect.querySelectorAll('.client-group-option');
             groupOptions.forEach(function(opt) {
@@ -1032,6 +1043,8 @@
                     
                     // Определяем текущий сценарий для условной валидации
                     var isRepPoint = (window.currentScenarioName === 'Репетиционная точка');
+                    var isMusicClass = (window.currentScenarioName === 'Музыкальный класс');
+                    var isSimplifiedScenario = isRepPoint || isMusicClass;
                     
                     // Проверяем наличие предупреждений
                     var startTimeWarning = document.getElementById('start-time-warning-icon');
@@ -1069,8 +1082,8 @@
                         checklist.push('Выберите доступное время окончания');
                     }
                     
-                    // Преподаватель и направление требуются только для НЕ-репточки
-                    if (!isRepPoint) {
+                    // Преподаватель и направление требуются только для Музыкальной школы
+                    if (!isSimplifiedScenario) {
                         if (!hasTeacher) {
                             checklist.push('Выберите преподавателя');
                         } else if (hasTeacherWarning) {
@@ -1082,6 +1095,7 @@
                         }
                     }
                     
+                    // Для Репточки - клиент или группа, для остальных - только клиент
                     if (!hasClientOrGroup) {
                         checklist.push(isRepPoint ? 'Выберите клиента или группу' : 'Выберите клиента');
                     }

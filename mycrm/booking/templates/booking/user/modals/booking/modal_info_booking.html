@@ -125,8 +125,8 @@
                             <h5 class="mb-0 mt-0" id="infoBookingDuration">1 час</h5>
                         </div>
                     </div>
-                    <!--Направление / преподаватель-->
-                    <div class="row mb-3">
+                    <!--Направление / преподаватель (только для Музыкальной школы)-->
+                    <div class="row mb-3" id="info-direction-teacher-row">
                         <div class="col-md-12 d-flex align-items-center gap-4">
 
                             <div class="d-flex align-items-center gap-2">
@@ -184,9 +184,10 @@
                         </div>
                     </div>
                     <!--Клиент / Телефон-->
-                    <div class="row mb-5">
+                    <div class="row mb-5" id="info-client-row">
                         <div class="col-md-12 d-flex align-items-center gap-4">
-                            <div class="d-flex align-items-center gap-2">
+                            <!--Иконка клиента (одиночный)-->
+                            <div class="d-flex align-items-center gap-2" id="info-client-icon-single">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
                                     <path
@@ -200,7 +201,17 @@
                                 </svg>
                                 <h5 class="mb-0 mt-0" id="infoBookingClientName">Иван Орлин</h5>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
+                            <!--Иконка группы (для Репточки)-->
+                            <div class="align-items-center gap-2 d-none" id="info-client-icon-group">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H6C4.93913 15 3.92172 15.4214 3.17157 16.1716C2.42143 16.9217 2 17.9391 2 19V21" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M22 21V19C21.9993 18.1137 21.7044 17.2528 21.1614 16.5523C20.6184 15.8519 19.8581 15.3516 19 15.13" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <h5 class="mb-0 mt-0" id="infoBookingGroupName">Название группы</h5>
+                            </div>
+                            <div class="d-flex align-items-center gap-2" id="info-phone-block">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
                                     <path
@@ -212,26 +223,37 @@
                             </div>
                         </div>
                     </div>
-                    <!--Блок абонемента-->
-                    <div class="col-md-12 d-flex flex-column gap-1">
-                        <h5>Абонемент</h5>
-                        <h6 style="color: #4F4F57;">Название абонемента</h6>
-                    </div>
-                    <div class="row mb-1">
-                        <div class="col-md-7">
-                            <h6 style="color: #4F4F57;">Количество занятий / осталось:</h6>
+                    <!--Блок абонемента (только для Музыкальной школы)-->
+                    <div id="info-abonement-container">
+                        <div class="col-md-12 d-flex flex-column gap-1">
+                            <h5>Абонемент</h5>
+                            <h6 style="color: #4F4F57;">Название абонемента</h6>
                         </div>
-                        <div class="col-md-5 d-flex justify-content-end">
-                            <h5 style="color: #4F4F57;">16/4</h5>
+                        <div class="row mb-1">
+                            <div class="col-md-7">
+                                <h6 style="color: #4F4F57;">Количество занятий / осталось:</h6>
+                            </div>
+                            <div class="col-md-5 d-flex justify-content-end">
+                                <h5 style="color: #4F4F57;">16/4</h5>
+                            </div>
+                        </div>
+                        <div class="row mb-5">
+                            <div class="col-md-12 d-flex align-items-center gap-2">
+                                <h6 class="m-0" style="color:#4F4F57;">ID:</h6>
+                                <h6 class="m-0" style="color:#4F4F57;">123457894</h6>
+                                <h6 class="m-0 mx-2" style="color:#4F4F57;">/</h6>
+                                <h6 class="m-0" style="color:#4F4F57;">Действует до:</h6>
+                                <h6 class="m-0" style="color:#4F4F57;">7 октября</h6>
+                            </div>
                         </div>
                     </div>
-                    <div class="row mb-5">
-                        <div class="col-md-12 d-flex align-items-center gap-2">
-                            <h6 class="m-0" style="color:#4F4F57;">ID:</h6>
-                            <h6 class="m-0" style="color:#4F4F57;">123457894</h6>
-                            <h6 class="m-0 mx-2" style="color:#4F4F57;">/</h6>
-                            <h6 class="m-0" style="color:#4F4F57;">Действует до:</h6>
-                            <h6 class="m-0" style="color:#4F4F57;">7 октября</h6>
+                    <!--Тариф (заглушка для Репточки и Музкласса)-->
+                    <div class="row mb-3 d-none" id="info-tariff-row">
+                        <div class="col-md-6">
+                            <h5 class="m-0">Тариф:</h5>
+                        </div>
+                        <div class="col-md-6 d-flex justify-content-end">
+                            <h5 class="m-0" style="color: #4F4F57;" id="infoTariffValue">55 BYN/т.е.</h5>
                         </div>
                     </div>
                     <!--Комментарий к брони-->
@@ -259,29 +281,16 @@
                             </a>
                         </div>
                     </div>
-                    <!--Маркер пробного занятия-->
-                    <div class="col-md-12 mb-4">
+                    <!--Маркер пробного занятия (только для Музыкальной школы)-->
+                    <div class="col-md-12 mb-4" id="info-trial-lesson-row">
                         <h5 style="color: #EB5757;">Пробное занятие</h5>
                     </div>
                     <!--Блок услуг-->
-                    <div class="col-md-12">
+                    <div class="col-md-12" id="info-services-header">
                         <h5>Услуги</h5>
                     </div>
-                    <div class="row mb-1 d-flex align-items-end">
-                        <div class="col-md-6 d-flex align-items-end">
-                            <h6 class="m-0" style="color: #4F4F57;">Самостоятельные занятия</h6>
-                        </div>
-                        <div class="col-md-6 d-flex justify-content-end align-items-end">
-                            <h5 class="m-0" style="color: #4F4F57;">0 BYN</h5>
-                        </div>
-                    </div>
-                    <div class="row mb-1 d-flex align-items-end">
-                        <div class="col-md-6 d-flex align-items-end">
-                            <h6 class="m-0" style="color: #4F4F57;">Акустическая гитара</h6>
-                        </div>
-                        <div class="col-md-6 d-flex justify-content-end align-items-end">
-                            <h5 class="m-0" style="color: #4F4F57;">20 BYN/т.е.</h5>
-                        </div>
+                    <div id="info-services-container">
+                        <!-- Услуги будут отображаться динамически -->
                     </div>
                 </div>
             </div>
@@ -313,4 +322,119 @@
             editModal.show();
         }, 50);
     }
+</script>
+
+<script>
+    /**
+     * Адаптация UI модалки информации под разные сценарии.
+     * - "Репетиционная точка": скрываем направление/преподавателя, абонемент, пробное занятие; показываем тариф; возможна группа вместо клиента
+     * - "Музыкальный класс": то же, что и Репточка, но без групп
+     * - "Музыкальная школа": стандартный вид
+     * @param {string} scenarioName - название сценария
+     * @param {boolean} isGroup - является ли бронь групповой (только для Репточки)
+     */
+    function adaptInfoModalForScenario(scenarioName, isGroup) {
+        var isRepPoint = (scenarioName === 'Репетиционная точка');
+        var isMusicClass = (scenarioName === 'Музыкальный класс');
+        var isMusicSchool = (scenarioName === 'Музыкальная школа');
+        var isSimplifiedScenario = isRepPoint || isMusicClass;
+        
+        // Контейнеры
+        var directionTeacherRow = document.getElementById('info-direction-teacher-row');
+        var abonementContainer = document.getElementById('info-abonement-container');
+        var tariffRow = document.getElementById('info-tariff-row');
+        var trialLessonRow = document.getElementById('info-trial-lesson-row');
+        var clientIconSingle = document.getElementById('info-client-icon-single');
+        var clientIconGroup = document.getElementById('info-client-icon-group');
+        var phoneBlock = document.getElementById('info-phone-block');
+        
+        // Скрыть/показать направление и преподавателя
+        if (directionTeacherRow) {
+            directionTeacherRow.style.display = isSimplifiedScenario ? 'none' : '';
+        }
+        
+        // Скрыть/показать абонемент
+        if (abonementContainer) {
+            abonementContainer.style.display = isSimplifiedScenario ? 'none' : '';
+        }
+        
+        // Скрыть/показать пробное занятие
+        if (trialLessonRow) {
+            trialLessonRow.style.display = isSimplifiedScenario ? 'none' : '';
+        }
+        
+        // Показать/скрыть тариф (только для упрощённых сценариев)
+        if (tariffRow) {
+            tariffRow.classList.toggle('d-none', !isSimplifiedScenario);
+        }
+        
+        // Логика отображения клиента/группы:
+        // - Музшкола: ВСЕГДА клиент + телефон, никогда группа
+        // - Музкласс: ВСЕГДА клиент + телефон, никогда группа
+        // - Репточка: ЛИБО группа (если isGroup), ЛИБО клиент + телефон
+        var showGroup = isRepPoint && isGroup;
+        var showClient = !showGroup;
+        
+        if (clientIconSingle) {
+            clientIconSingle.classList.toggle('d-none', !showClient);
+            clientIconSingle.classList.toggle('d-flex', showClient);
+        }
+        if (clientIconGroup) {
+            clientIconGroup.classList.toggle('d-none', !showGroup);
+            clientIconGroup.classList.toggle('d-flex', showGroup);
+        }
+        if (phoneBlock) {
+            // Телефон показываем только когда показываем клиента
+            phoneBlock.classList.toggle('d-none', !showClient);
+            phoneBlock.classList.toggle('d-flex', showClient);
+        }
+    }
+    
+    /**
+     * Отображает услуги брони в инфо-модалке
+     * @param {HTMLElement} modalElement - элемент модалки
+     * @param {Object} servicesByGroup - услуги, сгруппированные по группам
+     */
+    function renderInfoModalServices(modalElement, servicesByGroup) {
+        var container = modalElement.querySelector('#info-services-container');
+        var header = modalElement.querySelector('#info-services-header');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        // Если нет услуг - скрываем блок
+        if (!servicesByGroup || Object.keys(servicesByGroup).length === 0) {
+            if (header) header.style.display = 'none';
+            return;
+        }
+        
+        if (header) header.style.display = '';
+        
+        // Отображаем услуги по группам
+        for (var groupName in servicesByGroup) {
+            var services = servicesByGroup[groupName];
+            for (var i = 0; i < services.length; i++) {
+                var service = services[i];
+                var row = document.createElement('div');
+                row.className = 'row mb-1 d-flex align-items-end';
+                
+                var costNum = parseFloat(service.cost) || 0;
+                var costStr = (costNum % 1 === 0) ? costNum.toFixed(0) : costNum.toFixed(2);
+                
+                row.innerHTML = 
+                    '<div class="col-md-6 d-flex align-items-end">' +
+                        '<h6 class="m-0" style="color: #4F4F57;">' + service.name + '</h6>' +
+                    '</div>' +
+                    '<div class="col-md-6 d-flex justify-content-end align-items-end">' +
+                        '<h5 class="m-0" style="color: #4F4F57;">' + costStr + ' BYN</h5>' +
+                    '</div>';
+                
+                container.appendChild(row);
+            }
+        }
+    }
+    
+    // Делаем функции глобально доступными
+    window.adaptInfoModalForScenario = adaptInfoModalForScenario;
+    window.renderInfoModalServices = renderInfoModalServices;
 </script>

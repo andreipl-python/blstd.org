@@ -236,6 +236,10 @@ def get_booking_details(request, booking_id):
                 booking.scenario.name if booking.scenario_id else "Не указан"
             ),
             "payments_history": payments_history,
+            "client_group_id": booking.client_group_id,
+            "client_group_name": (
+                booking.client_group.name if booking.client_group else None
+            ),
         }
 
         return JsonResponse({"success": True, "booking": booking_data})
