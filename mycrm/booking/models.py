@@ -91,7 +91,8 @@ class Reservation(models.Model):
         on_delete=models.PROTECT,
         help_text="ID клиента, закрепленного за бронью",
         verbose_name="ID клиента",
-        null=False,
+        null=True,
+        blank=True,
     )
     client_group = models.ForeignKey(
         "ClientGroup",

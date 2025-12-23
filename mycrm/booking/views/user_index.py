@@ -117,9 +117,17 @@ def add_blocks_datetime_range_and_room_name(
                 "idroom": reservation.room_id,
                 "blocks_datetime_range": datetime_str_list,
                 "client_id": reservation.client_id,
-                "client_name": reservation.client.name,
-                "client_comment": reservation.client.comment,
-                "client_phone": reservation.client.phone,
+                "client_name": reservation.client.name if reservation.client else None,
+                "client_comment": (
+                    reservation.client.comment if reservation.client else None
+                ),
+                "client_phone": (
+                    reservation.client.phone if reservation.client else None
+                ),
+                "client_group_id": reservation.client_group_id,
+                "client_group_name": (
+                    reservation.client_group.name if reservation.client_group else None
+                ),
                 "specialist_id": reservation.specialist_id,
                 "status_id": reservation.status.id if reservation.status else 1,
                 "comment": reservation.comment,

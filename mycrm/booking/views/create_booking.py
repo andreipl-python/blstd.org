@@ -127,7 +127,9 @@ def create_booking_view(request):
                 {"success": False, "error": "Не указано время начала брони"}
             )
 
-        if not all([scenario_id, client_id, booking_duration, room_id]):
+        # Для Репетиционной точки можно указать либо client_id, либо client_group_id
+        has_client_or_group = client_id or client_group_id
+        if not all([scenario_id, has_client_or_group, booking_duration, room_id]):
             return JsonResponse(
                 {"success": False, "error": "Не все обязательные поля заполнены"}
             )

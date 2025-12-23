@@ -58,9 +58,9 @@
                         </div>
 
                         <!--Направление и комната-->
-                        <div class="row mb-4">
-                            <!-- Выпадающий список "Направление" -->
-                            <div class="col-md-6">
+                        <div class="row mb-4" id="edit-direction-room-row">
+                            <!-- Выпадающий список "Направление" (скрывается для Репточки и Музкласса) -->
+                            <div class="col-md-6" id="edit-direction-container">
                                 <label for="edit-direction" class="form-label">Направление</label>
                                 <div class="custom-select custom-select--clearable" id="edit-direction" name="edit-direction" data-placeholder="Выберите направление">
                                     <span class="selected">Выберите направление</span>
@@ -209,10 +209,10 @@
                             </div>
                         </div>
 
-                        <!--Преподаватель и услуги-->
-                        <div class="row mb-3">
-                            <!--Выпадающий список Преподаватель-->
-                            <div class="col-md-6">
+                        <!--Преподаватель/Тариф и услуги-->
+                        <div class="row mb-3" id="edit-teacher-services-row">
+                            <!--Выпадающий список Преподаватель (скрывается для Репточки и Музкласса)-->
+                            <div class="col-md-6" id="edit-teacher-container">
                                 <label for="edit-teacher" class="form-label">Преподаватель</label>
                                 <div class="custom-select custom-select--clearable" id="edit-teacher" name="edit-teacher" data-placeholder="Выберите преподавателя">
                                     <span class="selected">Выберите преподавателя</span>
@@ -237,8 +237,16 @@
                                 </div>
                             </div>
 
+                            <!--Тариф (заглушка для Репточки и Музкласса, показывается вместо Преподавателя)-->
+                            <div class="col-md-6 d-none" id="edit-tariff-container">
+                                <label class="form-label">Тариф</label>
+                                <div class="tariff-placeholder" style="padding: 12px 16px; background: #F8F9FA; border-radius: 8px; color: #4F4F57;">
+                                    <span id="editTariffValue">55 BYN/т.е.</span>
+                                </div>
+                            </div>
+
                             <!--Выпадающий список со множественным выбором Услуги-->
-                            <div class="col-md-6">
+                            <div class="col-md-6" id="edit-services-container">
                                 <label for="edit-services" class="form-label">Услуги (необязательно)</label>
                                 <div class="custom-select" id="edit-services" name="edit-services">
                                     <span class="selected">Выберите услугу</span>
@@ -281,8 +289,8 @@
                         </div>
 
                         <!--Чекбокс пробное занятие-->
-                        <div class="row mb-4">
-                            <div class="col-md-12 trial-checkbox-row">
+                        <div class="row mb-4 trial-checkbox-row" id="edit-trial-lesson-row">
+                            <div class="col-md-12">
                                 <input class="form-check-input" type="checkbox" id="editTrialLessonCheckbox"
                                     name="edit-trial-lesson">
                                 <label class="form-check-label ms-2" for="editTrialLessonCheckbox"
@@ -342,6 +350,49 @@
             editModal.hide();
         }
     }
+
+    /**
+     * Адаптация UI модалки редактирования под разные сценарии.
+     * - "Репетиционная точка" и "Музыкальный класс": скрываем Направление и Преподаватель, показываем Тариф
+     * - "Музыкальная школа": стандартный вид
+     * @param {string} scenarioName - название сценария
+     */
+    function adaptEditModalForScenario(scenarioName) {
+        console.log('[adaptEditModalForScenario] scenarioName:', scenarioName);
+        var isRepPoint = (scenarioName === 'Репетиционная точка');
+        var isMusicClass = (scenarioName === 'Музыкальный класс');
+        var isSimplifiedScenario = isRepPoint || isMusicClass;
+        console.log('[adaptEditModalForScenario] isSimplifiedScenario:', isSimplifiedScenario);
+        
+        var directionContainer = document.getElementById('edit-direction-container');
+        var teacherContainer = document.getElementById('edit-teacher-container');
+        var tariffContainer = document.getElementById('edit-tariff-container');
+        var trialLessonRow = document.getElementById('edit-trial-lesson-row');
+        console.log('[adaptEditModalForScenario] trialLessonRow:', trialLessonRow);
+        
+        // Скрыть/показать Направление
+        if (directionContainer) {
+            directionContainer.style.display = isSimplifiedScenario ? 'none' : '';
+        }
+        
+        // Скрыть/показать Преподаватель
+        if (teacherContainer) {
+            teacherContainer.style.display = isSimplifiedScenario ? 'none' : '';
+        }
+        
+        // Показать/скрыть Тариф (вместо Преподавателя)
+        if (tariffContainer) {
+            tariffContainer.classList.toggle('d-none', !isSimplifiedScenario);
+        }
+        
+        // Скрыть/показать чекбокс "Пробное занятие"
+        if (trialLessonRow) {
+            trialLessonRow.classList.toggle('d-none', isSimplifiedScenario);
+            console.log('[adaptEditModalForScenario] trialLessonRow.classList:', trialLessonRow.classList.toString());
+        }
+    }
+    
+    window.adaptEditModalForScenario = adaptEditModalForScenario;
 
     // Обработчики для editBookingModal: закрытие и инициализация custom-select
     const editModal = document.getElementById('editBookingModal');
@@ -641,13 +692,24 @@
             var hasStartTime = currentStartTimeMinutes !== null;
             var hasEndTime = currentEndTimeMinutes !== null;
             
+            // Определяем сценарий для условной валидации
+            var modalEl = document.getElementById('editBookingModal');
+            var currentScenarioId = modalEl ? modalEl.getAttribute('data-scenario-id') : null;
+            var scenarioName = '';
+            if (currentScenarioId && Array.isArray(window.SCENARIOS)) {
+                var scenario = window.SCENARIOS.find(function(s) { return String(s.pk) === String(currentScenarioId); });
+                scenarioName = scenario && scenario.fields ? scenario.fields.name : '';
+            }
+            var isSimplifiedScenario = (scenarioName === 'Репетиционная точка' || scenarioName === 'Музыкальный класс');
+            console.log('[updateSubmitButtonState] scenarioId:', currentScenarioId, 'scenarioName:', JSON.stringify(scenarioName), 'isSimplifiedScenario:', isSimplifiedScenario);
+            
             // Проверяем наличие предупреждений
             var teacherWarning = document.getElementById('edit-teacher-warning-icon');
             var hasStartWarning = startWarn && startWarn.style.display !== 'none';
             var hasEndWarning = endWarn && endWarn.style.display !== 'none';
             var hasTeacherWarning = teacherWarning && teacherWarning.style.display !== 'none';
             
-            // Проверяем преподавателя и направление
+            // Проверяем преподавателя и направление (только для Музыкальной школы)
             var teacherSelect = document.getElementById('edit-teacher');
             var directionSelect = document.getElementById('edit-direction');
             var teacherSelectedLi = teacherSelect ? teacherSelect.querySelector('ul.options li.selected') : null;
@@ -668,14 +730,17 @@
                 checklist.push('Выберите доступное время окончания');
             }
             
-            if (!hasTeacher) {
-                checklist.push('Выберите преподавателя');
-            } else if (hasTeacherWarning) {
-                checklist.push('Выберите доступного преподавателя');
-            }
-            
-            if (!hasDirection) {
-                checklist.push('Выберите направление');
+            // Преподаватель и направление обязательны только для Музыкальной школы
+            if (!isSimplifiedScenario) {
+                if (!hasTeacher) {
+                    checklist.push('Выберите преподавателя');
+                } else if (hasTeacherWarning) {
+                    checklist.push('Выберите доступного преподавателя');
+                }
+                
+                if (!hasDirection) {
+                    checklist.push('Выберите направление');
+                }
             }
             
             // Обновляем чек-лист в тултипе
@@ -1583,14 +1648,31 @@
             scenarioNameEl.textContent = booking.reservation_type || '';
         }
 
+        // Адаптируем модалку под сценарий
+        if (typeof window.adaptEditModalForScenario === 'function') {
+            window.adaptEditModalForScenario(booking.reservation_type);
+        }
+
+        // Отображаем клиента или группу в зависимости от типа брони
         const clientNameEl = modalEl.querySelector('#clientName');
         if (clientNameEl) {
-            clientNameEl.textContent = booking.client_name || '';
+            // Если есть группа и нет клиента - показываем группу
+            if (booking.client_group_id && !booking.client_id) {
+                clientNameEl.textContent = booking.client_group_name || 'Группа не указана';
+            } else {
+                clientNameEl.textContent = booking.client_name || '';
+            }
         }
 
         const clientPhoneEl = modalEl.querySelector('#clientPhone');
         if (clientPhoneEl) {
-            clientPhoneEl.textContent = formatPhoneNumber(booking.client_phone || '');
+            // Телефон показываем только для клиентов, для групп скрываем
+            if (booking.client_group_id && !booking.client_id) {
+                clientPhoneEl.style.display = 'none';
+            } else {
+                clientPhoneEl.style.display = '';
+                clientPhoneEl.textContent = formatPhoneNumber(booking.client_phone || '');
+            }
         }
 
         if (booking.scenario_id) {
