@@ -89,6 +89,13 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 
 class ScenarioSerializer(serializers.ModelSerializer):
+    # Допустимые названия сценариев
+    ALLOWED_NAMES = [
+        "Музыкальная школа",
+        "Репетиционная точка",
+        "Музыкальный класс",
+    ]
+
     active = serializers.BooleanField(
         required=True,
         help_text="Активен ли сценарий. True — доступен для выбора, False — скрыт.",
@@ -97,6 +104,14 @@ class ScenarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Scenario
         fields = "__all__"
+
+    def validate_name(self, value):
+        """Валидация названия сценария — только разрешённые названия."""
+        if value not in self.ALLOWED_NAMES:
+            raise serializers.ValidationError(
+                f"Недопустимое название сценария. Разрешены только: {', '.join(self.ALLOWED_NAMES)}"
+            )
+        return value
 
 
 class TariffUnitSerializer(serializers.ModelSerializer):

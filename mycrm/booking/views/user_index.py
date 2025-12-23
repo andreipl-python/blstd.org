@@ -6,6 +6,7 @@ from typing import Any
 
 from booking.models import (
     Client,
+    ClientGroup,
     Room,
     Service,
     Reservation,
@@ -257,6 +258,12 @@ def user_index_view(request):
     tariff_units = TariffUnit.objects.all()
     tariff_units_json = serialize("json", tariff_units)
 
+    # Группы клиентов для сценария "Репетиционная точка"
+    client_groups = ClientGroup.objects.all()
+    client_groups_json = json.dumps(
+        [{"id": cg.id, "name": cg.name} for cg in client_groups]
+    )
+
     payment_types = PaymentType.objects.all().order_by("id")
     payment_types_json = json.dumps(
         [
@@ -297,6 +304,8 @@ def user_index_view(request):
         "tariff_units_json": tariff_units_json,
         "clients": clients,
         "clients_json": clients_json,
+        "client_groups": client_groups,
+        "client_groups_json": client_groups_json,
         "payment_types_json": payment_types_json,
         "time_cells": range(96),
         "app_version": version_value,

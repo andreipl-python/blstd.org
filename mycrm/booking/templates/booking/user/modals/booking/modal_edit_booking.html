@@ -251,7 +251,10 @@
                                     <ul class="options">
                                         {% for service in services %}
                                             {% if service.active %}
-                                                <li data-value="{{ service.id }}" data-cost="{{ service.cost|default_if_none:'0' }}" data-scenario-id="{{ service.scenario_id|default_if_none:'' }}" data-room-id="{{ service.room_id|default_if_none:'' }}">{{ service.name }}</li>
+                                                <li data-value="{{ service.id }}" data-cost="{{ service.cost|default_if_none:'0' }}" data-scenario-id="{{ service.scenario_id|default_if_none:'' }}" data-room-id="{{ service.room_id|default_if_none:'' }}" data-name="{{ service.name }}">
+                                                    <span class="service-name">{{ service.name }}</span>
+                                                    <span class="service-cost">{{ service.cost|default_if_none:'0' }} BYN</span>
+                                                </li>
                                             {% endif %}
                                         {% endfor %}
                                     </ul>
@@ -429,7 +432,8 @@
         selectedLis.forEach(li => {
             const badge = document.createElement('span');
             badge.className = 'service-badge';
-            badge.textContent = li.textContent;
+            // Используем data-name для получения только названия услуги (без стоимости)
+            badge.textContent = li.getAttribute('data-name') || li.textContent.split('\n')[0].trim();
 
             // Крестик удаления услуги
             const removeBtn = document.createElement('span');

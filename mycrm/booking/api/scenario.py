@@ -8,10 +8,11 @@ from .settings import BaseViewSet
 from ..models import Scenario
 
 
-@extend_schema(tags=['Сценарий'])
+@extend_schema(tags=["Сценарий"])
 @extend_schema_view(destroy=extend_schema(exclude=True))
 class ScenarioViewSet(BaseViewSet):
     """CRUD для сценариев"""
+
     queryset = Scenario.objects.all()
     serializer_class = ScenarioSerializer
 
@@ -65,6 +66,5 @@ class ScenarioViewSet(BaseViewSet):
     )
     def destroy(self, request, *args, **kwargs):
         raise ValidationError(
-            {"detail": "Удаление сценария запрещено"},
-            code=status.HTTP_400_BAD_REQUEST
+            {"detail": "Удаление сценария запрещено"}, code=status.HTTP_400_BAD_REQUEST
         )

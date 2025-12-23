@@ -1310,7 +1310,44 @@
     color: #4F4F57 !important;
   }
 
-  #reset-services {
+  /* Двухстрочное отображение услуг в списке: название + стоимость */
+  #services ul.options li,
+  #edit-services ul.options li {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 8px 12px;
+  }
+
+  #services ul.options li .service-name,
+  #edit-services ul.options li .service-name {
+    font-family: 'Manrope';
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #1A1A1A;
+  }
+
+  #services ul.options li .service-cost,
+  #edit-services ul.options li .service-cost {
+    font-family: 'Manrope';
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #818EA2;
+    margin-top: 2px;
+  }
+
+  /* Белый текст услуг при наведении */
+  #services ul.options li:hover .service-name,
+  #services ul.options li:hover .service-cost,
+  #edit-services ul.options li:hover .service-name,
+  #edit-services ul.options li:hover .service-cost {
+    color: #FFFFFF;
+  }
+
+  #reset-services,
+  #create-reset-services {
     font-family: 'Manrope';
     font-style: normal;
     font-weight: 600 !important;

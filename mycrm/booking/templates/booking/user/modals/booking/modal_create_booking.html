@@ -8,6 +8,7 @@
 <p id="tariff_units_json" style="display: none;">{{ tariff_units_json }}</p>
 <p id="services_json" style="display: none;">{{ services_json }}</p>
 <p id="clients_json" style="display: none;">{{ clients_json }}</p>
+<p id="client_groups_json" style="display: none;">{{ client_groups_json }}</p>
 
 <div class="modal fade" id="createBookingModal" tabindex="-1" aria-labelledby="createBookingModalLabel"
     aria-hidden="true" data-bs-backdrop="false">
@@ -49,9 +50,9 @@
                     </div>
 
                     <div class="row mb-3">
-                        <!--Выпадающий список "Клиент"-->
+                        <!--Выпадающий список "Клиент" / "Клиент / группа"-->
                         <div class="col-md-6">
-                            <label for="client" class="form-label">Клиент</label>
+                            <label for="client" class="form-label" id="client-label">Клиент</label>
                             <div class="custom-select" id="client" name="client">
                                 <span class="selected">Выберите клиента</span>
                                 <span class="chevron">
@@ -78,14 +79,17 @@
                                         </span>
                                     </li>
                                     {% for client in clients %}
-                                        <li data-value="{{ client.id }}">{{ client.name }}</li>
+                                        <li data-value="{{ client.id }}" data-type="client">{{ client.name }}</li>
+                                    {% endfor %}
+                                    {% for group in client_groups %}
+                                        <li data-value="{{ group.id }}" data-type="group" class="client-group-option" style="display:none;">🎸 {{ group.name }}</li>
                                     {% endfor %}
                                 </ul>
                             </div>
                         </div>
 
-                        <!-- Выпадающий список "Направление" -->
-                        <div class="col-md-6">
+                        <!-- Выпадающий список "Направление" (скрывается для Репетиционной точки) -->
+                        <div class="col-md-6" id="direction-field-container">
                             <label for="field-direction" class="form-label">Направление</label>
                             <div class="custom-select custom-select--clearable" id="field-direction" name="field-direction" data-placeholder="Выберите направление">
                                 <span class="selected">Выберите направление</span>
@@ -105,7 +109,7 @@
                         </div>
                     </div>
 
-                    <div class="row mb-3">
+                    <div class="row mb-3" id="abonement-row-container">
                         <!--Строка информации об абонементе-->
                         <span id="abonementRow">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -252,9 +256,9 @@
                         </div>
                     </div>
 
-                    <div class="row mb-3">
-                        <!--Выпадающий список Преподаватель-->
-                        <div class="col-md-6">
+                    <div class="row mb-3" id="teacher-row-container">
+                        <!--Выпадающий список Преподаватель (скрывается для Репетиционной точки)-->
+                        <div class="col-md-6" id="teacher-field-container">
                             <label for="teacher" class="form-label">Преподаватель</label>
                             <div class="custom-select custom-select--clearable" id="teacher" name="teacher" data-placeholder="Выберите преподавателя">
                                 <span class="selected">Выберите преподавателя</span>
@@ -279,7 +283,24 @@
                             </div>
                         </div>
 
-                        <!--Выпадающий список со множественным выбором Услуги-->
+                        <!--Выпадающий список "Тариф" (заглушка для Репетиционной точки, скрыт по умолчанию)-->
+                        <div class="col-md-6" id="tariff-field-container" style="display: none;">
+                            <label for="tariff" class="form-label">Тариф</label>
+                            <div class="custom-select" id="tariff" name="tariff">
+                                <span class="selected">Выберите тариф</span>
+                                <span class="chevron">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                    </svg>
+                                </span>
+                                <ul class="options">
+                                    <!-- Заглушка: опции будут добавлены позже -->
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!--Выпадающий список со множественным выбором Услуги (справа от Преподавателя/Тарифа)-->
                         <div class="col-md-6">
                             <label for="services" class="form-label">Услуги (необязательно)</label>
                             <div class="custom-select" id="services" name="services">
@@ -293,11 +314,22 @@
                                 <ul class="options">
                                     {% for service in services %}
                                         {% if service.active %}
-                                            <li data-value="{{ service.id }}" data-scenario-id="{{ service.scenario_id|default_if_none:'' }}" data-room-id="{{ service.room_id|default_if_none:'' }}">{{ service.name }}</li>
+                                            <li data-value="{{ service.id }}" data-cost="{{ service.cost|default_if_none:'0' }}" data-scenario-id="{{ service.scenario_id|default_if_none:'' }}" data-room-id="{{ service.room_id|default_if_none:'' }}" data-name="{{ service.name }}">
+                                                <span class="service-name">{{ service.name }}</span>
+                                                <span class="service-cost">{{ service.cost|default_if_none:'0' }} BYN</span>
+                                            </li>
                                         {% endif %}
                                     {% endfor %}
                                 </ul>
                             </div>
+                        </div>
+                    </div>
+
+                    <!--Выбранные услуги и сброс-->
+                    <div class="row mb-3">
+                        <div class="col-md-12 d-flex align-items-center gap-3 flex-wrap">
+                            <div class="selected-services d-flex gap-2 flex-wrap" id="create-selected-services"></div>
+                            <a href="#" id="create-reset-services" style="display: none;">Сбросить всё</a>
                         </div>
                     </div>
 
@@ -366,6 +398,73 @@
 <script>
     // JS модалки создания брони
 
+    /**
+     * Адаптация UI модалки под разные сценарии.
+     * - "Репетиционная точка": скрываются Направление и Преподаватель, 
+     *   в списке клиентов появляются группы, показывается заглушка "Тариф"
+     * - Другие сценарии: стандартный вид
+     */
+    function adaptModalForScenario(scenarioName) {
+        // Сохраняем название сценария глобально для валидации
+        window.currentScenarioName = scenarioName;
+        
+        var isRepPoint = (scenarioName === 'Репетиционная точка');
+        
+        // Контейнеры полей
+        var directionContainer = document.getElementById('direction-field-container');
+        var teacherFieldContainer = document.getElementById('teacher-field-container');
+        var tariffFieldContainer = document.getElementById('tariff-field-container');
+        var abonementContainer = document.getElementById('abonement-row-container');
+        var clientLabel = document.getElementById('client-label');
+        var clientSelect = document.getElementById('client');
+        
+        // Показать/скрыть Направление
+        if (directionContainer) {
+            directionContainer.style.display = isRepPoint ? 'none' : '';
+        }
+        
+        // Показать/скрыть Абонемент (не нужен для Репетиционной точки)
+        if (abonementContainer) {
+            abonementContainer.style.display = isRepPoint ? 'none' : '';
+        }
+        
+        // Показать/скрыть Преподаватель vs Тариф
+        if (teacherFieldContainer) {
+            teacherFieldContainer.style.display = isRepPoint ? 'none' : '';
+        }
+        if (tariffFieldContainer) {
+            tariffFieldContainer.style.display = isRepPoint ? '' : 'none';
+        }
+        
+        // Изменить лейбл клиента
+        if (clientLabel) {
+            clientLabel.textContent = isRepPoint ? 'Клиент / группа' : 'Клиент';
+        }
+        
+        // Показать/скрыть группы в списке клиентов
+        if (clientSelect) {
+            var groupOptions = clientSelect.querySelectorAll('.client-group-option');
+            groupOptions.forEach(function(opt) {
+                opt.style.display = isRepPoint ? '' : 'none';
+            });
+            
+            // Сбросить выбор клиента при смене сценария
+            var selectedSpan = clientSelect.querySelector('.selected');
+            if (selectedSpan) {
+                selectedSpan.textContent = isRepPoint ? 'Выберите клиента или группу' : 'Выберите клиента';
+            }
+            var selectedLi = clientSelect.querySelector('ul.options li.selected');
+            if (selectedLi) {
+                selectedLi.classList.remove('selected');
+            }
+        }
+        
+        // Обновить состояние кнопки после адаптации
+        if (typeof window.updateSubmitButtonState === 'function') {
+            window.updateSubmitButtonState();
+        }
+    }
+
     // Функция открытия модального окна: подставляет комнату и сценарий в шапку + базовые hidden-поля
     function openModal(date, time, roomName, roomId, cell) {
         if (typeof window.resetCreateBookingModalSelects === 'function') {
@@ -388,16 +487,21 @@
         }
 
         // Сценарий: берём из глобального фильтра window.currentScenarioFilterId + window.SCENARIOS (из user_index.html)
+        var currentScenarioName = '';
         if (window.currentScenarioFilterId && Array.isArray(window.SCENARIOS)) {
             var scenarioId = String(window.currentScenarioFilterId);
             var scenarioObj = window.SCENARIOS.find(function (s) { return String(s.pk) === scenarioId; });
             var scenarioNameSpan = document.getElementById('scenarioName');
+            if (scenarioObj && scenarioObj.fields && scenarioObj.fields.name) {
+                currentScenarioName = scenarioObj.fields.name;
+            }
             if (scenarioNameSpan) {
-                scenarioNameSpan.textContent = (scenarioObj && scenarioObj.fields && scenarioObj.fields.name)
-                    ? scenarioObj.fields.name
-                    : 'Название сценария';
+                scenarioNameSpan.textContent = currentScenarioName || 'Название сценария';
             }
         }
+
+        // Адаптация UI для разных сценариев
+        adaptModalForScenario(currentScenarioName);
 
         // Базовые скрытые поля (если нужны бэкенду)
         var dateField = document.getElementById('dateField');
@@ -516,44 +620,83 @@
                     if (!servicesSelect || !servicesSelect._selectedOptions || servicesSelect._selectedOptions.size === 0) {
                         return 0;
                     }
-                    // Парсим JSON с услугами
-                    var servicesJsonEl = document.getElementById('services_json');
-                    if (!servicesJsonEl) return 0;
-                    var servicesData;
-                    try {
-                        servicesData = JSON.parse(servicesJsonEl.textContent || '[]');
-                    } catch (e) {
-                        return 0;
-                    }
-                    
                     var totalCost = 0;
                     servicesSelect._selectedOptions.forEach(function (li) {
-                        var serviceId = li.getAttribute('data-value');
-                        if (!serviceId) return;
-                        var service = servicesData.find(function (s) {
-                            return String(s.pk) === String(serviceId);
-                        });
-                        if (service && service.fields && service.fields.cost) {
-                            totalCost += parseFloat(service.fields.cost) || 0;
-                        }
+                        var cost = parseFloat(li.getAttribute('data-cost') || '0');
+                        if (Number.isFinite(cost)) totalCost += cost;
                     });
                     return totalCost;
                 }
 
+                // Обновить бейджи выбранных услуг
+                function updateServicesBadges() {
+                    var container = document.getElementById('create-selected-services');
+                    var servicesSelect = document.getElementById('services');
+                    var resetBtn = document.getElementById('create-reset-services');
+                    if (!container || !servicesSelect) return;
+                    
+                    container.innerHTML = '';
+                    var selectedLis = servicesSelect._selectedOptions ? Array.from(servicesSelect._selectedOptions) : [];
+
+                    // Показываем "Сбросить всё" если выбрано больше 1 услуги
+                    if (resetBtn) {
+                        resetBtn.style.display = selectedLis.length > 1 ? 'inline' : 'none';
+                    }
+
+                    selectedLis.forEach(function(li) {
+                        var badge = document.createElement('span');
+                        badge.className = 'service-badge';
+                        // Используем data-name для получения только названия услуги (без стоимости)
+                        badge.textContent = li.getAttribute('data-name') || li.textContent.split('\n')[0].trim();
+
+                        // Крестик удаления услуги
+                        var removeBtn = document.createElement('span');
+                        removeBtn.className = 'service-badge-remove';
+                        removeBtn.innerHTML = '&times;';
+                        removeBtn.style.marginLeft = '6px';
+                        removeBtn.style.cursor = 'pointer';
+                        removeBtn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            // Убираем услугу из выбранных
+                            li.classList.remove('selected');
+                            servicesSelect._selectedOptions.delete(li);
+                            updateServicesBadges();
+                            calculateAndUpdateBookingCost();
+                            // Обновляем текст в селекте
+                            var selectedSpan = servicesSelect.querySelector('.selected');
+                            var count = servicesSelect._selectedOptions.size;
+                            if (selectedSpan) {
+                                if (count === 0) {
+                                    selectedSpan.textContent = 'Выберите услугу';
+                                } else if (count === 1) {
+                                    selectedSpan.textContent = Array.from(servicesSelect._selectedOptions)[0].textContent;
+                                } else {
+                                    selectedSpan.textContent = count + ' выбрано';
+                                }
+                            }
+                        });
+                        badge.appendChild(removeBtn);
+                        container.appendChild(badge);
+                    });
+                }
+                // Делаем функцию доступной глобально для вызова из других блоков кода
+                window.updateServicesBadges = updateServicesBadges;
+
                 // Рассчитать и обновить стоимость брони
                 // Стоимость = (кол-во периодов × стоимость периода) + сумма услуг
+                // Если время не выбрано — показываем только стоимость услуг
                 function calculateAndUpdateBookingCost() {
                     var costElement = document.getElementById('bookingCostValue');
                     if (!costElement) return;
                     
-                    // Если длительность не выбрана — стоимость 0
-                    if (currentSelectedPeriods === null || currentSelectedPeriods === undefined) {
-                        costElement.textContent = '0 BYN';
-                        return;
+                    // Стоимость периодов (0 если время не выбрано)
+                    var periodsTotalCost = 0;
+                    if (currentSelectedPeriods !== null && currentSelectedPeriods !== undefined) {
+                        var periodCost = getScenarioTariffUnitCost();
+                        periodsTotalCost = currentSelectedPeriods * periodCost;
                     }
                     
-                    var periodCost = getScenarioTariffUnitCost();
-                    var periodsTotalCost = currentSelectedPeriods * periodCost;
+                    // Стоимость услуг всегда учитывается
                     var servicesCost = getSelectedServicesCost();
                     var totalCost = periodsTotalCost + servicesCost;
                     
@@ -887,6 +1030,9 @@
                     var hasStartTime = currentStartTimeMinutes !== null;
                     var hasEndTime = currentEndTimeMinutes !== null;
                     
+                    // Определяем текущий сценарий для условной валидации
+                    var isRepPoint = (window.currentScenarioName === 'Репетиционная точка');
+                    
                     // Проверяем наличие предупреждений
                     var startTimeWarning = document.getElementById('start-time-warning-icon');
                     var endTimeWarning = document.getElementById('end-time-warning-icon');
@@ -895,7 +1041,7 @@
                     var hasEndWarning = endTimeWarning && endTimeWarning.style.display !== 'none';
                     var hasTeacherWarning = teacherWarning && teacherWarning.style.display !== 'none';
                     
-                    // Проверяем преподавателя, направление и клиента
+                    // Проверяем преподавателя, направление и клиента/группу
                     var teacherSelect = document.getElementById('teacher');
                     var directionSelect = document.getElementById('field-direction');
                     var clientSelect = document.getElementById('client');
@@ -904,7 +1050,11 @@
                     var clientSelectedLi = clientSelect ? clientSelect.querySelector('ul.options li.selected:not(#search-option)') : null;
                     var hasTeacher = teacherSelectedLi !== null;
                     var hasDirection = directionSelectedLi !== null;
+                    // Для "Репетиционная точка" клиент или группа, для других - только клиент
                     var hasClient = clientSelectedLi !== null && clientSelectedLi.getAttribute('data-value');
+                    // Группа тоже считается валидным выбором
+                    var isGroupSelected = clientSelectedLi && clientSelectedLi.getAttribute('data-type') === 'group';
+                    var hasClientOrGroup = hasClient || isGroupSelected;
                     
                     // Формируем чек-лист
                     if (!hasStartTime) {
@@ -919,18 +1069,21 @@
                         checklist.push('Выберите доступное время окончания');
                     }
                     
-                    if (!hasTeacher) {
-                        checklist.push('Выберите преподавателя');
-                    } else if (hasTeacherWarning) {
-                        checklist.push('Выберите доступного преподавателя');
+                    // Преподаватель и направление требуются только для НЕ-репточки
+                    if (!isRepPoint) {
+                        if (!hasTeacher) {
+                            checklist.push('Выберите преподавателя');
+                        } else if (hasTeacherWarning) {
+                            checklist.push('Выберите доступного преподавателя');
+                        }
+                        
+                        if (!hasDirection) {
+                            checklist.push('Выберите направление');
+                        }
                     }
                     
-                    if (!hasDirection) {
-                        checklist.push('Выберите направление');
-                    }
-                    
-                    if (!hasClient) {
-                        checklist.push('Выберите клиента');
+                    if (!hasClientOrGroup) {
+                        checklist.push(isRepPoint ? 'Выберите клиента или группу' : 'Выберите клиента');
                     }
                     
                     // Обновляем чек-лист в тултипе
@@ -2280,6 +2433,9 @@
                         }
 
                         updateSelectedText();
+                        if (typeof window.updateServicesBadges === 'function') {
+                            window.updateServicesBadges();
+                        }
                         
                         // Пересчитываем стоимость брони при изменении услуг
                         if (typeof window.calculateAndUpdateBookingCost === 'function') {
@@ -2287,6 +2443,25 @@
                         }
                     });
                 });
+
+                // Обработчик кнопки "Сбросить всё"
+                var resetServicesBtn = document.getElementById('create-reset-services');
+                if (resetServicesBtn) {
+                    resetServicesBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        selectedOptions.clear();
+                        optionsList.forEach(function(opt) {
+                            opt.classList.remove('selected');
+                        });
+                        updateSelectedText();
+                        if (typeof window.updateServicesBadges === 'function') {
+                            window.updateServicesBadges();
+                        }
+                        if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                            window.calculateAndUpdateBookingCost();
+                        }
+                    });
+                }
 
                 return;
             }
@@ -2422,8 +2597,17 @@
                 });
                 var servicesSelectedSpan = servicesSelect.querySelector('span.selected');
                 if (servicesSelectedSpan) {
-                    servicesSelectedSpan.textContent = 'Выберите услуги';
+                    servicesSelectedSpan.textContent = 'Выберите услугу';
                 }
+            }
+            // Сбрасываем бейджи услуг
+            var servicesBadgesContainer = document.getElementById('create-selected-services');
+            if (servicesBadgesContainer) {
+                servicesBadgesContainer.innerHTML = '';
+            }
+            var resetServicesBtn = document.getElementById('create-reset-services');
+            if (resetServicesBtn) {
+                resetServicesBtn.style.display = 'none';
             }
             
             // Сбрасываем комментарий
@@ -2496,12 +2680,17 @@
                 formData.append('room_id', roomIdField.value);
             }
 
-            // Client ID
+            // Client ID или Client Group ID (в зависимости от типа выбранного элемента)
             var clientSelect = document.getElementById('client');
             if (clientSelect) {
                 var selectedClient = clientSelect.querySelector('ul.options li.selected:not(#search-option)');
                 if (selectedClient && selectedClient.getAttribute('data-value')) {
-                    formData.append('client_id', selectedClient.getAttribute('data-value'));
+                    var selectionType = selectedClient.getAttribute('data-type') || 'client';
+                    if (selectionType === 'group') {
+                        formData.append('client_group_id', selectedClient.getAttribute('data-value'));
+                    } else {
+                        formData.append('client_id', selectedClient.getAttribute('data-value'));
+                    }
                 }
             }
 
@@ -2609,8 +2798,11 @@
             }
 
             // Валидация обязательных полей
-            if (!formData.get('client_id')) {
-                alert('Выберите клиента');
+            // Для "Репетиционная точка" нужен либо клиент, либо группа
+            var isRepPointScenario = window.currentScenarioName === 'Репетиционная точка';
+            var hasClientOrGroup = formData.get('client_id') || formData.get('client_group_id');
+            if (!hasClientOrGroup) {
+                alert(isRepPointScenario ? 'Выберите клиента или группу' : 'Выберите клиента');
                 return;
             }
             if (!formData.get('full_datetime')) {
