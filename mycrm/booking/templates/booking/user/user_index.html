@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="{% static 'css/repa.css' %}?v={% now 'U' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.0/dist/sweetalert2.min.js"></script>
 
 </head>
@@ -54,7 +55,7 @@
                 <div class="col-md-12 d-flex justify-content-between align-items-center">
                     <h1 class="mb-0">Брони</h1>
                     <div class="d-flex gap-2">
-                        <button type="button" class="button-secondary">
+                        <button type="button" class="button-secondary" id="openAddClientModalBtn" data-bs-toggle="modal" data-bs-target="#addClientModal">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path d="M5 12H19" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
@@ -240,6 +241,8 @@
     {% include "booking/user/modals/payments/modal_edit_payment.html" %}
     {% include "booking/user/modals/common/modal_confirm_cancel_action.html" %}
     {% include "booking/user/modals/payments/modal_confirm_cancel_payment.html" %}
+    {% include "booking/user/modals/client/modal_add_client.html" %}
+    {% include "booking/user/modals/client/modal_client_added_success.html" %}
 
     {% include 'booking/add/scripts.html' %}
 
@@ -1269,8 +1272,7 @@
                 return;
             }
 
-            const NO_BACKDROP_CLOSE_IDS = ['confirmCancelActionModal'];
-            let openModalsCount = 0;
+            const NO_BACKDROP_CLOSE_IDS = ['confirmCancelActionModal', 'clientAddedSuccessModal'];
             let hideTimeoutId = null;
 
             function showAppBackdrop() {
@@ -1281,19 +1283,40 @@
                 appBackdrop.classList.add('is-visible');
             }
 
+            function hasOpenModals() {
+                var shownModals = document.querySelectorAll('.modal.show');
+                return shownModals.length > 0;
+            }
+
             function scheduleHideBackdrop() {
                 if (hideTimeoutId) {
                     clearTimeout(hideTimeoutId);
                 }
                 hideTimeoutId = setTimeout(function () {
-                    if (openModalsCount <= 0) {
+                    if (!hasOpenModals()) {
                         appBackdrop.classList.remove('is-visible');
-                        openModalsCount = 0;
                     }
-                }, 150);
+                }, 100);
+            }
+
+            window.updateAppBackdrop = function() {
+                if (hasOpenModals()) {
+                    showAppBackdrop();
+                } else {
+                    scheduleHideBackdrop();
+                }
+            };
+
+            function isConfirmCancelActionModalOpen() {
+                const confirmModal = document.getElementById('confirmCancelActionModal');
+                return !!(confirmModal && confirmModal.classList.contains('show'));
             }
 
             function findTopmostClosableModal() {
+                if (isConfirmCancelActionModalOpen()) {
+                    return null;
+                }
+
                 const shownModals = Array.prototype.slice.call(document.querySelectorAll('.modal.show'));
                 if (!shownModals.length) {
                     return null;
@@ -1316,42 +1339,40 @@
 
             document.querySelectorAll('.modal').forEach(function (modal) {
                 modal.addEventListener('show.bs.modal', function () {
-                    openModalsCount += 1;
                     showAppBackdrop();
                 });
 
                 modal.addEventListener('hidden.bs.modal', function () {
-                    if (openModalsCount > 0) {
-                        openModalsCount -= 1;
-                    }
-                    if (openModalsCount === 0) {
-                        scheduleHideBackdrop();
-                    }
+                    scheduleHideBackdrop();
                 });
 
+                // Клик по серой области внутри конкретной модалки = попытка её закрыть
                 modal.addEventListener('mousedown', function (event) {
                     if (event.target !== modal) {
+                        return;
+                    }
+                    if (isConfirmCancelActionModalOpen()) {
                         return;
                     }
                     if (NO_BACKDROP_CLOSE_IDS.includes(modal.id)) {
                         return;
                     }
-                    const instance = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
-                    if (instance) {
-                        instance.hide();
-                    }
+                    const instance = bootstrap.Modal.getOrCreateInstance(modal);
+                    instance.hide();
                 });
             });
 
+            // Клик по общему app-бэкдропу закрывает верхнюю доступную модалку
             appBackdrop.addEventListener('click', function () {
+                if (isConfirmCancelActionModalOpen()) {
+                    return;
+                }
                 const targetModal = findTopmostClosableModal();
                 if (!targetModal) {
                     return;
                 }
-                const instance = bootstrap.Modal.getInstance(targetModal) || new bootstrap.Modal(targetModal);
-                if (instance) {
-                    instance.hide();
-                }
+                const instance = bootstrap.Modal.getOrCreateInstance(targetModal);
+                instance.hide();
             });
         })();
     </script>

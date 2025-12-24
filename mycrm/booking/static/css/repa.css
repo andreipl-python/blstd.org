@@ -1072,13 +1072,21 @@
     background: rgba(0, 0, 0, 0.5);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.1s ease;
     z-index: 1040;
   }
 
   #app-modal-backdrop.is-visible {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  #confirmCancelActionModal {
+    z-index: 1070;
+  }
+
+  #clientAddedSuccessModal {
+    z-index: 1070;
   }
 
   #calendar-loading-overlay {

@@ -29,7 +29,7 @@ from .api import (
     PaymentViewSet,
     AreaViewSet,
 )
-from .views import user_index_view, create_booking_view
+from .views import user_index_view, create_booking_view, add_client_view
 from .views.user_index import (
     get_bookings_grid,
     get_calendar_grid,
@@ -188,6 +188,8 @@ urlpatterns = [
         delete_booking_service,
         name="delete-booking-service",
     ),
+    # Управление клиентами
+    path("booking/client/add/", add_client_view, name="add_client"),
     # API-аутентификация
     path("api/token/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", CustomTokenRefreshView.as_view(), name="token_refresh"),

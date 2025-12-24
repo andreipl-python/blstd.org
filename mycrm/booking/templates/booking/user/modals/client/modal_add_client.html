@@ -1,0 +1,648 @@
+{% load static %}
+
+<!-- Модальное окно добавления клиента -->
+<div class="modal fade" id="addClientModal" tabindex="-1" aria-labelledby="addClientModalLabel"
+    aria-hidden="true" data-bs-backdrop="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:none; width: 31vw;">
+        <div class="modal-content">
+            <style>
+                #addClientModal .form-control {
+                    border-radius: 16px;
+                }
+                #openAddClientModalBtn:focus {
+                    outline: none !important;
+                    box-shadow: none !important;
+                }
+            </style>
+            <div class="modal-body">
+                <form id="addClientForm" action="javascript:void(0);" method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <div class="row d-flex align-items-center mb-1">
+                            <div class="col-md-12 d-flex justify-content-between align-items-center">
+                                <h2 class="mb-0">Новый клиент</h2>
+                                <button type="button" class="modal-close-icon" id="addClientCloseBtn" aria-label="Закрыть" data-bs-dismiss="modal">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M18 6L6 18" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round" />
+                                        <path d="M6 6L18 18" stroke="#7A52FF" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Имя -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="addClientName" class="form-label">Имя</label>
+                            <input type="text" class="form-control" id="addClientName" name="name" 
+                                   placeholder="Введите имя" maxlength="30" autocomplete="off">
+                            <div class="invalid-feedback" id="addClientNameError"></div>
+                        </div>
+                    </div>
+
+                    <!-- Фамилия -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="addClientSurname" class="form-label">Фамилия</label>
+                            <input type="text" class="form-control" id="addClientSurname" name="surname" 
+                                   placeholder="Введите фамилию" maxlength="30" autocomplete="off">
+                            <div class="invalid-feedback" id="addClientSurnameError"></div>
+                        </div>
+                    </div>
+
+                    <!-- Телефон -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="addClientPhone" class="form-label">Телефон</label>
+                            <input type="tel" class="form-control" id="addClientPhone" name="phone" 
+                                   placeholder="Введите номер телефона" autocomplete="off">
+                            <div class="invalid-feedback" id="addClientPhoneError"></div>
+                        </div>
+                    </div>
+
+                    <!-- Комментарий -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <label for="addClientComment" class="form-label">Комментарий (необязательно)</label>
+                            <textarea class="form-control" id="addClientComment" name="comment" 
+                                      rows="4" placeholder="Добавьте комментарий" maxlength="1000"></textarea>
+                            <div class="d-flex justify-content-end mt-1">
+                                <span id="addClientCommentCounter" style="color: #818EA2; font-size: 14px;">0 / 1000</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Кнопки -->
+                    <div class="d-flex gap-3 flex-column flex-md-row">
+                        <button type="submit" class="button-primary flex-fill" id="addClientSubmitBtn">
+                            Добавить
+                        </button>
+                        <button type="button" class="button-sec flex-fill" id="addClientCancelBtn" data-bs-dismiss="modal">
+                            Отмена
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Скрипт модалки добавления клиента
+(function() {
+    var addClientFormDirty = false;
+    var addClientSubmitting = false;
+    var addClientInitialized = false;
+    var addClientForceClose = false;
+    var addClientAwaitingCancelConfirm = false;
+    var addClientTempHideForConfirm = false;
+    var addClientRestoring = false;
+
+    function initAddClientModal() {
+        if (addClientInitialized) return;
+        addClientInitialized = true;
+
+        var modalEl = document.getElementById('addClientModal');
+        var form = document.getElementById('addClientForm');
+        var closeBtn = document.getElementById('addClientCloseBtn');
+        var cancelBtn = document.getElementById('addClientCancelBtn');
+        var phoneInput = document.getElementById('addClientPhone');
+        var commentTextarea = document.getElementById('addClientComment');
+        var commentCounter = document.getElementById('addClientCommentCounter');
+
+        if (!modalEl) return;
+
+        // Счётчик символов комментария
+        function updateCommentCounter() {
+            if (!commentTextarea || !commentCounter) return;
+            var val = commentTextarea.value || '';
+            commentCounter.textContent = val.length + ' / 1000';
+            commentCounter.style.color = 
+                val.length >= 1000 ? '#FF0000' :
+                val.length >= 900 ? '#FFA500' : '#818EA2';
+        }
+
+        // Валидация русского имени/фамилии
+        function isValidRussianName(value) {
+            if (!value || value.trim() === '') return false;
+            return /^[А-Яа-яЁё\s\-]+$/.test(value.trim());
+        }
+
+        // Валидация белорусского телефона
+        function isValidBelarusPhone(value) {
+            if (!value) return false;
+            var digits = value.replace(/\D/g, '');
+            if (!digits.startsWith('375')) return false;
+            if (digits.length < 12) return false;
+            return /^375(29|44|25|33)\d{7}$/.test(digits);
+        }
+
+        var PHONE_TEMPLATE = '+375 (__) ___-__-__';
+        var PHONE_UNDERSCORE_POSITIONS = (function() {
+            var positions = [];
+            for (var i = 0; i < PHONE_TEMPLATE.length; i++) {
+                if (PHONE_TEMPLATE[i] === '_') positions.push(i);
+            }
+            return positions;
+        })();
+
+        var phoneDigitsAfterPrefix = new Array(PHONE_UNDERSCORE_POSITIONS.length).fill('');
+        var phonePointerFocus = false;
+
+        function extractDigitsAfterPrefix(text) {
+            var digits = (text || '').replace(/\D/g, '');
+            if (digits.startsWith('375')) {
+                digits = digits.substring(3);
+            }
+            return digits.substring(0, 9);
+        }
+
+        function setPhoneDigitsFromString(digitsAfterPrefixStr) {
+            phoneDigitsAfterPrefix = new Array(PHONE_UNDERSCORE_POSITIONS.length).fill('');
+            for (var i = 0; i < digitsAfterPrefixStr.length && i < phoneDigitsAfterPrefix.length; i++) {
+                phoneDigitsAfterPrefix[i] = digitsAfterPrefixStr[i];
+            }
+        }
+
+        function getFirstEmptyPhoneDigitIndex() {
+            for (var i = 0; i < phoneDigitsAfterPrefix.length; i++) {
+                if (!phoneDigitsAfterPrefix[i]) return i;
+            }
+            return phoneDigitsAfterPrefix.length;
+        }
+
+        function getDigitIndexFromCaretPos(caretPos) {
+            if (caretPos == null) return getFirstEmptyPhoneDigitIndex();
+            for (var i = 0; i < PHONE_UNDERSCORE_POSITIONS.length; i++) {
+                if (caretPos <= PHONE_UNDERSCORE_POSITIONS[i]) return i;
+            }
+            return PHONE_UNDERSCORE_POSITIONS.length;
+        }
+
+        function applyPhoneMask(digitsAfterPrefix) {
+            var chars = PHONE_TEMPLATE.split('');
+            for (var i = 0; i < PHONE_UNDERSCORE_POSITIONS.length; i++) {
+                var pos = PHONE_UNDERSCORE_POSITIONS[i];
+                chars[pos] = digitsAfterPrefix[i] ? digitsAfterPrefix[i] : '_';
+            }
+            return chars.join('');
+        }
+
+        function setPhoneCaretByIndex(input, digitIndex) {
+            var pos = digitIndex < PHONE_UNDERSCORE_POSITIONS.length
+                ? PHONE_UNDERSCORE_POSITIONS[digitIndex]
+                : PHONE_TEMPLATE.length;
+            try {
+                input.setSelectionRange(pos, pos);
+            } catch (e) {}
+        }
+
+        function clearPhoneDigitsRange(startIndex, endIndexExclusive) {
+            var start = Math.max(0, startIndex);
+            var end = Math.min(phoneDigitsAfterPrefix.length, endIndexExclusive);
+            for (var i = start; i < end; i++) {
+                phoneDigitsAfterPrefix[i] = '';
+            }
+        }
+
+        // Валидация формы перед отправкой
+        function validateForm() {
+            var isValid = true;
+            var nameInput = document.getElementById('addClientName');
+            var surnameInput = document.getElementById('addClientSurname');
+            var phoneInputEl = document.getElementById('addClientPhone');
+            var phoneDigits = phoneInputEl.value.replace(/\D/g, '');
+            var phoneErrorEl = document.getElementById('addClientPhoneError');
+
+            nameInput.classList.remove('is-invalid');
+            surnameInput.classList.remove('is-invalid');
+            phoneInputEl.classList.remove('is-invalid');
+
+            if (!nameInput.value.trim()) {
+                nameInput.classList.add('is-invalid');
+                document.getElementById('addClientNameError').textContent = 'Введите имя';
+                isValid = false;
+            } else if (!isValidRussianName(nameInput.value)) {
+                nameInput.classList.add('is-invalid');
+                document.getElementById('addClientNameError').textContent = 'Имя должно содержать только русские буквы';
+                isValid = false;
+            }
+
+            if (!surnameInput.value.trim()) {
+                surnameInput.classList.add('is-invalid');
+                document.getElementById('addClientSurnameError').textContent = 'Введите фамилию';
+                isValid = false;
+            } else if (!isValidRussianName(surnameInput.value)) {
+                surnameInput.classList.add('is-invalid');
+                document.getElementById('addClientSurnameError').textContent = 'Фамилия должна содержать только русские буквы';
+                isValid = false;
+            }
+
+            if (!phoneInputEl.value.trim() || phoneDigits === '375') {
+                phoneInputEl.classList.add('is-invalid');
+                phoneErrorEl.textContent = 'Введите номер телефона';
+                isValid = false;
+            } else if (!isValidBelarusPhone(phoneInputEl.value)) {
+                phoneInputEl.classList.add('is-invalid');
+                if (phoneDigits.length >= 5 && !/^375(29|33|44|25)/.test(phoneDigits)) {
+                    phoneErrorEl.textContent = 'Используйте коды 29, 33, 44 или 25';
+                } else {
+                    phoneErrorEl.textContent = 'Неверный формат. Используйте: +375 (XX) XXX-XX-XX';
+                }
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        // Сброс формы в исходное состояние
+        function resetForm() {
+            if (form) form.reset();
+            ['addClientName', 'addClientSurname', 'addClientPhone'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.classList.remove('is-invalid');
+            });
+            if (commentCounter) {
+                commentCounter.textContent = '0 / 1000';
+                commentCounter.style.color = '#818EA2';
+            }
+            if (phoneInput) {
+                phoneDigitsAfterPrefix = new Array(PHONE_UNDERSCORE_POSITIONS.length).fill('');
+                phoneInput.value = PHONE_TEMPLATE;
+            }
+            addClientFormDirty = false;
+            addClientSubmitting = false;
+        }
+
+        // Получение CSRF токена
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function getModalInstance() {
+            return bootstrap.Modal.getOrCreateInstance(modalEl);
+        }
+
+        // Программное закрытие модалки без подтверждения
+        function forceCloseModal() {
+            addClientForceClose = true;
+            resetForm();
+            getModalInstance().hide();
+        }
+
+        // Отправка формы
+        async function submitForm(e) {
+            e.preventDefault();
+            if (!validateForm()) return;
+
+            addClientSubmitting = true;
+            var nameInput = document.getElementById('addClientName');
+            var surnameInput = document.getElementById('addClientSurname');
+            var phoneInputEl = document.getElementById('addClientPhone');
+            var commentInput = document.getElementById('addClientComment');
+
+            var fullName = surnameInput.value.trim() + ' ' + nameInput.value.trim();
+            var phone = '+' + phoneInputEl.value.replace(/\D/g, '');
+
+            try {
+                var response = await fetch('/booking/client/add/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        name: fullName,
+                        phone: phone,
+                        comment: commentInput ? commentInput.value : ''
+                    })
+                });
+
+                var data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Не удалось добавить клиента');
+                }
+
+                // Успешное сохранение
+                addClientFormDirty = false;
+                addClientSubmitting = false;
+                forceCloseModal();
+
+                // Показываем модалку успеха
+                var successEl = document.getElementById('clientAddedSuccessModal');
+                if (successEl) {
+                    setTimeout(function () {
+                        var successModal = bootstrap.Modal.getOrCreateInstance(successEl);
+                        successModal.show();
+                    }, 100);
+                }
+
+            } catch (error) {
+                console.error('Ошибка при добавлении клиента:', error);
+                addClientSubmitting = false;
+                if (error.message.includes('телефон') || error.message.includes('phone')) {
+                    var phoneInputEl = document.getElementById('addClientPhone');
+                    phoneInputEl.classList.add('is-invalid');
+                    document.getElementById('addClientPhoneError').textContent = error.message;
+                } else {
+                    alert(error.message);
+                }
+            }
+        }
+
+        // Обработчики ввода
+        if (commentTextarea) {
+            commentTextarea.addEventListener('input', updateCommentCounter);
+        }
+
+        if (phoneInput) {
+            phoneInput.addEventListener('mousedown', function() {
+                phonePointerFocus = true;
+            });
+
+            phoneInput.addEventListener('focus', function() {
+                if (!this.value) {
+                    setPhoneDigitsFromString('');
+                    this.value = PHONE_TEMPLATE;
+                }
+                if (this.value !== PHONE_TEMPLATE) {
+                    setPhoneDigitsFromString(extractDigitsAfterPrefix(this.value));
+                    this.value = applyPhoneMask(phoneDigitsAfterPrefix);
+                }
+                setTimeout(function() {
+                    if (!phonePointerFocus) {
+                        setPhoneCaretByIndex(phoneInput, getFirstEmptyPhoneDigitIndex());
+                    }
+                    phonePointerFocus = false;
+                }, 0);
+            });
+
+            phoneInput.addEventListener('input', function() {
+                var caretPos = this.selectionStart || 0;
+                var caretDigitIndex = getDigitIndexFromCaretPos(caretPos);
+                setPhoneDigitsFromString(extractDigitsAfterPrefix(this.value));
+                var masked = applyPhoneMask(phoneDigitsAfterPrefix);
+                if (this.value !== masked) {
+                    this.value = masked;
+                }
+                setPhoneCaretByIndex(this, Math.min(caretDigitIndex, phoneDigitsAfterPrefix.length));
+                addClientFormDirty = true;
+            });
+
+            phoneInput.addEventListener('keydown', function(e) {
+                if (e.ctrlKey || e.metaKey || e.altKey) {
+                    return;
+                }
+
+                if (e.key === 'Tab') {
+                    return;
+                }
+
+                var selectionStart = this.selectionStart || 0;
+                var selectionEnd = this.selectionEnd || selectionStart;
+                var startIndex = getDigitIndexFromCaretPos(selectionStart);
+                var endIndex = getDigitIndexFromCaretPos(selectionEnd);
+                var hasSelection = selectionEnd > selectionStart && endIndex > startIndex;
+
+                if (e.key === 'Backspace' || e.key === 'Delete') {
+                    e.preventDefault();
+
+                    if (hasSelection) {
+                        clearPhoneDigitsRange(startIndex, endIndex);
+                        phoneInput.value = applyPhoneMask(phoneDigitsAfterPrefix);
+                        setPhoneCaretByIndex(phoneInput, startIndex);
+                        addClientFormDirty = true;
+                        return;
+                    }
+
+                    if (e.key === 'Backspace') {
+                        if (startIndex > 0) {
+                            phoneDigitsAfterPrefix[startIndex - 1] = '';
+                            phoneInput.value = applyPhoneMask(phoneDigitsAfterPrefix);
+                            setPhoneCaretByIndex(phoneInput, startIndex - 1);
+                            addClientFormDirty = true;
+                        } else {
+                            phoneInput.value = applyPhoneMask(phoneDigitsAfterPrefix);
+                            setPhoneCaretByIndex(phoneInput, 0);
+                        }
+                        return;
+                    }
+
+                    if (e.key === 'Delete') {
+                        if (startIndex < phoneDigitsAfterPrefix.length) {
+                            phoneDigitsAfterPrefix[startIndex] = '';
+                            phoneInput.value = applyPhoneMask(phoneDigitsAfterPrefix);
+                            setPhoneCaretByIndex(phoneInput, startIndex);
+                            addClientFormDirty = true;
+                        } else {
+                            phoneInput.value = applyPhoneMask(phoneDigitsAfterPrefix);
+                            setPhoneCaretByIndex(phoneInput, getFirstEmptyPhoneDigitIndex());
+                        }
+                        return;
+                    }
+                    return;
+                }
+
+                if (e.key && e.key.length === 1) {
+                    if (!/\d/.test(e.key)) {
+                        e.preventDefault();
+                        return;
+                    }
+                    e.preventDefault();
+
+                    if (hasSelection) {
+                        clearPhoneDigitsRange(startIndex, endIndex);
+                    }
+
+                    if (startIndex >= phoneDigitsAfterPrefix.length) {
+                        setPhoneCaretByIndex(phoneInput, getFirstEmptyPhoneDigitIndex());
+                        return;
+                    }
+
+                    phoneDigitsAfterPrefix[startIndex] = e.key;
+                    phoneInput.value = applyPhoneMask(phoneDigitsAfterPrefix);
+                    setPhoneCaretByIndex(phoneInput, Math.min(startIndex + 1, phoneDigitsAfterPrefix.length));
+                    addClientFormDirty = true;
+                    return;
+                }
+
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End') {
+                    e.preventDefault();
+                    if (e.key === 'Home') {
+                        setPhoneCaretByIndex(phoneInput, 0);
+                        return;
+                    }
+                    if (e.key === 'End') {
+                        setPhoneCaretByIndex(phoneInput, getFirstEmptyPhoneDigitIndex());
+                        return;
+                    }
+                    if (e.key === 'ArrowLeft') {
+                        setPhoneCaretByIndex(phoneInput, Math.max(0, startIndex - 1));
+                        return;
+                    }
+                    if (e.key === 'ArrowRight') {
+                        setPhoneCaretByIndex(phoneInput, Math.min(phoneDigitsAfterPrefix.length, startIndex + 1));
+                        return;
+                    }
+                    return;
+                }
+            });
+
+            phoneInput.addEventListener('paste', function(e) {
+                e.preventDefault();
+                var text = '';
+                if (e.clipboardData && e.clipboardData.getData) {
+                    text = e.clipboardData.getData('text');
+                } else if (window.clipboardData && window.clipboardData.getData) {
+                    text = window.clipboardData.getData('Text');
+                }
+                setPhoneDigitsFromString(extractDigitsAfterPrefix(text));
+                phoneInput.value = applyPhoneMask(phoneDigitsAfterPrefix);
+                setPhoneCaretByIndex(phoneInput, getFirstEmptyPhoneDigitIndex());
+                addClientFormDirty = true;
+            });
+
+            phoneInput.addEventListener('click', function() {
+                var caretPos = this.selectionStart || 0;
+                var caretDigitIndex = getDigitIndexFromCaretPos(caretPos);
+                setPhoneCaretByIndex(phoneInput, caretDigitIndex);
+            });
+        }
+
+        if (form) {
+            form.addEventListener('input', function() { addClientFormDirty = true; });
+            form.addEventListener('submit', submitForm);
+        }
+
+        // При открытии модалки — сброс формы
+        modalEl.addEventListener('show.bs.modal', function() {
+            if (addClientRestoring) {
+                addClientRestoring = false;
+                return;
+            }
+            addClientFormDirty = false;
+            addClientSubmitting = false;
+            window._addClientPendingClose = false;
+            addClientForceClose = false;
+            resetForm();
+        });
+
+        // При попытке закрыть модалку: если есть несохранённые изменения — показываем подтверждение
+        modalEl.addEventListener('hide.bs.modal', function(event) {
+            if (addClientForceClose) {
+                addClientForceClose = false;
+                return;
+            }
+
+            if (addClientTempHideForConfirm) {
+                addClientTempHideForConfirm = false;
+                return;
+            }
+
+            if (addClientFormDirty && !addClientSubmitting) {
+                event.preventDefault();
+                window._addClientPendingClose = true;
+                addClientAwaitingCancelConfirm = true;
+                addClientTempHideForConfirm = true;
+                setTimeout(function() {
+                    getModalInstance().hide();
+                }, 0);
+                return;
+            }
+
+            resetForm();
+        });
+
+        // После закрытия модалки — убираем фокус с кнопки и обновляем бэкдроп
+        modalEl.addEventListener('hidden.bs.modal', function() {
+            if (addClientAwaitingCancelConfirm) {
+                var confirmEl = document.getElementById('confirmCancelActionModal');
+                if (confirmEl) {
+                    setTimeout(function () {
+                        var confirmModal = bootstrap.Modal.getOrCreateInstance(confirmEl, { backdrop: false, keyboard: false });
+                        confirmModal.show();
+                        setTimeout(function() {
+                            if (typeof window.updateAppBackdrop === 'function') {
+                                window.updateAppBackdrop();
+                            }
+                        }, 50);
+                    }, 0);
+                }
+                return;
+            }
+
+            window._addClientPendingClose = false;
+            addClientSubmitting = false;
+            var triggerBtn = document.getElementById('openAddClientModalBtn');
+            if (triggerBtn) {
+                triggerBtn.blur();
+            }
+            setTimeout(function() {
+                if (typeof window.updateAppBackdrop === 'function') {
+                    window.updateAppBackdrop();
+                }
+            }, 50);
+        });
+
+        // Подтверждение выхода (событие от модалки подтверждения)
+        document.addEventListener('booking:confirm-cancel-action', function() {
+            if (addClientAwaitingCancelConfirm) {
+                addClientAwaitingCancelConfirm = false;
+                window._addClientPendingClose = false;
+                addClientFormDirty = false;
+                addClientSubmitting = false;
+                resetForm();
+                var triggerBtn = document.getElementById('openAddClientModalBtn');
+                if (triggerBtn) {
+                    triggerBtn.blur();
+                }
+                setTimeout(function() {
+                    if (typeof window.updateAppBackdrop === 'function') {
+                        window.updateAppBackdrop();
+                    }
+                }, 50);
+                return;
+            }
+        });
+
+        // Отмена выхода (событие от модалки подтверждения)
+        document.addEventListener('booking:cancel-close-action', function() {
+            if (addClientAwaitingCancelConfirm) {
+                addClientAwaitingCancelConfirm = false;
+                window._addClientPendingClose = false;
+                addClientRestoring = true;
+                setTimeout(function() {
+                    getModalInstance().show();
+                    setTimeout(function() {
+                        if (typeof window.updateAppBackdrop === 'function') {
+                            window.updateAppBackdrop();
+                        }
+                    }, 50);
+                }, 50);
+                return;
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAddClientModal);
+    } else {
+        initAddClientModal();
+    }
+})();
+</script>
