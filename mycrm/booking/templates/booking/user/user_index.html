@@ -243,6 +243,7 @@
     {% include "booking/user/modals/payments/modal_confirm_cancel_payment.html" %}
     {% include "booking/user/modals/client/modal_add_client.html" %}
     {% include "booking/user/modals/client/modal_client_added_success.html" %}
+    {% include "booking/user/modals/booking/modal_booking_added_success.html" %}
 
     {% include 'booking/add/scripts.html' %}
 
@@ -634,7 +635,14 @@
             window.reloadCalendarGridForCurrentState = reloadCalendarGridForCurrentState;
             window.reloadCalendarGridForAreaChange = reloadCalendarGridForAreaChange;
 
+            if (typeof window.__suppressBookingsRefreshUntil !== 'number') {
+                window.__suppressBookingsRefreshUntil = 0;
+            }
+
             setInterval(function () {
+                if (window.__suppressBookingsRefreshUntil && Date.now() < window.__suppressBookingsRefreshUntil) {
+                    return;
+                }
                 refreshBookingsGrid({ silent: true });
             }, 5000);
 
@@ -1272,7 +1280,7 @@
                 return;
             }
 
-            const NO_BACKDROP_CLOSE_IDS = ['confirmCancelActionModal', 'clientAddedSuccessModal'];
+            const NO_BACKDROP_CLOSE_IDS = ['confirmCancelActionModal', 'clientAddedSuccessModal', 'bookingAddedSuccessModal'];
             let hideTimeoutId = null;
 
             function showAppBackdrop() {

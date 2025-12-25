@@ -1,0 +1,53 @@
+{% load static %}
+
+<div class="modal fade" id="bookingAddedSuccessModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:none; width: 25vw;">
+        <div class="modal-content confirm-cancel-modal">
+            <div class="modal-body text-center">
+                <div class="mb-4">
+                    <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="96" height="96" rx="48" fill="#CFFFDA" />
+                        <path d="M64 36L42 58L32 48" stroke="#0AA37A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <div class="mb-2">
+                    <h2>Спасибо!</h2>
+                </div>
+                <div class="mb-4">
+                    <p style="color: #818EA2; font-size: 16px; margin: 0;">Бронь успешно добавлена</p>
+                </div>
+                <div>
+                    <button type="button" class="button-primary" style="min-width: 150px;" id="bookingAddedSuccessOkBtn">
+                        OК
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var modalEl = document.getElementById('bookingAddedSuccessModal');
+        var okBtn = document.getElementById('bookingAddedSuccessOkBtn');
+        if (!modalEl || !okBtn) return;
+
+        okBtn.addEventListener('click', function () {
+            var instance = bootstrap.Modal.getOrCreateInstance(modalEl);
+            instance.hide();
+            setTimeout(function () {
+                if (typeof window.updateAppBackdrop === 'function') {
+                    window.updateAppBackdrop();
+                }
+            }, 50);
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            setTimeout(function () {
+                if (typeof window.updateAppBackdrop === 'function') {
+                    window.updateAppBackdrop();
+                }
+            }, 50);
+        });
+    })();
+</script>

@@ -2841,11 +2841,25 @@
             })
             .then(function (data) {
                 if (data.success) {
-                    // Закрываем модалку (данные обновятся автоматически через AJAX)
-                    var modal = bootstrap.Modal.getInstance(modalElement);
-                    if (modal) {
-                        modal.hide();
+                    if (typeof window.refreshBookingsGrid === 'function') {
+                        try {
+                            window.__suppressBookingsRefreshUntil = Date.now() + 6000;
+                            window.refreshBookingsGrid({ silent: true });
+                        } catch (e) {}
                     }
+
+                    // Закрываем модалку (данные обновятся автоматически через AJAX)
+                    modalElement.addEventListener('hidden.bs.modal', function () {
+                        var successEl = document.getElementById('bookingAddedSuccessModal');
+                        if (!successEl) {
+                            return;
+                        }
+                        var successModal = bootstrap.Modal.getOrCreateInstance(successEl);
+                        successModal.show();
+                    }, { once: true });
+
+                    var modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+                    modal.hide();
                 } else {
                     alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
                 }
