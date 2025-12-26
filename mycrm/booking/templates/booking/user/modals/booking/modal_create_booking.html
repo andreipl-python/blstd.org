@@ -2481,7 +2481,8 @@
             if (isClientSelect && searchInput) {
                 searchInput.addEventListener('input', function () {
                     var filter = this.value.trim().toLowerCase();
-                    optionsList.forEach(function (option) {
+                    var currentOptionsList = optionsContainer.querySelectorAll('li');
+                    currentOptionsList.forEach(function (option) {
                         if (option.id === 'search-option') {
                             return;
                         }
@@ -2524,7 +2525,12 @@
 
                 option.addEventListener('click', function (e) {
                     e.stopPropagation();
-                    optionsList.forEach(function (opt) { opt.classList.remove('selected'); });
+                    var currentOptionsList = optionsContainer.querySelectorAll('li');
+                    currentOptionsList.forEach(function (opt) {
+                        if (opt.id !== 'search-option') {
+                            opt.classList.remove('selected');
+                        }
+                    });
                     option.classList.add('selected');
                     selected.textContent = option.textContent;
                     select.classList.remove('open');
@@ -2543,6 +2549,104 @@
                 });
             });
         });
+
+        if (!window.__createBookingClientAddedListenerAttached) {
+            window.__createBookingClientAddedListenerAttached = true;
+            document.addEventListener('booking:client-added', function (event) {
+                var clientData = event && event.detail ? event.detail : null;
+                if (!clientData || !clientData.id || !clientData.name) {
+                    return;
+                }
+
+                var clientSelect = document.getElementById('client');
+                if (!clientSelect) {
+                    return;
+                }
+
+                var optionsContainer = clientSelect.querySelector('ul.options');
+                if (!optionsContainer) {
+                    return;
+                }
+
+                var clientId = String(clientData.id);
+                var existing = optionsContainer.querySelector('li[data-type="client"][data-value="' + clientId + '"]');
+
+                if (!existing) {
+                    existing = document.createElement('li');
+                    existing.setAttribute('data-value', clientId);
+                    existing.setAttribute('data-type', 'client');
+
+                    var searchOption = optionsContainer.querySelector('#search-option');
+                    var insertBeforeEl = searchOption ? searchOption.nextElementSibling : optionsContainer.firstElementChild;
+                    if (insertBeforeEl) {
+                        optionsContainer.insertBefore(existing, insertBeforeEl);
+                    } else {
+                        optionsContainer.appendChild(existing);
+                    }
+
+                    existing.addEventListener('click', function (e) {
+                        e.stopPropagation();
+
+                        var selectedSpan = clientSelect.querySelector('span.selected');
+                        if (!selectedSpan) {
+                            return;
+                        }
+
+                        var currentOptionsList = optionsContainer.querySelectorAll('li');
+                        currentOptionsList.forEach(function (opt) {
+                            if (opt.id !== 'search-option') {
+                                opt.classList.remove('selected');
+                            }
+                        });
+
+                        existing.classList.add('selected');
+                        selectedSpan.textContent = existing.textContent;
+                        clientSelect.classList.remove('open');
+
+                        if (typeof syncClearableSelectState === 'function') {
+                            syncClearableSelectState(clientSelect);
+                        }
+
+                        var searchInput = clientSelect.querySelector('#client-search-input');
+                        if (searchInput) {
+                            searchInput.value = '';
+                            var allOptions = optionsContainer.querySelectorAll('li');
+                            allOptions.forEach(function (opt) {
+                                if (opt.id === 'search-option') return;
+                                opt.style.display = '';
+                            });
+                        }
+
+                        if (typeof window.updateSubmitButtonState === 'function') {
+                            window.updateSubmitButtonState();
+                        }
+                    });
+                }
+
+                existing.textContent = clientData.name;
+
+                var bookingModalEl = document.getElementById('createBookingModal');
+                if (bookingModalEl && bookingModalEl.classList.contains('show')) {
+                    var selectedSpan = clientSelect.querySelector('span.selected');
+                    if (selectedSpan) {
+                        var currentOptionsList = optionsContainer.querySelectorAll('li');
+                        currentOptionsList.forEach(function (opt) {
+                            if (opt.id !== 'search-option') {
+                                opt.classList.remove('selected');
+                            }
+                        });
+                        existing.classList.add('selected');
+                        selectedSpan.textContent = existing.textContent;
+                        if (typeof syncClearableSelectState === 'function') {
+                            syncClearableSelectState(clientSelect);
+                        }
+                        if (typeof window.updateSubmitButtonState === 'function') {
+                            window.updateSubmitButtonState();
+                        }
+                    }
+                }
+            });
+        }
 
         // При закрытии модалки сбрасываем связанные селекты и фильтры, чтобы при следующем открытии не оставались скрытые элементы
         modalElement.addEventListener('hidden.bs.modal', function () {

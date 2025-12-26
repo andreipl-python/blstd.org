@@ -343,6 +343,10 @@
                 addClientSubmitting = false;
                 forceCloseModal();
 
+                if (data.client) {
+                    document.dispatchEvent(new CustomEvent('booking:client-added', { detail: data.client }));
+                }
+
                 // Показываем модалку успеха
                 var successEl = document.getElementById('clientAddedSuccessModal');
                 if (successEl) {
