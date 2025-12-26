@@ -258,6 +258,21 @@ def delete_booking_view(request, booking_id):
 
     try:
         booking = get_object_or_404(Reservation, id=booking_id)
+
+        cancellation_reason_id = None
+        if request.body:
+            try:
+                payload = json.loads(request.body or "{}")
+                cancellation_reason_id = payload.get("cancellation_reason_id")
+            except Exception:
+                cancellation_reason_id = None
+
+        if cancellation_reason_id:
+            cancellation_reason = get_object_or_404(
+                CancellationReason, id=cancellation_reason_id
+            )
+            booking.cancellation_reason = cancellation_reason
+
         cancelled_status = get_object_or_404(ReservationStatusType, id=1082)
         booking.status = cancelled_status
         booking.save()

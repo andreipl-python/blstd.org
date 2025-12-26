@@ -236,6 +236,7 @@
     {% include "booking/user/modals/booking/modal_create_booking.html" %}
     {% include "booking/user/modals/booking/modal_edit_booking.html" %}
     {% include "booking/user/modals/booking/modal_info_booking.html" %}
+    {% include "booking/user/modals/booking/modal_delete_booking.html" %}
     {% include "booking/user/modals/payments/modal_payment_booking.html" %}
     {% include "booking/user/modals/payments/modal_payment_history.html" %}
     {% include "booking/user/modals/payments/modal_edit_payment.html" %}
@@ -1280,7 +1281,7 @@
                 return;
             }
 
-            const NO_BACKDROP_CLOSE_IDS = ['confirmCancelActionModal', 'clientAddedSuccessModal', 'bookingAddedSuccessModal'];
+            const NO_BACKDROP_CLOSE_IDS = ['confirmCancelActionModal', 'clientAddedSuccessModal', 'bookingAddedSuccessModal', 'deleteBookingModal'];
             let hideTimeoutId = null;
 
             function showAppBackdrop() {
@@ -1655,18 +1656,9 @@
                 if (!window.currentBookingId) {
                     return;
                 }
-                Swal.fire({
-                    title: 'Удалить бронь?',
-                    text: 'Бронь будет отменена и исчезнет из календаря.',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Удалить',
-                    cancelButtonText: 'Отмена'
-                }).then(function (result) {
-                    if (result.isConfirmed) {
-                        deleteCurrentBooking();
-                    }
-                });
+                if (typeof window.openDeleteBookingModal === 'function') {
+                    window.openDeleteBookingModal();
+                }
             });
         });
     </script>

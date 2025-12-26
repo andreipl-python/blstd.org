@@ -1,0 +1,261 @@
+{% load static %}
+
+<div class="modal fade" id="deleteBookingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="false" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:none; width: 31vw;">
+        <div class="modal-content confirm-cancel-modal">
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <h2 class="mb-2">Удалить бронь?</h2>
+                    <p style="color: #818EA2; font-size: 16px; margin: 0;">
+                        Вы уверены, что хотите удалить бронь? Вы потеряете все данные, и это действие нельзя будет отменить
+                    </p>
+                </div>
+
+                <div class="mb-4">
+                    <label for="deleteBookingReason" class="form-label" style="font-weight: 600;">Причина удаления</label>
+                    <select class="form-select" id="deleteBookingReason" name="deleteBookingReason" style="height: 48px; border-radius: 12px;">
+                        <option value="">Выберите причину</option>
+                    </select>
+                </div>
+
+                <div class="d-flex gap-3 flex-column flex-md-row">
+                    <button type="button" class="button-primary flex-fill" id="deleteBookingCancelBtn">
+                        Отмена
+                    </button>
+                    <button type="button" class="button-sec flex-fill" id="deleteBookingConfirmBtn" disabled style="border: 1px solid #EB5757; color: #EB5757; background: transparent;">
+                        <span style="display:inline-flex; align-items:center; justify-content:center; gap:10px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 6H5H21" stroke="#EB5757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6" stroke="#EB5757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6" stroke="#EB5757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M10 11V17" stroke="#EB5757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M14 11V17" stroke="#EB5757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Удалить
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var modalEl = document.getElementById('deleteBookingModal');
+        var reasonSelect = document.getElementById('deleteBookingReason');
+        var cancelBtn = document.getElementById('deleteBookingCancelBtn');
+        var confirmBtn = document.getElementById('deleteBookingConfirmBtn');
+
+        if (!modalEl || !reasonSelect || !cancelBtn || !confirmBtn) return;
+
+        var confirming = false;
+        var returnToInfoModalOnClose = false;
+        var pendingSuccessText = null;
+
+        var confirmDefaultHtml = confirmBtn.innerHTML;
+
+        function waitForHidden(element) {
+            return new Promise(function (resolve) {
+                if (!element) {
+                    resolve();
+                    return;
+                }
+                if (!element.classList.contains('show')) {
+                    resolve();
+                    return;
+                }
+                var handler = function () {
+                    element.removeEventListener('hidden.bs.modal', handler);
+                    resolve();
+                };
+                element.addEventListener('hidden.bs.modal', handler);
+            });
+        }
+
+        function setConfirmEnabled(enabled) {
+            confirmBtn.disabled = !enabled;
+            confirmBtn.style.opacity = enabled ? '1' : '0.55';
+        }
+
+        function getCookie(name) {
+            if (typeof window.getCookie === 'function') {
+                return window.getCookie(name);
+            }
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        async function loadReasons() {
+            try {
+                var response = await fetch('/booking/get-cancellation-reasons/');
+                var data = await response.json();
+
+                reasonSelect.innerHTML = '<option value="">Выберите причину</option>';
+                if (data && data.success && Array.isArray(data.reasons)) {
+                    data.reasons.forEach(function (reason) {
+                        var opt = document.createElement('option');
+                        opt.value = reason.id;
+                        opt.textContent = reason.name;
+                        reasonSelect.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Ошибка при загрузке причин удаления:', e);
+                reasonSelect.innerHTML = '<option value="">Не удалось загрузить причины</option>';
+            }
+        }
+
+        window.openDeleteBookingModal = function () {
+            if (!window.currentBookingId) {
+                return;
+            }
+
+            var infoModalEl = document.getElementById('infoBookingModal');
+            var infoModal = infoModalEl ? bootstrap.Modal.getInstance(infoModalEl) : null;
+            if (infoModal) {
+                infoModal.hide();
+            }
+
+            returnToInfoModalOnClose = false;
+            confirming = false;
+
+            reasonSelect.value = '';
+            setConfirmEnabled(false);
+
+            var modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: false, keyboard: false });
+            modal.show();
+        };
+
+        modalEl.addEventListener('shown.bs.modal', function () {
+            loadReasons();
+            reasonSelect.value = '';
+            setConfirmEnabled(false);
+        });
+
+        reasonSelect.addEventListener('change', function () {
+            setConfirmEnabled(!!reasonSelect.value);
+        });
+
+        cancelBtn.addEventListener('click', function () {
+            if (confirming) {
+                return;
+            }
+            returnToInfoModalOnClose = true;
+            var modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.hide();
+        });
+
+        confirmBtn.addEventListener('click', async function () {
+            if (confirming) return;
+
+            var bookingId = window.currentBookingId;
+            var reasonId = reasonSelect.value;
+
+            if (!bookingId || !reasonId) {
+                setConfirmEnabled(false);
+                return;
+            }
+
+            confirming = true;
+            setConfirmEnabled(false);
+            confirmBtn.innerHTML = 'Удаление...';
+
+            try {
+                var response = await fetch('/booking/delete/' + bookingId + '/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ cancellation_reason_id: reasonId })
+                });
+
+                var data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error((data && data.error) ? data.error : 'Не удалось удалить бронь');
+                }
+
+                returnToInfoModalOnClose = false;
+                if (typeof window.refreshBookingsGrid === 'function') {
+                    try {
+                        window.__suppressBookingsRefreshUntil = Date.now() + 6000;
+                        await window.refreshBookingsGrid({ silent: true });
+                    } catch (e) {}
+                } else if (typeof window.reloadCalendarGridForCurrentState === 'function') {
+                    try {
+                        window.__suppressBookingsRefreshUntil = Date.now() + 6000;
+                        window.reloadCalendarGridForCurrentState();
+                    } catch (e) {}
+                }
+
+                pendingSuccessText = 'Бронь успешно удалена';
+                var modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.hide();
+                await waitForHidden(modalEl);
+
+                if (typeof window.openBookingSuccessModal === 'function') {
+                    window.openBookingSuccessModal(pendingSuccessText);
+                } else {
+                    var successEl = document.getElementById('bookingAddedSuccessModal');
+                    if (successEl) {
+                        var instance = bootstrap.Modal.getOrCreateInstance(successEl);
+                        instance.show();
+                    }
+                }
+                pendingSuccessText = null;
+            } catch (error) {
+                console.error('Ошибка при удалении брони:', error);
+                confirming = false;
+                setConfirmEnabled(!!reasonSelect.value);
+                confirmBtn.innerHTML = confirmDefaultHtml;
+                if (typeof Swal !== 'undefined' && Swal && typeof Swal.fire === 'function') {
+                    Swal.fire({
+                        title: 'Ошибка!',
+                        text: error.message || 'Ошибка при удалении брони',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                } else {
+                    alert(error.message || 'Ошибка при удалении брони');
+                }
+            }
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            confirming = false;
+            confirmBtn.innerHTML = confirmDefaultHtml;
+
+            if (returnToInfoModalOnClose) {
+                returnToInfoModalOnClose = false;
+                setTimeout(function () {
+                    if (typeof window.openInfoModal === 'function') {
+                        window.openInfoModal();
+                    } else {
+                        var infoModalEl = document.getElementById('infoBookingModal');
+                        if (infoModalEl) {
+                            var infoModal = bootstrap.Modal.getOrCreateInstance(infoModalEl);
+                            infoModal.show();
+                        }
+                    }
+                }, 50);
+            }
+
+            setTimeout(function () {
+                if (typeof window.updateAppBackdrop === 'function') {
+                    window.updateAppBackdrop();
+                }
+            }, 50);
+        });
+    })();
+</script>
