@@ -219,13 +219,13 @@
             const maxForInput = getMaxAllowedValueForInput(input);
             const formatted = sanitizePaymentValue(input.value, { preserveSeparator: true, maxValue: maxForInput });
             input.value = formatted;
-            updateSubmitButtonState();
+            updatePaymentSubmitButtonState();
             updateTotalAmount();
         });
 
         input.addEventListener('blur', function () {
             if (!input.value) {
-                updateSubmitButtonState();
+                updatePaymentSubmitButtonState();
                 updateTotalAmount();
                 return;
             }
@@ -241,13 +241,13 @@
             const numericValue = parsePaymentNumericValue(formatted);
             if (!numericValue || numericValue <= 0) {
                 input.value = '';
-                updateSubmitButtonState();
+                updatePaymentSubmitButtonState();
                 updateTotalAmount();
                 return;
             }
 
             input.value = formatted;
-            updateSubmitButtonState();
+            updatePaymentSubmitButtonState();
             updateTotalAmount();
         });
 
@@ -279,7 +279,7 @@
     }
 
     // Управляет доступностью кнопки "Оплатить" в зависимости от валидности блоков (кнопка не скрывается)
-    function updateSubmitButtonState() {
+    function updatePaymentSubmitButtonState() {
         if (!paymentSubmitButton) return;
         const shouldEnable = allPaymentBlocksValid();
         paymentSubmitButton.disabled = !shouldEnable;
@@ -389,6 +389,18 @@
             }
 
             updatePaymentSummaryFromBookingData(data.booking);
+
+            if (Array.isArray(paymentMethodBlocks) && paymentMethodBlocks.length) {
+                paymentMethodBlocks.forEach(block => {
+                    if (!block || !block.paymentInput) return;
+                    const maxForInput = getMaxAllowedValueForInput(block.paymentInput);
+                    if (maxForInput === null || maxForInput === undefined) return;
+                    const formatted = sanitizePaymentValue(block.paymentInput.value, { preserveSeparator: true, maxValue: maxForInput });
+                    block.paymentInput.value = formatted;
+                });
+                updatePaymentSubmitButtonState();
+                updateTotalAmount();
+            }
         } catch (error) {
             console.error('Ошибка при загрузке деталей брони для оплаты:', error);
         }
@@ -509,7 +521,7 @@
         }
         refreshAllSelectOptions(block.id);
         updateAddButtonState();
-        updateSubmitButtonState();
+        updatePaymentSubmitButtonState();
     }
 
     // Перестраивает список опций конкретного блока с учётом уже занятых типов в других блоках
@@ -620,7 +632,7 @@
         }
 
         updateAddButtonState();
-        updateSubmitButtonState();
+        updatePaymentSubmitButtonState();
         updateTotalBlockVisibility();
         updateTotalAmount();
     }
@@ -674,7 +686,7 @@
         renderPaymentSelectOptions(blockData);
         updateRemoveButtonsState();
         updateAddButtonState();
-        updateSubmitButtonState();
+        updatePaymentSubmitButtonState();
         updateTotalBlockVisibility();
         updateTotalAmount();
 
@@ -720,7 +732,7 @@
             block.element.classList.add('mb-4');
         }
         updateAddButtonState();
-        updateSubmitButtonState();
+        updatePaymentSubmitButtonState();
         resetSubmitButtonLabel();
         updateTotalAmount();
     }
@@ -811,7 +823,7 @@
             paymentSubmitButton.dataset.listenerAttached = 'true';
         }
 
-        updateSubmitButtonState();
+        updatePaymentSubmitButtonState();
     }
 
     if (document.readyState === 'loading') {
@@ -840,6 +852,7 @@
         });
 
         paymentModalElement.addEventListener('shown.bs.modal', function () {
+            bookingRemainingAmount = null;
             initializePaymentMethodsUI();
             loadPaymentSummaryForCurrentBooking();
         });
