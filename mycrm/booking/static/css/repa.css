@@ -622,6 +622,79 @@
     display: block;
   }
 
+  .booking-hover-popover {
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: none;
+    width: 288px;
+    padding: 16px;
+    background: #FFFFFF;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(61, 51, 86, 0.12);
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  .booking-hover-popover__row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .booking-hover-popover__row + .booking-hover-popover__row {
+    margin-top: 12px;
+  }
+
+  .booking-hover-popover__icon {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .booking-hover-popover__text {
+    flex: 1;
+    color: #181B22;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+  }
+
+  .booking-hover-popover__text--secondary {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .booking-hover-popover__text--muted {
+    color: #4F4F57;
+    font-weight: 400;
+    font-size: 14px;
+  }
+
+  .booking-hover-popover__comment {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #EBEBEC;
+    color: #4F4F57;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
   /*Кнопки*/
 
   .button-secondary {

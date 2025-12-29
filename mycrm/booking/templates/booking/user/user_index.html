@@ -228,6 +228,70 @@
         <div class="container-fluid" id="calendar-grid-container">
             {% include 'booking/user/_calendar_grid.html' %}
         </div>
+
+        <div id="bookingHoverPopover" class="booking-hover-popover">
+            <div class="booking-hover-popover__row" id="bookingHoverPopoverTimeRow">
+                <div class="booking-hover-popover__icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M12 6V12L16 14" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <div class="booking-hover-popover__text">
+                    <span id="bookingHoverPopoverTime"></span> / <span id="bookingHoverPopoverDuration"></span>
+                </div>
+            </div>
+
+            <div class="booking-hover-popover__row" id="bookingHoverPopoverClientRow">
+                <div class="booking-hover-popover__icon" id="bookingHoverPopoverClientIconSingle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 21V19C19 17.9391 18.5786 16.9217 17.8284 16.1716C17.0783 15.4214 16.0609 15 15 15H9C7.93913 15 6.92172 15.4214 6.17157 16.1716C5.42143 16.9217 5 17.9391 5 19V21" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <div class="booking-hover-popover__icon" id="bookingHoverPopoverClientIconGroup" style="display:none;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H6C4.93913 15 3.92172 15.4214 3.17157 16.1716C2.42143 16.9217 2 17.9391 2 19V21" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M22 21V19C21.9993 18.1137 21.7044 17.2528 21.1614 16.5523C20.6184 15.8519 19.8581 15.3516 19 15.13" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="booking-hover-popover__text" id="bookingHoverPopoverClientName"></div>
+            </div>
+
+            <div class="booking-hover-popover__row" id="bookingHoverPopoverDirectionRow">
+                <div class="booking-hover-popover__icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 18V5L21 3V16" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M6 21C7.65685 21 9 19.6569 9 18C9 16.3431 7.65685 15 6 15C4.34315 15 3 16.3431 3 18C3 19.6569 4.34315 21 6 21Z" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M18 19C19.6569 19 21 17.6569 21 16C21 14.3431 19.6569 13 18 13C16.3431 13 15 14.3431 15 16C15 17.6569 16.3431 19 18 19Z" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <div class="booking-hover-popover__text" id="bookingHoverPopoverDirection"></div>
+            </div>
+
+            <div class="booking-hover-popover__row" id="bookingHoverPopoverSpecialistRow">
+                <div class="booking-hover-popover__icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14.3047 19.53L15.2277 19.148" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M15.2277 16.852L14.3047 16.469" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M16.8517 15.228L16.4688 14.305" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M16.8517 20.772L16.4688 21.696" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M19.1484 15.228L19.5314 14.305" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M19.5304 21.696L19.1484 20.772" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M2 21C2.00012 19.741 2.29739 18.4997 2.86766 17.3773C3.43792 16.2548 4.26506 15.2827 5.28182 14.5402C6.29858 13.7976 7.47624 13.3056 8.71904 13.104C9.96183 12.9024 11.2347 12.9969 12.434 13.38" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M20.7725 16.852L21.6965 16.469" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M20.7725 19.148L21.6965 19.531" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M10 13C12.7614 13 15 10.7614 15 8C15 5.23858 12.7614 3 10 3C7.23858 3 5 5.23858 5 8C5 10.7614 7.23858 13 10 13Z" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M18 21C19.6569 21 21 19.6569 21 18C21 16.3431 19.6569 15 18 15C16.3431 15 15 16.3431 15 18C15 19.6569 16.3431 21 18 21Z" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <div class="booking-hover-popover__text booking-hover-popover__text--muted" id="bookingHoverPopoverSpecialist"></div>
+            </div>
+
+            <div class="booking-hover-popover__comment" id="bookingHoverPopoverComment" style="display:none;"></div>
+        </div>
     </div>
 
     <script src="{% static 'js/booking_time_utils.js' %}?v={% now 'U' %}"></script>
@@ -275,6 +339,199 @@
             // Обновление забронированных ячеек
             bookingsInRange = JSON.parse(document.getElementById('bookings_in_range').textContent);
             initializeCalendarGridState();
+
+            var bookingHoverPopoverEl = document.getElementById('bookingHoverPopover');
+            var bookingHoverPopoverCache = {};
+            var bookingHoverPopoverActiveId = null;
+            var bookingHoverPopoverAnchorRect = null;
+
+            window.invalidateBookingHoverPopoverCache = function (bookingId) {
+                if (bookingId !== undefined && bookingId !== null && String(bookingId).trim() !== '') {
+                    delete bookingHoverPopoverCache[String(bookingId)];
+                    return;
+                }
+                Object.keys(bookingHoverPopoverCache).forEach(function (k) {
+                    delete bookingHoverPopoverCache[k];
+                });
+            };
+
+            function isSimpleScenarioName(scenarioName) {
+                var name = (typeof scenarioName === 'string') ? scenarioName.trim() : '';
+                return name === 'Репетиционная точка' || name === 'Музыкальный класс';
+            }
+
+            function hideBookingHoverPopover() {
+                bookingHoverPopoverActiveId = null;
+                bookingHoverPopoverAnchorRect = null;
+                if (!bookingHoverPopoverEl) {
+                    return;
+                }
+                bookingHoverPopoverEl.style.display = 'none';
+            }
+
+            function positionBookingHoverPopover() {
+                if (!bookingHoverPopoverEl || bookingHoverPopoverEl.style.display === 'none') {
+                    return;
+                }
+
+                if (!bookingHoverPopoverAnchorRect) {
+                    return;
+                }
+
+                var offset = 0;
+                var overlap = 8;
+                var padding = 8;
+
+                var popoverWidth = bookingHoverPopoverEl.offsetWidth;
+                var popoverHeight = bookingHoverPopoverEl.offsetHeight;
+
+                var left = bookingHoverPopoverAnchorRect.right - overlap + offset;
+                var top = bookingHoverPopoverAnchorRect.top + (bookingHoverPopoverAnchorRect.height / 2) - (popoverHeight / 2);
+
+                if (left + popoverWidth + padding > window.innerWidth) {
+                    left = bookingHoverPopoverAnchorRect.left - popoverWidth + overlap - offset;
+                }
+
+                if (left < padding) {
+                    left = padding;
+                }
+
+                if (top < padding) {
+                    top = padding;
+                } else if (top + popoverHeight + padding > window.innerHeight) {
+                    top = Math.max(padding, window.innerHeight - popoverHeight - padding);
+                }
+
+                bookingHoverPopoverEl.style.left = left + 'px';
+                bookingHoverPopoverEl.style.top = top + 'px';
+            }
+
+            function formatDurationCompactFromHhmm(durationHhmm) {
+                if (!durationHhmm) {
+                    return '';
+                }
+                var parts = String(durationHhmm).split(':');
+                if (parts.length < 2) {
+                    return '';
+                }
+                var h = parseInt(parts[0], 10);
+                var m = parseInt(parts[1], 10);
+                if (!Number.isFinite(h) || !Number.isFinite(m) || (h === 0 && m === 0)) {
+                    return '';
+                }
+                if (h > 0 && m > 0) {
+                    return h + 'ч ' + m + 'мин';
+                }
+                if (h > 0) {
+                    return h + 'ч';
+                }
+                return m + 'мин';
+            }
+
+            function fillBookingHoverPopover(booking) {
+                if (!bookingHoverPopoverEl || !booking) {
+                    return;
+                }
+
+                var timeEl = document.getElementById('bookingHoverPopoverTime');
+                var durationEl = document.getElementById('bookingHoverPopoverDuration');
+                var clientNameEl = document.getElementById('bookingHoverPopoverClientName');
+                var directionEl = document.getElementById('bookingHoverPopoverDirection');
+                var specialistEl = document.getElementById('bookingHoverPopoverSpecialist');
+                var directionRow = document.getElementById('bookingHoverPopoverDirectionRow');
+                var specialistRow = document.getElementById('bookingHoverPopoverSpecialistRow');
+                var commentEl = document.getElementById('bookingHoverPopoverComment');
+
+                if (timeEl) {
+                    timeEl.textContent = (typeof booking.time === 'string') ? booking.time : '';
+                }
+                if (durationEl) {
+                    var compact = formatDurationCompactFromHhmm(booking.duration_hhmm);
+                    durationEl.textContent = compact || ((typeof booking.duration === 'string') ? booking.duration : '');
+                }
+
+                var isGroup = !!booking.client_group_id;
+                var iconSingle = document.getElementById('bookingHoverPopoverClientIconSingle');
+                var iconGroup = document.getElementById('bookingHoverPopoverClientIconGroup');
+                if (iconSingle && iconGroup) {
+                    iconSingle.style.display = isGroup ? 'none' : '';
+                    iconGroup.style.display = isGroup ? '' : 'none';
+                }
+                if (clientNameEl) {
+                    if (isGroup) {
+                        clientNameEl.textContent = booking.client_group_name || '';
+                    } else {
+                        clientNameEl.textContent = booking.client_name || '';
+                    }
+                }
+
+                var simpleScenario = isSimpleScenarioName(booking.reservation_type);
+                if (directionRow) {
+                    directionRow.style.display = simpleScenario ? 'none' : '';
+                }
+                if (specialistRow) {
+                    specialistRow.style.display = simpleScenario ? 'none' : '';
+                }
+
+                if (directionEl) {
+                    directionEl.textContent = (typeof booking.direction_name === 'string') ? booking.direction_name : '';
+                }
+                if (specialistEl) {
+                    specialistEl.textContent = (typeof booking.specialist_name === 'string') ? booking.specialist_name : '';
+                }
+
+                if (commentEl) {
+                    var comment = (typeof booking.comment === 'string') ? booking.comment.trim() : '';
+                    if (comment) {
+                        commentEl.textContent = comment;
+                        commentEl.style.display = '';
+                    } else {
+                        commentEl.textContent = '';
+                        commentEl.style.display = 'none';
+                    }
+                }
+
+                positionBookingHoverPopover();
+            }
+
+            async function showBookingHoverPopover(bookingId, anchorEl) {
+                if (!bookingHoverPopoverEl) {
+                    return;
+                }
+
+                bookingHoverPopoverActiveId = String(bookingId);
+                bookingHoverPopoverEl.style.display = 'block';
+                bookingHoverPopoverAnchorRect = anchorEl ? anchorEl.getBoundingClientRect() : null;
+                positionBookingHoverPopover();
+
+                var cacheKey = String(bookingId);
+                if (bookingHoverPopoverCache[cacheKey]) {
+                    fillBookingHoverPopover(bookingHoverPopoverCache[cacheKey]);
+                    return;
+                }
+
+                try {
+                    var response = await fetch(`/booking/get-booking-details/${bookingId}/`);
+                    if (!response.ok) {
+                        return;
+                    }
+                    var data = await response.json();
+                    if (!data || !data.success || !data.booking) {
+                        return;
+                    }
+
+                    bookingHoverPopoverCache[cacheKey] = data.booking;
+                    if (bookingHoverPopoverActiveId !== cacheKey) {
+                        return;
+                    }
+                    fillBookingHoverPopover(data.booking);
+                } catch (e) {
+                    return;
+                }
+            }
+
+            window.addEventListener('scroll', hideBookingHoverPopover, { passive: true });
+            window.addEventListener('resize', hideBookingHoverPopover, { passive: true });
 
             function getCurrentScenarioFromGlobals() {
                 if (!window.currentScenarioFilterId || !Array.isArray(window.SCENARIOS)) {
@@ -399,6 +656,7 @@
             }
 
             function updateBookedCells() {
+                hideBookingHoverPopover();
                 // Сначала очищаем все ячейки
                 roomCells.forEach(function (cell) {
                     cell.classList.remove('highlight-cell', 'booked');
@@ -488,6 +746,14 @@
                     window.currentBookingId = booking.id;
                     openInfoModal();
                 };
+
+                block.addEventListener('mouseenter', function (event) {
+                    event.stopPropagation();
+                    showBookingHoverPopover(booking.id, block);
+                });
+                block.addEventListener('mouseleave', function () {
+                    hideBookingHoverPopover();
+                });
 
                 return block;
             }

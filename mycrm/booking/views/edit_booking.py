@@ -82,11 +82,11 @@ def get_booking_details(request, booking_id):
 
         duration_str = ""
         if duration_hours > 0:
-            duration_str += f"{duration_hours} {'час' if duration_hours == 1 else 'часа' if 2 <= duration_hours <= 4 else 'часов'}"
+            duration_str += f"{duration_hours}ч"
         if duration_minutes > 0:
             if duration_hours > 0:
                 duration_str += " "
-            duration_str += f"{duration_minutes} {'минута' if duration_minutes == 1 else 'минуты' if 2 <= duration_minutes <= 4 else 'минут'}"
+            duration_str += f"{duration_minutes}мин"
 
         # Вычисляем стоимость аренды и услуг
         total_cost = booking.total_cost or Decimal("0")

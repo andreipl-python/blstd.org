@@ -1927,6 +1927,10 @@
                 throw new Error(msg);
             }
 
+            if (typeof window.invalidateBookingHoverPopoverCache === 'function') {
+                window.invalidateBookingHoverPopoverCache(bookingId);
+            }
+
             if (typeof window.reloadCalendarGridForCurrentState === 'function') {
                 await window.reloadCalendarGridForCurrentState();
             } else if (typeof window.refreshBookingsGrid === 'function') {
