@@ -154,6 +154,8 @@
     let paymentSelectCloseListenerAttached = false;
     // Остаток к оплате по текущей брони (число), используется как верхний лимит для суммарной оплаты
     let bookingRemainingAmount = null;
+    let bookingTotalCostAmount = null;
+    let bookingPaidAmount = null;
     let paymentSuccessFlow = false;
 
     // === Хелперы работы с суммой оплаты ===
@@ -308,6 +310,8 @@
 
         const formatted = total.toFixed(2);
         paymentTotalAmount.textContent = `${formatted} BYN`;
+
+        updatePaymentSummaryWithInputs();
     }
 
     // Возвращает суммарную текущую сумму по всем полям оплат (с опцией исключить одно поле)
@@ -353,11 +357,23 @@
     function updatePaymentSummaryFromBookingData(bookingData) {
         if (!bookingData) return;
 
+        if (paymentModalElement) {
+            const publicIdEl = paymentModalElement.querySelector('#publicID');
+            if (publicIdEl && (typeof bookingData.id === 'number' || typeof bookingData.id === 'string')) {
+                publicIdEl.textContent = bookingData.id;
+            }
+        }
+
+        const totalNumeric = parsePaymentNumericValue(bookingData.total_cost);
+        bookingTotalCostAmount = Number.isFinite(totalNumeric) ? Math.max(0, totalNumeric) : 0;
+        const paidNumeric = parsePaymentNumericValue(bookingData.paid_amount);
+        bookingPaidAmount = Number.isFinite(paidNumeric) ? Math.max(0, paidNumeric) : 0;
+
         if (paymentSummaryTotalElement) {
-            paymentSummaryTotalElement.textContent = formatAmountByn(bookingData.total_cost);
+            paymentSummaryTotalElement.textContent = formatAmountByn(bookingTotalCostAmount);
         }
         if (paymentSummaryPaidElement) {
-            paymentSummaryPaidElement.textContent = formatAmountByn(bookingData.paid_amount);
+            paymentSummaryPaidElement.textContent = formatAmountByn(bookingPaidAmount);
         }
         if (paymentSummaryRemainingElement) {
             paymentSummaryRemainingElement.textContent = formatAmountByn(bookingData.remaining_amount);
@@ -366,6 +382,24 @@
         // Сохраняем числовое значение остатка для дальнейшего ограничения сумм оплат
         const remainingNumeric = parsePaymentNumericValue(bookingData.remaining_amount);
         bookingRemainingAmount = Number.isFinite(remainingNumeric) ? Math.max(0, remainingNumeric) : 0;
+
+        updatePaymentSummaryWithInputs();
+    }
+
+    function updatePaymentSummaryWithInputs() {
+        if (!paymentSummaryPaidElement && !paymentSummaryRemainingElement) return;
+        if (!Number.isFinite(bookingTotalCostAmount) || !Number.isFinite(bookingPaidAmount)) return;
+
+        const inputTotal = getCurrentPaymentsTotal();
+        const paidWithInput = bookingPaidAmount + inputTotal;
+        const remainingWithInput = Math.max(0, bookingTotalCostAmount - paidWithInput);
+
+        if (paymentSummaryPaidElement) {
+            paymentSummaryPaidElement.textContent = formatAmountByn(paidWithInput);
+        }
+        if (paymentSummaryRemainingElement) {
+            paymentSummaryRemainingElement.textContent = formatAmountByn(remainingWithInput);
+        }
     }
 
     // Загружает детали брони по текущему bookingId и обновляет блок "Стоимость / Внесено / Остаток"
