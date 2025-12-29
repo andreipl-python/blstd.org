@@ -1106,6 +1106,8 @@
     }
 
     // --- Кэш занятых специалистов на дату ---
+    // Endpoint возвращает интервалы "busy" как от броней, так и от расписания
+    // (недоступность вне рабочих интервалов специалиста).
     var editBusySpecialistsCache = {
         date: null,
         specialists: [] // [{id, name, intervals: [{startMinutes, endMinutes}]}]
@@ -1151,6 +1153,8 @@
                     if (excludeBookingId && interval.booking_id && interval.booking_id === excludeBookingId) {
                         continue;
                     }
+                    // Интервалы могут означать как реальную занятость бронью,
+                    // так и "не работает" по расписанию (gaps).
                     if (startMinutes < interval.endMinutes && endMinutes > interval.startMinutes) {
                         return true;
                     }

@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import PROTECT, CASCADE
+from django.db.models import PROTECT, CASCADE, Q, F
 
 
 class Subscription(models.Model):
@@ -53,6 +53,190 @@ class ReservationStatusType(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SpecialistWeeklyInterval(models.Model):
+    """Еженедельные рабочие интервалы специалиста.
+
+    Если у специалиста задан хотя бы один weekly-интервал, то дни без интервалов
+    считаются выходными (если на конкретную дату нет override).
+    """
+
+    WEEKDAY_CHOICES = (
+        (0, "Понедельник"),
+        (1, "Вторник"),
+        (2, "Среда"),
+        (3, "Четверг"),
+        (4, "Пятница"),
+        (5, "Суббота"),
+        (6, "Воскресенье"),
+    )
+
+    specialist = models.ForeignKey(
+        "Specialist",
+        on_delete=CASCADE,
+        related_name="weekly_intervals",
+        verbose_name="Специалист",
+        help_text="Специалист, для которого задан интервал",
+    )
+    weekday = models.SmallIntegerField(
+        choices=WEEKDAY_CHOICES,
+        verbose_name="День недели",
+        help_text="0=Пн ... 6=Вс",
+    )
+    start_time = models.TimeField(
+        verbose_name="Начало",
+        help_text="Время начала интервала",
+    )
+    end_time = models.TimeField(
+        verbose_name="Конец",
+        help_text="Время окончания интервала",
+    )
+
+    class Meta:
+        db_table = "specialist_weekly_intervals"
+        verbose_name = "Интервал работы специалиста (неделя)"
+        verbose_name_plural = "Интервалы работы специалистов (неделя)"
+        ordering = ("specialist", "weekday", "start_time")
+        constraints = [
+            models.CheckConstraint(
+                name="weekly_interval_start_lt_end",
+                check=Q(start_time__lt=F("end_time")),
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        from django.core.exceptions import ValidationError
+
+        # Базовая валидация времени: начало строго меньше конца.
+        if self.start_time is not None and self.end_time is not None:
+            if self.start_time >= self.end_time:
+                raise ValidationError("Начало интервала должно быть меньше конца")
+
+        qs = SpecialistWeeklyInterval.objects.filter(
+            specialist_id=self.specialist_id,
+            weekday=self.weekday,
+        )
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+        # Запрещаем пересечение интервалов в рамках одного дня недели.
+        if (
+            self.start_time is not None
+            and self.end_time is not None
+            and qs.filter(
+                start_time__lt=self.end_time, end_time__gt=self.start_time
+            ).exists()
+        ):
+            raise ValidationError("Интервалы расписания пересекаются")
+
+    def __str__(self):
+        weekday_label = dict(self.WEEKDAY_CHOICES).get(self.weekday, str(self.weekday))
+        return f"{self.specialist} — {weekday_label}: {self.start_time}-{self.end_time}"
+
+
+class SpecialistScheduleOverride(models.Model):
+    """Исключение расписания на конкретную дату.
+
+    Может:
+    - пометить дату как выходной (`is_day_off=True`), или
+    - задать набор интервалов работы на дату (через `SpecialistOverrideInterval`).
+    """
+
+    specialist = models.ForeignKey(
+        "Specialist",
+        on_delete=CASCADE,
+        related_name="schedule_overrides",
+        verbose_name="Специалист",
+        help_text="Специалист, для которого задано исключение",
+    )
+    date = models.DateField(
+        verbose_name="Дата",
+        help_text="Дата, на которую применяется исключение",
+    )
+    is_day_off = models.BooleanField(
+        default=False,
+        verbose_name="Выходной",
+        help_text="Если включено — специалист не работает в эту дату",
+    )
+    note = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        verbose_name="Комментарий",
+        help_text="Причина/пояснение",
+    )
+
+    class Meta:
+        db_table = "specialist_schedule_overrides"
+        verbose_name = "Исключение расписания специалиста"
+        verbose_name_plural = "Исключения расписания специалистов"
+        ordering = ("specialist", "date")
+        unique_together = ("specialist", "date")
+
+    def __str__(self):
+        return f"{self.specialist} — {self.date}"
+
+
+class SpecialistOverrideInterval(models.Model):
+    """Интервал работы в рамках override на конкретную дату."""
+
+    override = models.ForeignKey(
+        "SpecialistScheduleOverride",
+        on_delete=CASCADE,
+        related_name="intervals",
+        verbose_name="Исключение",
+        help_text="Исключение расписания, к которому относится интервал",
+    )
+    start_time = models.TimeField(
+        verbose_name="Начало",
+        help_text="Время начала интервала",
+    )
+    end_time = models.TimeField(
+        verbose_name="Конец",
+        help_text="Время окончания интервала",
+    )
+
+    class Meta:
+        db_table = "specialist_override_intervals"
+        verbose_name = "Интервал работы специалиста (исключение)"
+        verbose_name_plural = "Интервалы работы специалистов (исключения)"
+        ordering = ("override", "start_time")
+        constraints = [
+            models.CheckConstraint(
+                name="override_interval_start_lt_end",
+                check=Q(start_time__lt=F("end_time")),
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        from django.core.exceptions import ValidationError
+
+        # Если override помечен как выходной — интервалы задавать нельзя.
+        if getattr(self.override, "is_day_off", False):
+            raise ValidationError("Нельзя задавать интервалы, если выбран выходной")
+
+        # Базовая валидация времени: начало строго меньше конца.
+        if self.start_time is not None and self.end_time is not None:
+            if self.start_time >= self.end_time:
+                raise ValidationError("Начало интервала должно быть меньше конца")
+
+        qs = SpecialistOverrideInterval.objects.filter(override_id=self.override_id)
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+        # Запрещаем пересечение интервалов внутри одного override.
+        if (
+            self.start_time is not None
+            and self.end_time is not None
+            and qs.filter(
+                start_time__lt=self.end_time, end_time__gt=self.start_time
+            ).exists()
+        ):
+            raise ValidationError("Интервалы исключения пересекаются")
+
+    def __str__(self):
+        return f"{self.override} {self.start_time}-{self.end_time}"
 
 
 class Reservation(models.Model):

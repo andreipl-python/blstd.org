@@ -232,6 +232,8 @@
                     if (excludeBookingId && interval.booking_id && interval.booking_id === excludeBookingId) {
                         continue;
                     }
+                    // Интервалы "busy" могут включать как реальную занятость бронями,
+                    // так и недоступность вне расписания ("не работает").
                     // Проверяем пересечение интервалов
                     if (startMinutes < interval.endMinutes && endMinutes > interval.startMinutes) {
                         return true;

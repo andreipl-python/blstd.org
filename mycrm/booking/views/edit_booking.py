@@ -9,7 +9,11 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
-from .create_booking import check_room_availability, check_specialist_availability
+from .create_booking import (
+    check_room_availability,
+    check_specialist_availability,
+    check_specialist_schedule,
+)
 from ..models import (
     Reservation,
     Room,
@@ -592,6 +596,20 @@ def get_available_specialists(request, booking_id):
         )
 
         specialists = specialists.exclude(id__in=busy_specialists)
+
+        # Исключаем специалистов, которые не работают по расписанию в это время
+        # (weekly интервалы + overrides на конкретную дату). Любая ошибка проверки
+        # трактуется как недоступность специалиста.
+        specialists_by_schedule = []
+        for s in specialists:
+            try:
+                check_specialist_schedule(s, booking.datetimestart, booking.datetimeend)
+            except Exception:
+                # Если не попадает в рабочее время / выходной / и т.п.
+                continue
+            specialists_by_schedule.append(s)
+
+        specialists = specialists_by_schedule
 
         # Формируем список специалистов
         specialists_data = []

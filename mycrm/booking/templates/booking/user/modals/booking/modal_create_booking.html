@@ -799,6 +799,8 @@
                 }
                 
                 // --- Кэш занятых специалистов на дату ---
+                // Важно: endpoint возвращает интервалы "busy" как от броней, так и от
+                // расписания (недоступность вне рабочих интервалов).
                 var busySpecialistsCache = {
                     date: null,
                     specialists: [] // [{id, name, intervals: [{startMinutes, endMinutes}]}]
@@ -847,6 +849,8 @@
                             var intervals = busySpecs[i].intervals || [];
                             for (var j = 0; j < intervals.length; j++) {
                                 var interval = intervals[j];
+                                // Интервалы могут означать как реальную занятость бронью,
+                                // так и "не работает" по расписанию (gaps).
                                 // Пересечение: (start1 < end2) && (end1 > start2)
                                 if (startMinutes < interval.endMinutes && endMinutes > interval.startMinutes) {
                                     return true;

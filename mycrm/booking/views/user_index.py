@@ -12,6 +12,8 @@ from booking.models import (
     Reservation,
     Scenario,
     Specialist,
+    SpecialistWeeklyInterval,
+    SpecialistScheduleOverride,
     Direction,
     TariffUnit,
     PaymentType,
@@ -630,14 +632,123 @@ def get_busy_specialists_for_date(request):
         Reservation.objects.filter(
             Q(datetimestart__lte=end_dt) & Q(datetimeend__gte=start_dt),
             specialist__isnull=False,
+            specialist__active=True,
         )
         .exclude(status_id__in=[4, 1082])
         .select_related("specialist")
     )
 
+    def _time_to_minutes(t):
+        # Минуты от полуночи для компактной передачи на фронт.
+        return t.hour * 60 + t.minute
+
+    def _merge_work_intervals(work_intervals_minutes):
+        # Объединяем пересекающиеся/прилегающие интервалы рабочего времени.
+        merged = []
+        for s, e in sorted(work_intervals_minutes, key=lambda x: x[0]):
+            if s < 0:
+                s = 0
+            if e > 24 * 60:
+                e = 24 * 60
+            if s >= e:
+                continue
+            if not merged or s > merged[-1][1]:
+                merged.append([s, e])
+            else:
+                merged[-1][1] = max(merged[-1][1], e)
+        return merged
+
+    def _get_unavailability_intervals_for_specialist(specialist_id: int):
+        # Возвращаем интервалы НЕДОСТУПНОСТИ (gaps), то есть всё, что вне рабочего
+        # времени специалиста на эту дату. Эти интервалы отдаем фронту как "busy",
+        # чтобы повторно использовать существующую проверку isSpecialistBusy.
+        override = overrides_map.get(specialist_id)
+        if override is not None:
+            if override.is_day_off:
+                return [(0, 24 * 60)]
+            work = [
+                (_time_to_minutes(i.start_time), _time_to_minutes(i.end_time))
+                for i in getattr(override, "intervals", []).all()
+            ]
+        else:
+            if specialist_id not in specialists_with_any_weekly:
+                # Нет weekly-расписания вообще — значит не ограничиваем доступность.
+                return []
+            work = weekly_work_map.get(specialist_id, [])
+
+        work_merged = _merge_work_intervals(work)
+        if not work_merged:
+            # Есть расписание (weekly/override), но на дату нет рабочих интервалов.
+            return [(0, 24 * 60)]
+
+        gaps = []
+        prev_end = 0
+        for s, e in work_merged:
+            if prev_end < s:
+                gaps.append((prev_end, s))
+            prev_end = max(prev_end, e)
+        if prev_end < 24 * 60:
+            gaps.append((prev_end, 24 * 60))
+        return gaps
+
+    overrides_qs = SpecialistScheduleOverride.objects.filter(
+        date=target_date,
+        specialist__active=True,
+    ).prefetch_related("intervals")
+    overrides_map = {o.specialist_id: o for o in overrides_qs}
+
+    specialists_with_any_weekly = set(
+        SpecialistWeeklyInterval.objects.filter(specialist__active=True)
+        .values_list("specialist_id", flat=True)
+        .distinct()
+    )
+    weekday = int(target_date.weekday())
+    weekly_work_map = {}
+    for spec_id, start_t, end_t in SpecialistWeeklyInterval.objects.filter(
+        weekday=weekday,
+        specialist_id__in=specialists_with_any_weekly,
+    ).values_list("specialist_id", "start_time", "end_time"):
+        weekly_work_map.setdefault(int(spec_id), []).append(
+            (_time_to_minutes(start_t), _time_to_minutes(end_t))
+        )
+
+    relevant_specialist_ids = (
+        set(bookings_qs.values_list("specialist_id", flat=True))
+        | set(overrides_map.keys())
+        | set(specialists_with_any_weekly)
+    )
+
+    specialist_names = {
+        s.id: s.name
+        for s in Specialist.objects.filter(
+            id__in=relevant_specialist_ids,
+            active=True,
+        ).only("id", "name")
+    }
+
     # Собираем данные о занятости специалистов
     busy_specialists = {}
+
+    for spec_id in relevant_specialist_ids:
+        # Сначала добавляем "занятость" из расписания (вне рабочего времени).
+        unavail = _get_unavailability_intervals_for_specialist(int(spec_id))
+        if not unavail:
+            continue
+
+        busy_specialists[int(spec_id)] = {
+            "id": int(spec_id),
+            "name": specialist_names.get(int(spec_id), ""),
+            "intervals": [
+                {
+                    "startMinutes": s,
+                    "endMinutes": e,
+                }
+                for s, e in unavail
+            ],
+        }
     for booking in bookings_qs:
+        # Затем дополняем фактическими бронями, чтобы фронт видел обе причины
+        # недоступности: "не работает" и "занят бронью".
         spec_id = booking.specialist_id
         if spec_id not in busy_specialists:
             busy_specialists[spec_id] = {

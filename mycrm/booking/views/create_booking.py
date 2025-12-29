@@ -12,11 +12,144 @@ from ..models import (
     Room,
     Service,
     Specialist,
+    SpecialistWeeklyInterval,
+    SpecialistScheduleOverride,
     ReservationStatusType,
     ClientGroup,
     Scenario,
     Direction,
 )
+
+
+def _time_to_minutes(t):
+    """Конвертирует `datetime.time` в минуты от полуночи (0..1439)."""
+    return t.hour * 60 + t.minute
+
+
+def get_specialist_work_intervals_for_date(specialist: Specialist, target_date):
+    """Возвращает рабочие интервалы специалиста на конкретную дату.
+
+    Приоритет:
+    - Если на дату есть override — используем его (или считаем день выходным).
+    - Иначе используем weekly-интервалы. Если weekly-интервалов в принципе нет —
+      расписание не ограничивает (поведение как раньше).
+
+    Формат ответа:
+    - restricted: расписание ограничивает/не ограничивает доступность
+    - is_day_off: является ли дата выходным для специалиста
+    - intervals: список пар (start_time, end_time)
+    """
+    override = (
+        SpecialistScheduleOverride.objects.filter(
+            specialist_id=specialist.id,
+            date=target_date,
+        )
+        .prefetch_related("intervals")
+        .first()
+    )
+    if override is not None:
+        # Override может пометить день выходным, либо задать конкретные интервалы.
+        if override.is_day_off:
+            return {
+                "restricted": True,
+                "is_day_off": True,
+                "intervals": [],
+            }
+        intervals = [(i.start_time, i.end_time) for i in override.intervals.all()]
+        return {
+            "restricted": True,
+            "is_day_off": False,
+            "intervals": intervals,
+        }
+
+    has_any_weekly = SpecialistWeeklyInterval.objects.filter(
+        specialist_id=specialist.id
+    ).exists()
+    if not has_any_weekly:
+        # Если у специалиста нет weekly-расписания — ничего не ограничиваем.
+        return {
+            "restricted": False,
+            "is_day_off": False,
+            "intervals": [],
+        }
+
+    weekday = int(target_date.weekday())
+    # Если weekly-расписание есть, то отсутствие интервалов в конкретный weekday
+    # трактуем как выходной.
+    intervals = list(
+        SpecialistWeeklyInterval.objects.filter(
+            specialist_id=specialist.id,
+            weekday=weekday,
+        ).values_list("start_time", "end_time")
+    )
+    return {
+        "restricted": True,
+        "is_day_off": len(intervals) == 0,
+        "intervals": intervals,
+    }
+
+
+def check_specialist_schedule(
+    specialist: Specialist,
+    start_datetime: datetime,
+    end_datetime: datetime,
+) -> bool:
+    """Проверяет, работает ли специалист по расписанию в указанный интервал.
+
+    - Бронь должна быть в пределах одних суток.
+    - Интервал брони должен целиком попадать в один из рабочих интервалов,
+      при этом рабочие интервалы предварительно объединяются (merge), чтобы
+      корректно учитывать прилегающие/пересекающиеся интервалы.
+    """
+    # Приводим naive datetime к aware, чтобы сравнения были корректными.
+    if timezone.is_naive(start_datetime):
+        start_datetime = timezone.make_aware(
+            start_datetime, timezone.get_current_timezone()
+        )
+    if timezone.is_naive(end_datetime):
+        end_datetime = timezone.make_aware(
+            end_datetime, timezone.get_current_timezone()
+        )
+
+    # Дальше считаем всё в локальном времени.
+    local_start = timezone.localtime(start_datetime)
+    local_end = timezone.localtime(end_datetime)
+    if local_start.date() != local_end.date():
+        raise ValidationError("Бронь не может пересекать сутки")
+
+    schedule = get_specialist_work_intervals_for_date(specialist, local_start.date())
+    if not schedule.get("restricted"):
+        return True
+    if schedule.get("is_day_off"):
+        raise ValidationError("У специалиста выходной в выбранную дату")
+
+    intervals = schedule.get("intervals") or []
+    if not intervals:
+        raise ValidationError("У специалиста выходной в выбранную дату")
+
+    start_minutes = _time_to_minutes(local_start.time())
+    end_minutes = _time_to_minutes(local_end.time())
+
+    work_intervals = []
+    for start_t, end_t in intervals:
+        if start_t is None or end_t is None:
+            continue
+        work_intervals.append((_time_to_minutes(start_t), _time_to_minutes(end_t)))
+
+    # Объединяем интервалы, чтобы проверять попадание в “union” рабочего времени.
+    work_intervals.sort(key=lambda x: x[0])
+    merged = []
+    for s, e in work_intervals:
+        if not merged or s > merged[-1][1]:
+            merged.append([s, e])
+        else:
+            merged[-1][1] = max(merged[-1][1], e)
+
+    for s, e in merged:
+        if start_minutes >= s and end_minutes <= e:
+            return True
+
+    raise ValidationError("Специалист не работает в это время")
 
 
 def check_room_availability(
@@ -83,6 +216,10 @@ def check_specialist_availability(
     exclude_reservation_id: int | None = None,
 ) -> bool:
     """Проверка доступности специалиста"""
+    # Сначала проверяем фиксированное расписание (weekly/override), и только потом —
+    # пересечения с существующими бронями.
+    check_specialist_schedule(specialist, start_datetime, end_datetime)
+
     existing_bookings = Reservation.objects.filter(
         specialist=specialist,
     ).exclude(status_id__in=[4, 1082])
