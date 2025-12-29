@@ -250,7 +250,7 @@ def user_index_view(request):
 
     services_json = serialize("json", services, use_natural_foreign_keys=True)
 
-    specialists = Specialist.objects.prefetch_related("scenario", "directions").all()
+    specialists = Specialist.objects.prefetch_related("directions").all()
     specialists_json = serialize("json", specialists, use_natural_primary_keys=True)
 
     directions = Direction.objects.filter(active=True).order_by("name")
@@ -627,7 +627,7 @@ def get_busy_specialists_for_date(request):
     start_dt = timezone.make_aware(start_dt)
     end_dt = timezone.make_aware(end_dt)
 
-    # Все брони на дату с назначенным специалистом (исключаем отменённые, status_id=4)
+    # Все брони на дату с назначенным специалистом (исключаем отменённые)
     bookings_qs = (
         Reservation.objects.filter(
             Q(datetimestart__lte=end_dt) & Q(datetimeend__gte=start_dt),
@@ -637,6 +637,28 @@ def get_busy_specialists_for_date(request):
         .exclude(status_id__in=[4, 1082])
         .select_related("specialist")
     )
+
+    # Специалист может быть занят в это время как клиент (например, берёт урок у другого).
+    # Для фронта это тоже считается "busy".
+    client_to_specialist_ids = {}
+    for spec_id, client_id in Specialist.objects.filter(
+        active=True,
+        client_id__isnull=False,
+    ).values_list("id", "client_id"):
+        client_to_specialist_ids.setdefault(int(client_id), []).append(int(spec_id))
+
+    client_bookings_qs = Reservation.objects.none()
+    client_busy_specialist_ids = set()
+    if client_to_specialist_ids:
+        client_bookings_qs = Reservation.objects.filter(
+            Q(datetimestart__lte=end_dt) & Q(datetimeend__gte=start_dt),
+            client_id__in=list(client_to_specialist_ids.keys()),
+        ).exclude(status_id__in=[4, 1082])
+
+        busy_client_ids = set(client_bookings_qs.values_list("client_id", flat=True))
+        for cid in busy_client_ids:
+            for sid in client_to_specialist_ids.get(int(cid), []):
+                client_busy_specialist_ids.add(int(sid))
 
     def _time_to_minutes(t):
         # Минуты от полуночи для компактной передачи на фронт.
@@ -716,6 +738,7 @@ def get_busy_specialists_for_date(request):
         set(bookings_qs.values_list("specialist_id", flat=True))
         | set(overrides_map.keys())
         | set(specialists_with_any_weekly)
+        | set(client_busy_specialist_ids)
     )
 
     specialist_names = {
@@ -770,6 +793,31 @@ def get_busy_specialists_for_date(request):
                 "endMinutes": end_minutes,
             }
         )
+
+    # Дополняем занятость специалистов как клиентов.
+    for booking in client_bookings_qs:
+        client_id = booking.client_id
+        for spec_id in client_to_specialist_ids.get(int(client_id), []):
+            spec_id = int(spec_id)
+            if spec_id not in busy_specialists:
+                busy_specialists[spec_id] = {
+                    "id": spec_id,
+                    "name": specialist_names.get(spec_id, ""),
+                    "intervals": [],
+                }
+
+            local_start = timezone.localtime(booking.datetimestart)
+            local_end = timezone.localtime(booking.datetimeend)
+            start_minutes = local_start.hour * 60 + local_start.minute
+            end_minutes = local_end.hour * 60 + local_end.minute
+
+            busy_specialists[spec_id]["intervals"].append(
+                {
+                    "booking_id": booking.id,
+                    "startMinutes": start_minutes,
+                    "endMinutes": end_minutes,
+                }
+            )
 
     return JsonResponse(
         {

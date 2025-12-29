@@ -364,18 +364,8 @@ def edit_booking_view(request, booking_id):
                     {"success": False, "error": "Выбранный специалист неактивен"},
                     status=400,
                 )
-            # Проверяем привязку к сценарию только при СМЕНЕ специалиста
-            # Если специалист не меняется — он по определению валиден для этой брони
-            is_specialist_changed = booking.specialist_id != int(specialist_id)
-            if is_specialist_changed:
-                if not specialist.scenario.filter(id=booking.scenario_id).exists():
-                    return JsonResponse(
-                        {
-                            "success": False,
-                            "error": "Специалист не может работать с данным типом брони",
-                        },
-                        status=400,
-                    )
+            # Раньше здесь была проверка привязки специалиста к сценариям.
+            # Поле `Specialist.scenario` удалено как избыточное.
 
         total_cost = None
         if total_cost_raw is not None and str(total_cost_raw).strip() != "":
@@ -578,10 +568,8 @@ def get_available_specialists(request, booking_id):
         # Получаем бронь
         booking = get_object_or_404(Reservation, id=booking_id)
 
-        # Получаем всех активных специалистов, которые могут работать с данным сценарием бронирования
-        specialists = Specialist.objects.filter(
-            active=True, scenario__id=booking.scenario_id
-        )
+        # Получаем всех активных специалистов
+        specialists = Specialist.objects.filter(active=True)
 
         # Исключаем специалистов, у которых есть пересекающиеся брони
         busy_specialists = (
@@ -596,6 +584,26 @@ def get_available_specialists(request, booking_id):
         )
 
         specialists = specialists.exclude(id__in=busy_specialists)
+
+        # Дополнительно исключаем специалистов, которые заняты как клиенты
+        # (например, сами записаны на урок у другого преподавателя).
+        specialist_client_ids = list(
+            specialists.exclude(client_id__isnull=True).values_list(
+                "client_id", flat=True
+            )
+        )
+        if specialist_client_ids:
+            busy_clients = (
+                Reservation.objects.filter(
+                    client_id__in=specialist_client_ids,
+                    datetimestart__lt=booking.datetimeend,
+                    datetimeend__gt=booking.datetimestart,
+                )
+                .exclude(id=booking_id)
+                .exclude(status_id__in=[4, 1082])
+                .values_list("client_id", flat=True)
+            )
+            specialists = specialists.exclude(client_id__in=busy_clients)
 
         # Исключаем специалистов, которые не работают по расписанию в это время
         # (weekly интервалы + overrides на конкретную дату). Любая ошибка проверки

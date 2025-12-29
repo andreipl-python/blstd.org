@@ -220,6 +220,21 @@ def check_specialist_availability(
     # пересечения с существующими бронями.
     check_specialist_schedule(specialist, start_datetime, end_datetime)
 
+    # Специалист может быть занят не только как преподаватель, но и как клиент
+    # (например, если сам берёт урок у другого специалиста).
+    if specialist.client_id:
+        client_bookings = Reservation.objects.filter(
+            client_id=specialist.client_id,
+        ).exclude(status_id__in=[4, 1082])
+        if exclude_reservation_id is not None:
+            client_bookings = client_bookings.exclude(id=exclude_reservation_id)
+        if client_bookings.filter(
+            datetimestart__lt=end_datetime, datetimeend__gt=start_datetime
+        ).exists():
+            raise ValidationError(
+                "Специалист занят в это время (он записан как клиент)"
+            )
+
     existing_bookings = Reservation.objects.filter(
         specialist=specialist,
     ).exclude(status_id__in=[4, 1082])

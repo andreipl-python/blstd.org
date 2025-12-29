@@ -553,12 +553,6 @@ class Specialist(models.Model):
         verbose_name="ID клиента",
         null=True,
     )
-    scenario = models.ManyToManyField(
-        "Scenario",
-        related_name="scenarios",
-        help_text="Типы бронирования доступные для специалиста",
-        verbose_name="Типы бронирования",
-    )
     directions = models.ManyToManyField(
         "Direction",
         related_name="specialists",
