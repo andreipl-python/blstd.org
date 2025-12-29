@@ -154,6 +154,7 @@
     let paymentSelectCloseListenerAttached = false;
     // Остаток к оплате по текущей брони (число), используется как верхний лимит для суммарной оплаты
     let bookingRemainingAmount = null;
+    let paymentSuccessFlow = false;
 
     // === Хелперы работы с суммой оплаты ===
     // Очищает ввод до корректного десятичного формата с двумя знаками после разделителя
@@ -466,8 +467,8 @@
             const result = await response.json();
 
             if (result.success) {
-                // Закрываем модалку оплаты без подтверждения и переходим в инфо-модалку
                 resetSubmitButtonLabel();
+                paymentSuccessFlow = true;
                 paymentModalForceClose = true;
                 hidePaymentModal();
             } else {
@@ -843,12 +844,35 @@
         });
 
         paymentModalElement.addEventListener('hidden.bs.modal', function () {
-            if (typeof openInfoModal === 'function') {
-                openInfoModal();
-            } else {
-                const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
+            const reopenInfoModal = function () {
+                if (typeof openInfoModal === 'function') {
+                    openInfoModal();
+                    return;
+                }
+                const infoEl = document.getElementById('infoBookingModal');
+                if (!infoEl) return;
+                const infoModal = new bootstrap.Modal(infoEl);
                 infoModal.show();
+            };
+
+            if (!paymentSuccessFlow) {
+                reopenInfoModal();
+                return;
             }
+
+            paymentSuccessFlow = false;
+            const successEl = document.getElementById('bookingAddedSuccessModal');
+            if (!successEl || typeof window.openBookingSuccessModal !== 'function') {
+                reopenInfoModal();
+                return;
+            }
+            const onSuccessClosed = function () {
+                successEl.removeEventListener('hidden.bs.modal', onSuccessClosed);
+                reopenInfoModal();
+            };
+            successEl.addEventListener('hidden.bs.modal', onSuccessClosed);
+
+            window.openBookingSuccessModal('Оплата успешно внесена');
         });
 
         paymentModalElement.addEventListener('shown.bs.modal', function () {
