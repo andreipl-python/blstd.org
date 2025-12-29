@@ -1050,6 +1050,21 @@
                     var hasStartWarning = startTimeWarning && startTimeWarning.style.display !== 'none';
                     var hasEndWarning = endTimeWarning && endTimeWarning.style.display !== 'none';
                     var hasTeacherWarning = teacherWarning && teacherWarning.style.display !== 'none';
+
+                    var startTimeSelectForWarning = document.getElementById('start-time');
+                    if (startTimeSelectForWarning) {
+                        startTimeSelectForWarning.classList.toggle('has-warning', !!hasStartWarning);
+                    }
+
+                    var endTimeSelectForWarning = document.getElementById('end-time');
+                    if (endTimeSelectForWarning) {
+                        endTimeSelectForWarning.classList.toggle('has-warning', !!hasEndWarning);
+                    }
+
+                    var teacherSelectForWarning = document.getElementById('teacher');
+                    if (teacherSelectForWarning) {
+                        teacherSelectForWarning.classList.toggle('has-warning', !isSimplifiedScenario && !!hasTeacherWarning);
+                    }
                     
                     // Проверяем преподавателя, направление и клиента/группу
                     var teacherSelect = document.getElementById('teacher');
@@ -1077,6 +1092,10 @@
                         checklist.push('Выберите время окончания');
                     } else if (hasEndWarning) {
                         checklist.push('Выберите доступное время окончания');
+                    }
+
+                    if (currentSelectedPeriods === null) {
+                        checklist.push('Выберите длительность');
                     }
                     
                     // Преподаватель и направление требуются только для Музыкальной школы
@@ -2240,7 +2259,15 @@
             if (visibleTeacherCount === 0) {
                 // Нет доступных специалистов
                 teacherSelect.classList.add('disabled');
-                if (teacherSelectedSpan) teacherSelectedSpan.textContent = 'Нет доступных специалистов';
+                teacherSelect.classList.remove('open');
+                teacherSelect.classList.remove('has-selection');
+                teacherLis.forEach(function (li) {
+                    li.classList.remove('selected');
+                });
+                selectedTeacherId = '';
+                if (teacherSelectedSpan) teacherSelectedSpan.textContent = 'Нет доступных преподавателей';
+                syncClearableSelectState(teacherSelect);
+                if (teacherWarning) teacherWarning.style.display = 'none';
             } else {
                 teacherSelect.classList.remove('disabled');
                 if (!selectedTeacherId && teacherSelectedSpan) {

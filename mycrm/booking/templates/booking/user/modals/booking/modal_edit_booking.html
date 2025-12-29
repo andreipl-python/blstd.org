@@ -709,12 +709,24 @@
             var hasStartWarning = startWarn && startWarn.style.display !== 'none';
             var hasEndWarning = endWarn && endWarn.style.display !== 'none';
             var hasTeacherWarning = teacherWarning && teacherWarning.style.display !== 'none';
+
+            if (startTimeSelect) {
+                startTimeSelect.classList.toggle('has-warning', !!hasStartWarning);
+            }
+            if (endTimeSelect) {
+                endTimeSelect.classList.toggle('has-warning', !!hasEndWarning);
+            }
+            var teacherSelectForWarning = document.getElementById('edit-teacher');
+            if (teacherSelectForWarning) {
+                teacherSelectForWarning.classList.toggle('has-warning', !isSimplifiedScenario && !!hasTeacherWarning);
+            }
             
             // Проверяем преподавателя и направление (только для Музыкальной школы)
             var teacherSelect = document.getElementById('edit-teacher');
             var directionSelect = document.getElementById('edit-direction');
             var teacherSelectedLi = teacherSelect ? teacherSelect.querySelector('ul.options li.selected') : null;
             var directionSelectedLi = directionSelect ? directionSelect.querySelector('ul.options li.selected') : null;
+            
             var hasTeacher = teacherSelectedLi !== null;
             var hasDirection = directionSelectedLi !== null;
             
@@ -729,6 +741,10 @@
                 checklist.push('Выберите время окончания');
             } else if (hasEndWarning) {
                 checklist.push('Выберите доступное время окончания');
+            }
+            
+            if (currentSelectedPeriods === null) {
+                checklist.push('Выберите длительность');
             }
             
             // Преподаватель и направление обязательны только для Музыкальной школы
@@ -1256,20 +1272,47 @@
             li.style.display = vis ? '' : 'none';
             if (vis) { visibleTeacherCount++; lastVisibleTeacherLi = li; }
         });
-        // Авто-подстановка единственного специалиста
-        if (visibleTeacherCount === 1 && !selectedTeacherId && lastVisibleTeacherLi) {
-            lastVisibleTeacherLi.classList.add('selected');
-            if (teacherSpan) teacherSpan.textContent = lastVisibleTeacherLi.textContent;
-            selectedTeacherId = lastVisibleTeacherLi.getAttribute('data-value');
-            var sDirsRaw = lastVisibleTeacherLi.getAttribute('data-directions') || '';
-            var sDirs = sDirsRaw ? sDirsRaw.split(',').map(function(v) { return v.trim(); }).filter(Boolean) : [];
-            if (sDirs.length === 1 && !selectedDirectionId) {
-                directionLis.forEach(function(li) {
-                    if (li.getAttribute('data-value') === sDirs[0]) {
-                        li.classList.add('selected');
-                        if (dirSpan) dirSpan.textContent = li.textContent;
-                    }
-                });
+
+        if (selectedTeacherId) {
+            var selectedTeacherLi2 = teacherSelect.querySelector('ul.options li.selected');
+            if (selectedTeacherLi2 && selectedTeacherLi2.style.display === 'none') {
+                teacherLis.forEach(function(li) { li.classList.remove('selected'); });
+                selectedTeacherId = '';
+                if (teacherSpan) teacherSpan.textContent = 'Выберите преподавателя';
+                teacherSelect.classList.remove('has-selection');
+            }
+        }
+
+        if (visibleTeacherCount === 0) {
+            teacherSelect.classList.add('disabled');
+            teacherSelect.classList.remove('open');
+            teacherSelect.classList.remove('has-selection');
+            teacherLis.forEach(function(li) { li.classList.remove('selected'); });
+            selectedTeacherId = '';
+            if (teacherSpan) teacherSpan.textContent = 'Нет доступных преподавателей';
+            if (teacherWarning) teacherWarning.style.display = 'none';
+        } else {
+            teacherSelect.classList.remove('disabled');
+            if (!selectedTeacherId && teacherSpan) {
+                teacherSpan.textContent = 'Выберите преподавателя';
+            }
+
+            // Авто-подстановка единственного специалиста
+            if (visibleTeacherCount === 1 && !selectedTeacherId && lastVisibleTeacherLi) {
+                lastVisibleTeacherLi.classList.add('selected');
+                if (teacherSpan) teacherSpan.textContent = lastVisibleTeacherLi.textContent;
+                teacherSelect.classList.add('has-selection');
+                selectedTeacherId = lastVisibleTeacherLi.getAttribute('data-value');
+                var sDirsRaw = lastVisibleTeacherLi.getAttribute('data-directions') || '';
+                var sDirs = sDirsRaw ? sDirsRaw.split(',').map(function(v) { return v.trim(); }).filter(Boolean) : [];
+                if (sDirs.length === 1 && !selectedDirectionId) {
+                    directionLis.forEach(function(li) {
+                        if (li.getAttribute('data-value') === sDirs[0]) {
+                            li.classList.add('selected');
+                            if (dirSpan) dirSpan.textContent = li.textContent;
+                        }
+                    });
+                }
             }
         }
 

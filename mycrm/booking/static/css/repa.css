@@ -791,13 +791,21 @@
 
   /* Стиль для disabled селектов */
   #duration.disabled,
-  #end-time.disabled {
+  #end-time.disabled,
+  #teacher.disabled,
+  #edit-teacher.disabled,
+  #field-direction.disabled,
+  #edit-direction.disabled {
     opacity: 0.6;
     pointer-events: none;
   }
 
   #duration.disabled .selected,
-  #end-time.disabled .selected {
+  #end-time.disabled .selected,
+  #teacher.disabled .selected,
+  #edit-teacher.disabled .selected,
+  #field-direction.disabled .selected,
+  #edit-direction.disabled .selected {
     color: #818EA2;
   }
 
@@ -811,9 +819,13 @@
     right: 80px;
     transform: translateY(-50%);
     font-size: 16px;
-    color: #7A52FF;
+    color: #E53935;
     cursor: help;
     z-index: 5;
+  }
+
+  .custom-select.has-warning {
+    border-color: #E53935;
   }
 
   .start-time-warning-icon .warning-tooltip,
