@@ -186,6 +186,7 @@
                                         <li class="date-range-picker__presets-item" data-preset="yesterday">Вчера</li>
                                         <li class="date-range-picker__presets-item" data-preset="today_yesterday">Сегодня и вчера</li>
                                         <li class="date-range-picker__presets-item" data-preset="last7">Последние 7 дн.</li>
+                                        <li class="date-range-picker__presets-item" data-preset="current14">Текущие 14 дней</li>
                                         <li class="date-range-picker__presets-item" data-preset="last14">Последние 14 дн.</li>
                                         <li class="date-range-picker__presets-item" data-preset="last30">Последние 30 дн.</li>
                                         <li class="date-range-picker__presets-item" data-preset="this_week">Эта неделя</li>
@@ -741,6 +742,15 @@
                 // Чтобы визуальный отступ от внешнего края был 3px, left = 3 - borderLeft
                 block.style.left = (3 - borderLeft) + 'px';
                 block.style.width = blockWidth + 'px';
+
+                if (booking && Number(booking.status_id) === 1079) {
+                    block.classList.add('booking-block--status-1079');
+                }
+
+                if (booking && typeof booking.comment === 'string' && booking.comment.trim()) {
+                    block.classList.add('booking-block--has-comment');
+                }
+
                 block.onclick = function (event) {
                     event.stopPropagation();
                     window.currentBookingId = booking.id;
@@ -1124,6 +1134,9 @@
                     } else if (preset === 'last7') {
                         start = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
                         end = new Date(today.getTime());
+                    } else if (preset === 'current14') {
+                        start = new Date(today.getTime());
+                        end = new Date(today.getTime() + 13 * 24 * 60 * 60 * 1000);
                     } else if (preset === 'last14') {
                         start = new Date(today.getTime() - 13 * 24 * 60 * 60 * 1000);
                         end = new Date(today.getTime());
@@ -1356,6 +1369,9 @@
                     } else if (preset === 'last7') {
                         start = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
                         end = new Date(today.getTime());
+                    } else if (preset === 'current14') {
+                        start = new Date(today.getTime());
+                        end = new Date(today.getTime() + 13 * 24 * 60 * 60 * 1000);
                     } else if (preset === 'last14') {
                         start = new Date(today.getTime() - 13 * 24 * 60 * 60 * 1000);
                         end = new Date(today.getTime());

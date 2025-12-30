@@ -622,6 +622,21 @@
     display: block;
   }
 
+  .booking-block--status-1079 {
+    background: rgba(226, 178, 46, 0.5);
+  }
+
+  .booking-block--has-comment::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #FFFFFF;
+  }
+
   .booking-hover-popover {
     position: fixed;
     top: 0;
