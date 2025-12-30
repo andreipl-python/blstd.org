@@ -502,6 +502,39 @@ class Service(models.Model):
         return (self.name,)
 
 
+class SpecialistService(models.Model):
+    name = models.CharField(
+        max_length=150,
+        help_text="Наименование услуги специалиста",
+        verbose_name="Наименование услуги",
+        unique=True,
+    )
+    active = models.BooleanField(
+        default=True,
+        help_text="Активность услуги (включена или нет)",
+        verbose_name="Активность",
+    )
+    cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Стоимость услуги",
+        verbose_name="Стоимость",
+    )
+    duration_minutes = models.PositiveIntegerField(
+        help_text="Длительность услуги в минутах",
+        verbose_name="Длительность, мин",
+    )
+
+    class Meta:
+        db_table = "specialist_services"
+        verbose_name = "Услуга специалиста"
+        verbose_name_plural = "Услуги специалистов"
+
+    def __str__(self):
+        return self.name
+
+
 class Direction(models.Model):
     """Модель для хранения направлений специалиста (фортепиано, бубен и т.п.)"""
 
@@ -558,6 +591,13 @@ class Specialist(models.Model):
         related_name="specialists",
         help_text="Направления деятельности специалиста (фортепиано, бубен и т.п.)",
         verbose_name="Направления",
+        blank=True,
+    )
+    specialist_services = models.ManyToManyField(
+        "SpecialistService",
+        related_name="specialists",
+        help_text="Услуги, которые оказывает специалист",
+        verbose_name="Услуги специалистов",
         blank=True,
     )
 

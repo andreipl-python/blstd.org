@@ -13,6 +13,7 @@ from .models import (
     TariffUnit,
     ServiceGroup,
     Service,
+    SpecialistService,
     Specialist,
     Client,
     ClientGroup,
@@ -188,11 +189,19 @@ class ServiceAdmin(admin.ModelAdmin):
     search_fields = ("name", "group__name")
 
 
+@admin.register(SpecialistService)
+class SpecialistServiceAdmin(admin.ModelAdmin):
+    list_display = ("name", "active", "duration_minutes", "cost")
+    list_filter = ("active",)
+    search_fields = ("name",)
+
+
 @admin.register(Specialist)
 class SpecialistAdmin(admin.ModelAdmin):
     list_display = ("name", "active")
     list_filter = ("active",)
     search_fields = ("name",)
+    filter_horizontal = ("directions", "specialist_services")
     inlines = (SpecialistWeeklyIntervalInline,)
 
 
