@@ -1,6 +1,9 @@
 {% load custom_filters %}
 {% load static %}
 
+<!-- Маппинг услуга преподавателя → список ID специалистов, которые её оказывают -->
+<p id="edit_specialist_service_to_specialists_json" style="display: none;">{{ specialist_service_to_specialists_json }}</p>
+
 <!-- Модальное окно редактирования брони -->
 <div class="modal fade" id="editBookingModal" tabindex="-1" aria-labelledby="editBookingModalLabel" aria-hidden="true" data-bs-backdrop="false">
     <div class="modal-dialog modal-dialog-centered" style="max-width:none; width: 63vw;">
@@ -1259,6 +1262,21 @@
             checkStartMinutes = endMinutes - 30;
         }
 
+        // 0) Получаем выбранную услугу преподавателя и маппинг услуга→специалисты
+        var specialistServiceSelect = modalEl.querySelector('#edit-specialist-service');
+        var selectedServiceId = specialistServiceSelect ? getSelectedValue(specialistServiceSelect) : '';
+        var mappingEl = document.getElementById('edit_specialist_service_to_specialists_json');
+        var serviceToSpecialists = {};
+        if (mappingEl) {
+            try {
+                serviceToSpecialists = JSON.parse(mappingEl.textContent || '{}');
+            } catch (e) {
+                console.warn('Не удалось распарсить edit_specialist_service_to_specialists_json:', e);
+            }
+        }
+        // Список специалистов, оказывающих выбранную услугу (если услуга выбрана)
+        var specialistsForSelectedService = selectedServiceId ? (serviceToSpecialists[selectedServiceId] || []) : null;
+
         // 1) Собираем доступных специалистов и их направления
         var availableTeacherIds = [];
         var availableDirectionIds = new Set();
@@ -1270,7 +1288,12 @@
             if (checkStartMinutes !== null && checkEndMinutes !== null) {
                 timeOk = !isEditSpecialistBusy(tid, checkStartMinutes, checkEndMinutes, currentBookingId);
             }
-            if (timeOk && !isNaN(tid)) {
+            // Проверяем, оказывает ли специалист выбранную услугу (если услуга выбрана)
+            var serviceMatch = true;
+            if (specialistsForSelectedService !== null) {
+                serviceMatch = specialistsForSelectedService.indexOf(tid) !== -1;
+            }
+            if (timeOk && serviceMatch && !isNaN(tid)) {
                 availableTeacherIds.push(tid);
                 dirs.forEach(function(d) { availableDirectionIds.add(d); });
             }
@@ -1656,6 +1679,12 @@
                     }
                     applyEditTeacherDirectionFilters();
                 }
+                
+                // При выборе услуги преподавателя — фильтруем преподавателей и направления
+                if (select.id === 'edit-specialist-service') {
+                    applyEditTeacherDirectionFilters();
+                    calculateAndUpdateBookingCost();
+                }
             });
         });
 
@@ -1738,6 +1767,7 @@
                     specialistServiceSelect.classList.remove('has-selection');
                 }
                 calculateAndUpdateBookingCost();
+                applyEditTeacherDirectionFilters();
             });
         }
 

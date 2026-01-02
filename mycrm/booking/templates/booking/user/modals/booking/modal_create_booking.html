@@ -6,6 +6,8 @@
 <p id="services_json" style="display: none;">{{ services_json }}</p>
 <p id="clients_json" style="display: none;">{{ clients_json }}</p>
 <p id="client_groups_json" style="display: none;">{{ client_groups_json }}</p>
+<!-- Маппинг услуга преподавателя → список ID специалистов, которые её оказывают -->
+<p id="specialist_service_to_specialists_json" style="display: none;">{{ specialist_service_to_specialists_json }}</p>
 
 <div class="modal fade" id="createBookingModal" tabindex="-1" aria-labelledby="createBookingModalLabel"
     aria-hidden="true" data-bs-backdrop="false">
@@ -2200,6 +2202,21 @@
                 checkStartMinutes = endMinutes - 30;
             }
 
+            // 0) Получаем выбранную услугу преподавателя и маппинг услуга→специалисты
+            var specialistServiceSelect = modalElement.querySelector('#specialist-service');
+            var selectedServiceId = specialistServiceSelect ? getSelectedValue(specialistServiceSelect) : '';
+            var mappingEl = document.getElementById('specialist_service_to_specialists_json');
+            var serviceToSpecialists = {};
+            if (mappingEl) {
+                try {
+                    serviceToSpecialists = JSON.parse(mappingEl.textContent || '{}');
+                } catch (e) {
+                    console.warn('Не удалось распарсить specialist_service_to_specialists_json:', e);
+                }
+            }
+            // Список специалистов, оказывающих выбранную услугу (если услуга выбрана)
+            var specialistsForSelectedService = selectedServiceId ? (serviceToSpecialists[selectedServiceId] || []) : null;
+
             // 1) Сначала определяем доступных специалистов
             var availableTeacherIds = [];
             var availableDirectionIds = new Set();
@@ -2215,7 +2232,13 @@
                     timeAvailable = !window.isSpecialistBusy(teacherId, checkStartMinutes, checkEndMinutes);
                 }
                 
-                if (timeAvailable && !isNaN(teacherId)) {
+                // Проверяем, оказывает ли специалист выбранную услугу (если услуга выбрана)
+                var serviceMatch = true;
+                if (specialistsForSelectedService !== null) {
+                    serviceMatch = specialistsForSelectedService.indexOf(teacherId) !== -1;
+                }
+                
+                if (timeAvailable && serviceMatch && !isNaN(teacherId)) {
                     availableTeacherIds.push(teacherId);
                     // Собираем направления доступных специалистов
                     dirs.forEach(function(dirId) {
@@ -2339,8 +2362,12 @@
                     teacherSelectedSpan.textContent = 'Выберите преподавателя';
                 }
                 
-                // Авто-подстановка единственного специалиста
-                if (visibleTeacherCount === 1 && !selectedTeacherId && lastVisibleTeacherLi) {
+                // Авто-подстановка единственного специалиста.
+                // ВАЖНО: автоподстановка происходит ТОЛЬКО если время установлено и по временным
+                // ограничениям доступен только один преподаватель. Без выбранного времени
+                // автоподстановка не должна срабатывать.
+                var timeIsSet = checkStartMinutes !== null && checkEndMinutes !== null;
+                if (visibleTeacherCount === 1 && !selectedTeacherId && lastVisibleTeacherLi && timeIsSet) {
                     lastVisibleTeacherLi.classList.add('selected');
                     if (teacherSelectedSpan) {
                         teacherSelectedSpan.textContent = lastVisibleTeacherLi.textContent;
@@ -2382,9 +2409,110 @@
             if (typeof window.updateSubmitButtonState === 'function') {
                 window.updateSubmitButtonState();
             }
+            
+            // Фильтруем услуги преподавателей по доступным специалистам
+            applySpecialistServicesFilter(availableTeacherIds, selectedTeacherId);
         }
         // Делаем функцию доступной глобально для вызова из других блоков кода
         window.applyTeacherDirectionFilters = applyTeacherDirectionFilters;
+        
+        /**
+         * Фильтрация списка "Услуги преподавателей" по доступным специалистам.
+         * 
+         * Логика:
+         * 1. Если выбран конкретный преподаватель — показываем только его услуги
+         * 2. Если преподаватель не выбран — показываем услуги всех доступных специалистов
+         * 3. Если у выбранного преподавателя только одна услуга — автоподстановка без плейсхолдера
+         * 
+         * @param {Array<number>} availableTeacherIds - ID доступных специалистов (по времени)
+         * @param {string|number} selectedTeacherId - ID выбранного преподавателя (или пусто)
+         */
+        function applySpecialistServicesFilter(availableTeacherIds, selectedTeacherId) {
+            var specialistServiceSelect = modalElement.querySelector('#specialist-service');
+            if (!specialistServiceSelect) return;
+            
+            // Получаем маппинг услуга → специалисты из скрытого JSON элемента
+            var mappingEl = document.getElementById('specialist_service_to_specialists_json');
+            var serviceToSpecialists = {};
+            if (mappingEl) {
+                try {
+                    serviceToSpecialists = JSON.parse(mappingEl.textContent || '{}');
+                } catch (e) {
+                    console.warn('Не удалось распарсить specialist_service_to_specialists_json:', e);
+                }
+            }
+            
+            var serviceLis = specialistServiceSelect.querySelectorAll('ul.options li');
+            var visibleCount = 0;
+            var lastVisibleLi = null;
+            var selectedServiceId = getSelectedValue(specialistServiceSelect);
+            
+            // Определяем, какие специалисты учитываются при фильтрации услуг
+            var relevantSpecialistIds = [];
+            if (selectedTeacherId) {
+                // Если выбран преподаватель — фильтруем по его услугам
+                relevantSpecialistIds = [parseInt(selectedTeacherId, 10)];
+            } else {
+                // Иначе — по всем доступным специалистам
+                relevantSpecialistIds = availableTeacherIds || [];
+            }
+            
+            serviceLis.forEach(function(li) {
+                var serviceId = li.getAttribute('data-value');
+                // Получаем список специалистов, оказывающих эту услугу
+                var specialistsForService = serviceToSpecialists[serviceId] || [];
+                
+                // Услуга видима, если хотя бы один из её специалистов доступен
+                var isVisible = specialistsForService.some(function(specId) {
+                    return relevantSpecialistIds.indexOf(specId) !== -1;
+                });
+                
+                li.style.display = isVisible ? '' : 'none';
+                if (isVisible) {
+                    visibleCount++;
+                    lastVisibleLi = li;
+                }
+            });
+            
+            var selectedSpan = specialistServiceSelect.querySelector('span.selected');
+            var placeholder = specialistServiceSelect.getAttribute('data-placeholder') || 'Выберите услугу преподавателя';
+            
+            // Сбрасываем выбор, если выбранная услуга больше не видима
+            if (selectedServiceId) {
+                var selectedLi = specialistServiceSelect.querySelector('ul.options li.selected');
+                if (selectedLi && selectedLi.style.display === 'none') {
+                    selectedLi.classList.remove('selected');
+                    selectedServiceId = '';
+                    if (selectedSpan) selectedSpan.textContent = placeholder;
+                    specialistServiceSelect.classList.remove('has-selection');
+                }
+            }
+            
+            if (visibleCount === 0) {
+                // Нет доступных услуг
+                specialistServiceSelect.classList.add('disabled');
+                if (selectedSpan) selectedSpan.textContent = 'Нет доступных услуг';
+                specialistServiceSelect.classList.remove('has-selection');
+            } else if (visibleCount === 1 && !selectedServiceId) {
+                // Автоподстановка единственной услуги (без плейсхолдера)
+                specialistServiceSelect.classList.remove('disabled');
+                lastVisibleLi.classList.add('selected');
+                if (selectedSpan) {
+                    // Берём только название услуги (без стоимости)
+                    var serviceName = lastVisibleLi.querySelector('.service-name');
+                    selectedSpan.textContent = serviceName ? serviceName.textContent : lastVisibleLi.textContent;
+                }
+                specialistServiceSelect.classList.add('has-selection');
+                syncClearableSelectState(specialistServiceSelect);
+            } else {
+                // Несколько услуг доступно
+                specialistServiceSelect.classList.remove('disabled');
+                if (!selectedServiceId && selectedSpan) {
+                    selectedSpan.textContent = placeholder;
+                }
+            }
+        }
+        window.applySpecialistServicesFilter = applySpecialistServicesFilter;
 
         function applyServicesFilters() {
             var servicesSelect = modalElement.querySelector('#services');
@@ -2491,6 +2619,11 @@
                     select.classList.remove('open');
 
                     if (select.id === 'teacher' || select.id === 'field-direction') {
+                        applyTeacherDirectionFilters();
+                    }
+                    
+                    // При сбросе услуги преподавателя — обновляем фильтрацию преподавателей и направлений
+                    if (select.id === 'specialist-service') {
                         applyTeacherDirectionFilters();
                     }
                 });
@@ -2634,6 +2767,11 @@
                         applyTeacherDirectionFilters();
                     }
                     
+                    // При выборе услуги преподавателя — фильтруем преподавателей и направления
+                    if (select.id === 'specialist-service') {
+                        applyTeacherDirectionFilters();
+                    }
+                    
                     // Обновляем состояние кнопки "Добавить" при выборе любого селекта
                     if (typeof window.updateSubmitButtonState === 'function') {
                         window.updateSubmitButtonState();
@@ -2744,6 +2882,20 @@
         modalElement.addEventListener('hidden.bs.modal', function () {
             teacherDirectionLastChanged = null;
             resetTeacherDirectionUI();
+            
+            // Сбрасываем услугу преподавателя
+            var specialistServiceSelect = document.getElementById('specialist-service');
+            if (specialistServiceSelect) {
+                var specOptions = specialistServiceSelect.querySelectorAll('ul.options li');
+                specOptions.forEach(function (opt) {
+                    opt.classList.remove('selected');
+                });
+                var specSelectedSpan = specialistServiceSelect.querySelector('span.selected');
+                if (specSelectedSpan) {
+                    specSelectedSpan.textContent = 'Выберите услугу преподавателя';
+                }
+                specialistServiceSelect.classList.remove('has-selection');
+            }
         });
 
         // При открытии гарантируем корректную фильтрацию (на случай, если есть предустановленные значения)
@@ -2815,6 +2967,20 @@
             var resetServicesBtn = document.getElementById('create-reset-services');
             if (resetServicesBtn) {
                 resetServicesBtn.style.display = 'none';
+            }
+            
+            // Сбрасываем услугу преподавателя
+            var specialistServiceSelect = document.getElementById('specialist-service');
+            if (specialistServiceSelect) {
+                var specOptions = specialistServiceSelect.querySelectorAll('ul.options li');
+                specOptions.forEach(function (opt) {
+                    opt.classList.remove('selected');
+                });
+                var specSelectedSpan = specialistServiceSelect.querySelector('span.selected');
+                if (specSelectedSpan) {
+                    specSelectedSpan.textContent = 'Выберите услугу преподавателя';
+                }
+                specialistServiceSelect.classList.remove('has-selection');
             }
             
             // Сбрасываем комментарий

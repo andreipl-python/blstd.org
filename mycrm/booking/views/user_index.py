@@ -297,6 +297,22 @@ def user_index_view(request):
     # Услуги преподавателей для сценария "Музыкальная школа"
     specialist_services = SpecialistService.objects.filter(active=True).order_by("name")
 
+    # Маппинг услуги преподавателя → список ID специалистов, которые её оказывают.
+    # Используется для фильтрации услуг по доступным специалистам на фронтенде.
+    specialist_service_to_specialists = {}
+    for specialist in Specialist.objects.filter(active=True).prefetch_related(
+        "specialist_services"
+    ):
+        for service in specialist.specialist_services.filter(active=True):
+            if service.id not in specialist_service_to_specialists:
+                specialist_service_to_specialists[service.id] = []
+            specialist_service_to_specialists[service.id].append(specialist.id)
+
+    # JSON для передачи на фронтенд: {service_id: [specialist_id, ...]}
+    specialist_service_to_specialists_json = json.dumps(
+        specialist_service_to_specialists
+    )
+
     context = {
         **menu2_context,
         "days_of_month": days_of_month,
@@ -324,6 +340,7 @@ def user_index_view(request):
         "time_cells": range(96),
         "app_version": version_value,
         "specialist_services": specialist_services,  # Услуги преподавателей для "Музыкальная школа"
+        "specialist_service_to_specialists_json": specialist_service_to_specialists_json,  # Маппинг услуга→специалисты
     }
 
     return render(request, "booking/user/user_index.html", context)

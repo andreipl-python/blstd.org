@@ -1448,7 +1448,9 @@
 
   /* Двухстрочное отображение услуг в списке: название + стоимость */
   #services ul.options li,
-  #edit-services ul.options li {
+  #edit-services ul.options li,
+  #specialist-service ul.options li,
+  #edit-specialist-service ul.options li {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -1456,29 +1458,39 @@
   }
 
   #services ul.options li .service-name,
-  #edit-services ul.options li .service-name {
+  #edit-services ul.options li .service-name,
+  #specialist-service ul.options li .service-name,
+  #edit-specialist-service ul.options li .service-name {
     font-family: 'Manrope';
     font-weight: 500;
     font-size: 14px;
     line-height: 1.4;
     color: #1A1A1A;
+    display: block;
   }
 
   #services ul.options li .service-cost,
-  #edit-services ul.options li .service-cost {
+  #edit-services ul.options li .service-cost,
+  #specialist-service ul.options li .service-cost,
+  #edit-specialist-service ul.options li .service-cost {
     font-family: 'Manrope';
     font-weight: 400;
     font-size: 12px;
     line-height: 1.4;
     color: #818EA2;
     margin-top: 2px;
+    display: block;
   }
 
   /* Белый текст услуг при наведении */
   #services ul.options li:hover .service-name,
   #services ul.options li:hover .service-cost,
   #edit-services ul.options li:hover .service-name,
-  #edit-services ul.options li:hover .service-cost {
+  #edit-services ul.options li:hover .service-cost,
+  #specialist-service ul.options li:hover .service-name,
+  #specialist-service ul.options li:hover .service-cost,
+  #edit-specialist-service ul.options li:hover .service-name,
+  #edit-specialist-service ul.options li:hover .service-cost {
     color: #FFFFFF;
   }
 
