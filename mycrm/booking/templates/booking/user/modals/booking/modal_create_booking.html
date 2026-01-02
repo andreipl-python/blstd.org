@@ -297,9 +297,33 @@
                             </div>
                         </div>
 
-                        <!--Выпадающий список со множественным выбором Услуги (справа от Преподавателя/Тарифа)-->
-                        <div class="col-md-6">
-                            <label for="services" class="form-label">Услуги (необязательно)</label>
+                        <!--Задача 1: Услуги преподавателей (только для сценария "Музыкальная школа", скрыт по умолчанию)-->
+                        <div class="col-md-6" id="specialist-service-container" style="display: none;">
+                            <label for="specialist-service" class="form-label">Услуги преподавателей</label>
+                            <div class="custom-select custom-select--clearable" id="specialist-service" name="specialist-service" data-placeholder="Выберите услугу преподавателя">
+                                <span class="selected">Выберите услугу преподавателя</span>
+                                <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
+                                <span class="chevron">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                    </svg>
+                                </span>
+                                <ul class="options">
+                                    {% for specialist_service in specialist_services %}
+                                        <li data-value="{{ specialist_service.id }}" data-cost="{{ specialist_service.cost|default_if_none:'0' }}" data-duration-minutes="{{ specialist_service.duration_minutes|default_if_none:'0' }}" data-name="{{ specialist_service.name }}">
+                                            <span class="service-name">{{ specialist_service.name }}</span>
+                                            <span class="service-cost">{{ specialist_service.cost|default_if_none:'0' }} BYN</span>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!--Задача 2: Переименовано из "Услуги (необязательно)" в "Дополнительные услуги"-->
+                        <!--Выпадающий список со множественным выбором Дополнительные услуги (справа от Преподавателя/Тарифа)-->
+                        <div class="col-md-6" id="services-container">
+                            <label for="services" class="form-label">Дополнительные услуги</label>
                             <div class="custom-select" id="services" name="services">
                                 <span class="selected">Выберите услугу</span>
                                 <span class="chevron">
@@ -319,6 +343,14 @@
                                     {% endfor %}
                                 </ul>
                             </div>
+                        </div>
+                    </div>
+
+                    <!--Задача 3: Отдельный ряд для "Дополнительные услуги" для сценария "Музыкальная школа" (скрыт по умолчанию)-->
+                    <!--Исправление 2: используем offset-md-6 вместо пустого col-md-6 для корректной ширины-->
+                    <div class="row mb-3" id="additional-services-row" style="display: none;">
+                        <div class="col-md-6 offset-md-6" id="additional-services-col">
+                            <!--Сюда будет перемещён контейнер services-container для Музыкальной школы-->
                         </div>
                     </div>
 
@@ -442,6 +474,35 @@
         }
         if (tariffFieldContainer) {
             tariffFieldContainer.style.display = isSimplifiedScenario ? '' : 'none';
+        }
+        
+        // Задача 1: Показать/скрыть "Услуги преподавателей" (только для Музыкальной школы)
+        var specialistServiceContainer = document.getElementById('specialist-service-container');
+        if (specialistServiceContainer) {
+            specialistServiceContainer.style.display = isMusicSchool ? '' : 'none';
+        }
+        
+        // Задача 3: Перемещение "Дополнительные услуги" для Музыкальной школы
+        // Исправление 2: При перемещении убираем/добавляем col-md-6 чтобы ширина была корректной
+        var servicesContainer = document.getElementById('services-container');
+        var additionalServicesRow = document.getElementById('additional-services-row');
+        var additionalServicesCol = document.getElementById('additional-services-col');
+        var teacherRowContainer = document.getElementById('teacher-row-container');
+        
+        if (servicesContainer && additionalServicesRow && additionalServicesCol && teacherRowContainer) {
+            if (isMusicSchool) {
+                // Для Музыкальной школы: перемещаем "Дополнительные услуги" в отдельный ряд под "Услуги преподавателей"
+                additionalServicesRow.style.display = '';
+                // Убираем col-md-6 чтобы занять всю ширину родительского контейнера (который уже col-md-6)
+                servicesContainer.classList.remove('col-md-6');
+                additionalServicesCol.appendChild(servicesContainer);
+            } else {
+                // Для остальных сценариев: "Дополнительные услуги" остаётся в ряду с Преподавателем/Тарифом
+                additionalServicesRow.style.display = 'none';
+                // Возвращаем col-md-6 для корректной сетки в ряду
+                servicesContainer.classList.add('col-md-6');
+                teacherRowContainer.appendChild(servicesContainer);
+            }
         }
         
         // Изменить лейбл клиента (только для Репточки - с группами)

@@ -18,6 +18,7 @@ from booking.models import (
     TariffUnit,
     PaymentType,
     Area,
+    SpecialistService,  # Услуги преподавателей для сценария "Музыкальная школа"
 )
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -293,6 +294,9 @@ def user_index_view(request):
     except OSError:
         version_value = ""
 
+    # Услуги преподавателей для сценария "Музыкальная школа"
+    specialist_services = SpecialistService.objects.filter(active=True).order_by("name")
+
     context = {
         **menu2_context,
         "days_of_month": days_of_month,
@@ -319,6 +323,7 @@ def user_index_view(request):
         "payment_types_json": payment_types_json,
         "time_cells": range(96),
         "app_version": version_value,
+        "specialist_services": specialist_services,  # Услуги преподавателей для "Музыкальная школа"
     }
 
     return render(request, "booking/user/user_index.html", context)

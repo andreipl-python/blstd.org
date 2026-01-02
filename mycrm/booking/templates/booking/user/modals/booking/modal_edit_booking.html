@@ -242,9 +242,33 @@
                                 </div>
                             </div>
 
-                            <!--Выпадающий список со множественным выбором Услуги-->
+                            <!--Задача 1: Услуги преподавателей (только для сценария "Музыкальная школа", скрыт по умолчанию)-->
+                            <div class="col-md-6" id="edit-specialist-service-container" style="display: none;">
+                                <label for="edit-specialist-service" class="form-label">Услуги преподавателей</label>
+                                <div class="custom-select custom-select--clearable" id="edit-specialist-service" name="edit-specialist-service" data-placeholder="Выберите услугу преподавателя">
+                                    <span class="selected">Выберите услугу преподавателя</span>
+                                    <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
+                                    <span class="chevron">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                        </svg>
+                                    </span>
+                                    <ul class="options">
+                                        {% for specialist_service in specialist_services %}
+                                            <li data-value="{{ specialist_service.id }}" data-cost="{{ specialist_service.cost|default_if_none:'0' }}" data-duration-minutes="{{ specialist_service.duration_minutes|default_if_none:'0' }}" data-name="{{ specialist_service.name }}">
+                                                <span class="service-name">{{ specialist_service.name }}</span>
+                                                <span class="service-cost">{{ specialist_service.cost|default_if_none:'0' }} BYN</span>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!--Задача 2: Переименовано из "Услуги (необязательно)" в "Дополнительные услуги"-->
+                            <!--Выпадающий список со множественным выбором Дополнительные услуги-->
                             <div class="col-md-6" id="edit-services-container">
-                                <label for="edit-services" class="form-label">Услуги (необязательно)</label>
+                                <label for="edit-services" class="form-label">Дополнительные услуги</label>
                                 <div class="custom-select" id="edit-services" name="edit-services">
                                     <span class="selected">Выберите услугу</span>
                                     <span class="chevron">
@@ -264,6 +288,14 @@
                                         {% endfor %}
                                     </ul>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!--Задача 3: Отдельный ряд для "Дополнительные услуги" для сценария "Музыкальная школа" (скрыт по умолчанию)-->
+                        <!--Исправление 2: используем offset-md-6 вместо пустого col-md-6 для корректной ширины-->
+                        <div class="row mb-3" id="edit-additional-services-row" style="display: none;">
+                            <div class="col-md-6 offset-md-6" id="edit-additional-services-col">
+                                <!--Сюда будет перемещён контейнер edit-services-container для Музыкальной школы-->
                             </div>
                         </div>
 
@@ -358,6 +390,7 @@
         console.log('[adaptEditModalForScenario] scenarioName:', scenarioName);
         var isRepPoint = (scenarioName === 'Репетиционная точка');
         var isMusicClass = (scenarioName === 'Музыкальный класс');
+        var isMusicSchool = (scenarioName === 'Музыкальная школа');
         var isSimplifiedScenario = isRepPoint || isMusicClass;
         console.log('[adaptEditModalForScenario] isSimplifiedScenario:', isSimplifiedScenario);
         
@@ -380,6 +413,34 @@
         // Показать/скрыть Тариф (вместо Преподавателя)
         if (tariffContainer) {
             tariffContainer.classList.toggle('d-none', !isSimplifiedScenario);
+        }
+        
+        // Задача 1: Показать/скрыть "Услуги преподавателей" (только для Музыкальной школы)
+        var specialistServiceContainer = document.getElementById('edit-specialist-service-container');
+        if (specialistServiceContainer) {
+            specialistServiceContainer.style.display = isMusicSchool ? '' : 'none';
+        }
+        
+        // Задача 3: Перемещение "Дополнительные услуги" для Музыкальной школы
+        var servicesContainer = document.getElementById('edit-services-container');
+        var additionalServicesRow = document.getElementById('edit-additional-services-row');
+        var additionalServicesCol = document.getElementById('edit-additional-services-col');
+        var teacherServicesRow = document.getElementById('edit-teacher-services-row');
+        
+        if (servicesContainer && additionalServicesRow && additionalServicesCol && teacherServicesRow) {
+            if (isMusicSchool) {
+                // Для Музыкальной школы: перемещаем "Дополнительные услуги" в отдельный ряд под "Услуги преподавателей"
+                additionalServicesRow.style.display = '';
+                // Убираем col-md-6 чтобы занять всю ширину родительского контейнера (который уже col-md-6)
+                servicesContainer.classList.remove('col-md-6');
+                additionalServicesCol.appendChild(servicesContainer);
+            } else {
+                // Для остальных сценариев: "Дополнительные услуги" остаётся в ряду с Преподавателем/Тарифом
+                additionalServicesRow.style.display = 'none';
+                // Возвращаем col-md-6 для корректной сетки в ряду
+                servicesContainer.classList.add('col-md-6');
+                teacherServicesRow.appendChild(servicesContainer);
+            }
         }
         
         // Скрыть/показать чекбокс "Пробное занятие"
@@ -1658,6 +1719,25 @@
                     teacherSelect.classList.remove('has-selection');
                 }
                 applyEditTeacherDirectionFilters();
+            });
+        }
+
+        // Обработчик сброса "Услуги преподавателей"
+        const specialistServiceClear = document.querySelector('#edit-specialist-service .custom-select-clear');
+        if (specialistServiceClear && !specialistServiceClear._bound) {
+            specialistServiceClear._bound = true;
+            specialistServiceClear.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const specialistServiceSelect = document.getElementById('edit-specialist-service');
+                if (specialistServiceSelect) {
+                    specialistServiceSelect.querySelectorAll('ul.options li').forEach(li => li.classList.remove('selected'));
+                    const span = specialistServiceSelect.querySelector('.selected');
+                    if (span) span.textContent = 'Выберите услугу преподавателя';
+                    specialistServiceSelect.classList.remove('open');
+                    specialistServiceSelect.classList.remove('has-selection');
+                }
+                calculateAndUpdateBookingCost();
             });
         }
 
