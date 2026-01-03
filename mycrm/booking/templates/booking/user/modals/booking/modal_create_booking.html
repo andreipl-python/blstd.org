@@ -1165,7 +1165,7 @@
                         checklist.push('Выберите длительность');
                     }
                     
-                    // Преподаватель и направление требуются только для Музыкальной школы
+                    // Преподаватель, направление и услуга преподавателя требуются только для Музыкальной школы
                     if (!isSimplifiedScenario) {
                         if (!hasTeacher) {
                             checklist.push('Выберите преподавателя');
@@ -1175,6 +1175,14 @@
                         
                         if (!hasDirection) {
                             checklist.push('Выберите направление');
+                        }
+                        
+                        // Проверяем выбор услуги преподавателя
+                        var specialistServiceSelect = document.getElementById('specialist-service');
+                        var specialistServiceSelectedLi = specialistServiceSelect ? specialistServiceSelect.querySelector('ul.options li.selected') : null;
+                        var hasSpecialistService = specialistServiceSelectedLi !== null;
+                        if (!hasSpecialistService) {
+                            checklist.push('Выберите услугу преподавателя');
                         }
                     }
                     
@@ -2511,6 +2519,10 @@
                     selectedSpan.textContent = placeholder;
                 }
             }
+
+            if (typeof window.updateSubmitButtonState === 'function') {
+                window.updateSubmitButtonState();
+            }
         }
         window.applySpecialistServicesFilter = applySpecialistServicesFilter;
 
@@ -2613,6 +2625,16 @@
                 clearBtn.addEventListener('click', function (e) {
                     e.preventDefault();
                     e.stopPropagation();
+
+                    if (select.id === 'specialist-service') {
+                        var visibleServices = Array.from(select.querySelectorAll('ul.options li')).filter(function(li) {
+                            return li.style.display !== 'none';
+                        });
+                        if (visibleServices.length === 1) {
+                            select.classList.remove('open');
+                            return;
+                        }
+                    }
 
                     teacherDirectionLastChanged = select.id;
                     resetSelect(select);
@@ -3082,6 +3104,14 @@
                 var selectedDirection = directionSelect.querySelector('ul.options li.selected');
                 if (selectedDirection) {
                     formData.append('direction_id', selectedDirection.getAttribute('data-value'));
+                }
+            }
+
+            var specialistServiceSelect = document.getElementById('specialist-service');
+            if (specialistServiceSelect) {
+                var selectedSpecialistService = specialistServiceSelect.querySelector('ul.options li.selected');
+                if (selectedSpecialistService) {
+                    formData.append('specialist_service_id', selectedSpecialistService.getAttribute('data-value'));
                 }
             }
 

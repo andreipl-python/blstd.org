@@ -325,6 +325,14 @@ class Reservation(models.Model):
         verbose_name="Услуги",
         blank=True,
     )
+    specialist_service = models.ForeignKey(
+        "SpecialistService",
+        on_delete=models.PROTECT,
+        help_text="Услуга преподавателя (для сценария Музыкальная школа)",
+        verbose_name="Услуга преподавателя",
+        null=True,
+        blank=True,
+    )
     total_cost = models.DecimalField(
         max_digits=10,
         decimal_places=2,

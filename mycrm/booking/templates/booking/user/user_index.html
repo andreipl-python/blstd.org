@@ -1747,6 +1747,7 @@
                             var durationElement = infoModalElement.querySelector('#infoBookingDuration');
                             var directionElement = infoModalElement.querySelector('#infoBookingDirection');
                             var specialistElement = infoModalElement.querySelector('#infoBookingSpecialist');
+                            var specialistServiceElement = infoModalElement.querySelector('#infoBookingSpecialistService');
                             var clientNameElement = infoModalElement.querySelector('#infoBookingClientName');
                             var clientPhoneElement = infoModalElement.querySelector('#infoBookingClientPhone');
                             var commentContainer = infoModalElement.querySelector('#infoBookingCommentContainer');
@@ -1783,6 +1784,12 @@
 
                             if (specialistElement && typeof booking.specialist_name === 'string') {
                                 specialistElement.textContent = booking.specialist_name;
+                            }
+
+                            if (specialistServiceElement) {
+                                specialistServiceElement.textContent = (typeof booking.specialist_service_name === 'string' && booking.specialist_service_name)
+                                    ? booking.specialist_service_name
+                                    : '';
                             }
 
                             if (clientNameElement && typeof booking.client_name === 'string') {

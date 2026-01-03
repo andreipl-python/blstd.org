@@ -534,11 +534,12 @@
         const resetBtn = document.getElementById('reset-services');
         if (!container || !servicesSelect) return;
         container.innerHTML = '';
-        const selectedLis = servicesSelect._selectedOptions ? Array.from(servicesSelect._selectedOptions) : [];
+        const selectedLis = Array.from(servicesSelect.querySelectorAll('ul.options li.selected'));
+        servicesSelect._selectedOptions = new Set(selectedLis);
 
         // Показываем/скрываем кнопку "Сбросить всё" в зависимости от количества услуг
         if (resetBtn) {
-            resetBtn.style.display = selectedLis.length > 0 ? 'inline' : 'none';
+            resetBtn.style.display = selectedLis.length > 1 ? 'inline' : 'none';
         }
 
         selectedLis.forEach(li => {
@@ -557,17 +558,18 @@
                 e.stopPropagation();
                 // Убираем услугу из выбранных
                 li.classList.remove('selected');
-                servicesSelect._selectedOptions.delete(li);
+                const remainingLis = Array.from(servicesSelect.querySelectorAll('ul.options li.selected'));
+                servicesSelect._selectedOptions = new Set(remainingLis);
                 updateServicesBadges();
                 calculateAndUpdateBookingCost();
                 // Обновляем текст в селекте
-                const selected = servicesSelect.querySelector('.selected');
-                const count = servicesSelect._selectedOptions.size;
+                const selected = servicesSelect.querySelector('span.selected');
+                const count = remainingLis.length;
                 if (selected) {
                     if (count === 0) {
                         selected.textContent = 'Выберите услугу';
                     } else if (count === 1) {
-                        selected.textContent = Array.from(servicesSelect._selectedOptions)[0].textContent;
+                        selected.textContent = remainingLis[0] ? remainingLis[0].textContent : 'Выберите услугу';
                     } else {
                         selected.textContent = count + ' выбрано';
                     }
@@ -639,9 +641,10 @@
     // Получить суммарную стоимость выбранных услуг
     function getSelectedServicesCost() {
         var servicesSelect = document.getElementById('edit-services');
-        if (!servicesSelect || !servicesSelect._selectedOptions) return 0;
+        if (!servicesSelect) return 0;
         var total = 0;
-        servicesSelect._selectedOptions.forEach(function(li) {
+        var selectedLis = Array.from(servicesSelect.querySelectorAll('ul.options li.selected'));
+        selectedLis.forEach(function(li) {
             var cost = parseFloat(li.getAttribute('data-cost') || '0');
             if (Number.isFinite(cost)) total += cost;
         });
@@ -821,6 +824,13 @@
                 
                 if (!hasDirection) {
                     checklist.push('Выберите направление');
+                }
+
+                var specialistServiceSelect = document.getElementById('edit-specialist-service');
+                var specialistServiceSelectedLi = specialistServiceSelect ? specialistServiceSelect.querySelector('ul.options li.selected') : null;
+                var hasSpecialistService = specialistServiceSelectedLi !== null;
+                if (!hasSpecialistService) {
+                    checklist.push('Выберите услугу преподавателя');
                 }
             }
             
@@ -1275,7 +1285,7 @@
             }
         }
         // Список специалистов, оказывающих выбранную услугу (если услуга выбрана)
-        var specialistsForSelectedService = selectedServiceId ? (serviceToSpecialists[selectedServiceId] || []) : null;
+        var specialistsForSelectedService = (selectedServiceId && !selectedTeacherId) ? (serviceToSpecialists[selectedServiceId] || []) : null;
 
         // 1) Собираем доступных специалистов и их направления
         var availableTeacherIds = [];
@@ -1367,6 +1377,7 @@
                 teacherLis.forEach(function(li) { li.classList.remove('selected'); });
                 selectedTeacherId = '';
                 if (teacherSpan) teacherSpan.textContent = 'Выберите преподавателя';
+                teacherSelect.classList.remove('open');
                 teacherSelect.classList.remove('has-selection');
             }
         }
@@ -1416,13 +1427,101 @@
             if (teacherWarning) teacherWarning.style.display = 'none';
         }
         
+        applyEditSpecialistServicesFilter(availableTeacherIds, selectedTeacherId);
+
         // 6) Обновляем состояние кнопки сохранения
         var ctrl2 = modalEl._editTimeController;
         if (ctrl2 && typeof ctrl2.updateSubmitButtonState === 'function') {
             ctrl2.updateSubmitButtonState();
         }
+        
     }
     window.applyEditTeacherDirectionFilters = applyEditTeacherDirectionFilters;
+
+    function applyEditSpecialistServicesFilter(availableTeacherIds, selectedTeacherId) {
+        var modalEl = document.getElementById('editBookingModal');
+        if (!modalEl) return;
+
+        var specialistServiceSelect = modalEl.querySelector('#edit-specialist-service');
+        if (!specialistServiceSelect) return;
+
+        var mappingEl = document.getElementById('edit_specialist_service_to_specialists_json');
+        var serviceToSpecialists = {};
+        if (mappingEl) {
+            try {
+                serviceToSpecialists = JSON.parse(mappingEl.textContent || '{}');
+            } catch (e) {
+                console.warn('Не удалось распарсить edit_specialist_service_to_specialists_json:', e);
+            }
+        }
+
+        var serviceLis = specialistServiceSelect.querySelectorAll('ul.options li');
+        var visibleCount = 0;
+        var lastVisibleLi = null;
+        var selectedServiceId = getSelectedValue(specialistServiceSelect);
+
+        var relevantSpecialistIds = [];
+        if (selectedTeacherId) {
+            relevantSpecialistIds = [parseInt(selectedTeacherId, 10)];
+        } else {
+            relevantSpecialistIds = availableTeacherIds || [];
+        }
+        var relevantSet = new Set(relevantSpecialistIds.map(function(x) { return String(x); }));
+
+        serviceLis.forEach(function(li) {
+            var serviceId = li.getAttribute('data-value');
+            var specialistsForService = serviceToSpecialists[serviceId] || [];
+
+            var isVisible = specialistsForService.some(function(specId) {
+                return relevantSet.has(String(specId));
+            });
+
+            li.style.display = isVisible ? '' : 'none';
+            if (isVisible) {
+                visibleCount++;
+                lastVisibleLi = li;
+            }
+        });
+
+        var selectedSpan = specialistServiceSelect.querySelector('span.selected');
+        var placeholder = specialistServiceSelect.getAttribute('data-placeholder') || 'Выберите услугу преподавателя';
+
+        if (selectedServiceId) {
+            var selectedLi = specialistServiceSelect.querySelector('ul.options li.selected');
+            if (selectedLi && selectedLi.style.display === 'none') {
+                selectedLi.classList.remove('selected');
+                selectedServiceId = '';
+                if (selectedSpan) selectedSpan.textContent = placeholder;
+                specialistServiceSelect.classList.remove('has-selection');
+            }
+        }
+
+        if (visibleCount === 0) {
+            specialistServiceSelect.classList.add('disabled');
+            if (selectedSpan) selectedSpan.textContent = 'Нет доступных услуг';
+            specialistServiceSelect.classList.remove('has-selection');
+        } else if (visibleCount === 1 && !selectedServiceId && lastVisibleLi) {
+            specialistServiceSelect.classList.remove('disabled');
+            lastVisibleLi.classList.add('selected');
+            if (selectedSpan) {
+                var serviceName = lastVisibleLi.querySelector('.service-name');
+                selectedSpan.textContent = serviceName ? serviceName.textContent : lastVisibleLi.textContent;
+            }
+            specialistServiceSelect.classList.add('has-selection');
+        } else {
+            specialistServiceSelect.classList.remove('disabled');
+            if (!selectedServiceId && selectedSpan) {
+                selectedSpan.textContent = placeholder;
+            }
+            if (!selectedServiceId) {
+                specialistServiceSelect.classList.remove('has-selection');
+            }
+        }
+        var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+        if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+            ctrl.updateSubmitButtonState();
+        }
+    }
 
     // =====================================================
     // МОДУЛЬ КАЛЕНДАРЯ (DATEPICKER) ДЛЯ РЕДАКТИРОВАНИЯ
@@ -1614,18 +1713,14 @@
                     const li = e.target && e.target.closest ? e.target.closest('li') : null;
                     if (!li) return;
                     e.stopPropagation();
-                    if (li.classList.contains('selected')) {
-                        li.classList.remove('selected');
-                        select._selectedOptions.delete(li);
-                    } else {
-                        li.classList.add('selected');
-                        select._selectedOptions.add(li);
-                    }
-                    const count = select._selectedOptions.size;
+                    li.classList.toggle('selected');
+                    const selectedLis = Array.from(select.querySelectorAll('ul.options li.selected'));
+                    select._selectedOptions = new Set(selectedLis);
+                    const count = selectedLis.length;
                     if (count === 0) {
                         selected.textContent = 'Выберите услугу';
                     } else if (count === 1) {
-                        selected.textContent = Array.from(select._selectedOptions)[0].textContent;
+                        selected.textContent = selectedLis[0] ? selectedLis[0].textContent : 'Выберите услугу';
                     } else {
                         selected.textContent = `${count} выбрано`;
                     }
@@ -1684,6 +1779,11 @@
                 if (select.id === 'edit-specialist-service') {
                     applyEditTeacherDirectionFilters();
                     calculateAndUpdateBookingCost();
+
+                    var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                    if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                        ctrl.updateSubmitButtonState();
+                    }
                 }
             });
         });
@@ -1706,6 +1806,8 @@
                 e.preventDefault();
                 setMultiSelectedValues(document.getElementById('edit-services'), []);
                 calculateAndUpdateBookingCost();
+                var rb = document.getElementById('reset-services');
+                if (rb) rb.style.display = 'none';
                 var ctrl = document.getElementById('editBookingModal')?._editTimeController;
                 if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
                     ctrl.updateSubmitButtonState();
@@ -1768,6 +1870,11 @@
                 }
                 calculateAndUpdateBookingCost();
                 applyEditTeacherDirectionFilters();
+
+                var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                    ctrl.updateSubmitButtonState();
+                }
             });
         }
 
@@ -1873,6 +1980,7 @@
         setCustomSelectValue(modalEl.querySelector('#edit-direction'), booking.direction_id, 'Выберите направление');
         setCustomSelectValue(modalEl.querySelector('#edit-room'), booking.room_id, 'Выберите комнату');
         setCustomSelectValue(modalEl.querySelector('#edit-teacher'), booking.specialist_id, 'Выберите преподавателя');
+        setCustomSelectValue(modalEl.querySelector('#edit-specialist-service'), booking.specialist_service_id, 'Выберите услугу преподавателя');
 
         const controller = ensureEditTimeController();
         if (controller && typeof controller.loadFromBooking === 'function') {
@@ -1907,6 +2015,7 @@
             room_id: String(booking.room_id || ''),
             specialist_id: String(booking.specialist_id || ''),
             direction_id: String(booking.direction_id || ''),
+            specialist_service_id: String(booking.specialist_service_id || ''),
             comment: booking.comment || '',
             service_ids: (Array.isArray(booking.service_ids) ? booking.service_ids.map(String).sort() : []).join(',')
         };
@@ -1929,19 +2038,15 @@
 
         var currentServiceIds = [];
         if (servicesSelect) {
-            if (servicesSelect._selectedOptions) {
-                servicesSelect._selectedOptions.forEach(function(li) {
-                    var val = li.getAttribute('data-value');
-                    if (val) currentServiceIds.push(String(val));
-                });
-            } else {
-                Array.from(servicesSelect.querySelectorAll('ul.options li.selected')).forEach(function(li) {
-                    var val = li.getAttribute('data-value');
-                    if (val) currentServiceIds.push(String(val));
-                });
-            }
+            Array.from(servicesSelect.querySelectorAll('ul.options li.selected')).forEach(function(li) {
+                var val = li.getAttribute('data-value');
+                if (val) currentServiceIds.push(String(val));
+            });
         }
         currentServiceIds.sort();
+
+        var specialistServiceSelect = document.getElementById('edit-specialist-service');
+        var specialistServiceId = getSelectedValue(specialistServiceSelect) || '';
 
         return {
             date_iso: dateInput ? dateInput.value : '',
@@ -1950,6 +2055,7 @@
             room_id: String(getSelectedValue(roomSelect) || ''),
             specialist_id: String(getSelectedValue(teacherSelect) || ''),
             direction_id: String(getSelectedValue(directionSelect) || ''),
+            specialist_service_id: String(specialistServiceId),
             comment: commentEl ? commentEl.value : '',
             service_ids: currentServiceIds.join(',')
         };
@@ -1967,6 +2073,7 @@
             current.room_id !== originalEditValues.room_id ||
             current.specialist_id !== originalEditValues.specialist_id ||
             current.direction_id !== originalEditValues.direction_id ||
+            current.specialist_service_id !== originalEditValues.specialist_service_id ||
             current.comment !== originalEditValues.comment ||
             current.service_ids !== originalEditValues.service_ids
         );
@@ -2003,8 +2110,12 @@
         const roomId = getSelectedValue(document.getElementById('edit-room'));
         const specialistId = getSelectedValue(document.getElementById('edit-teacher'));
         const directionId = getSelectedValue(document.getElementById('edit-direction'));
+        const specialistServiceId = getSelectedValue(document.getElementById('edit-specialist-service'));
         const comment = document.getElementById('editBookingComment')?.value || '';
-        const serviceIds = Array.from((document.getElementById('edit-services')?._selectedOptions || new Set())).map(li => li.getAttribute('data-value')).filter(Boolean);
+        const servicesEl = document.getElementById('edit-services');
+        const serviceIds = Array.from(
+            servicesEl ? servicesEl.querySelectorAll('ul.options li.selected') : []
+        ).map(li => li.getAttribute('data-value')).filter(Boolean);
 
         const costText = document.getElementById('editBookingCostValue')?.textContent || '';
         const totalCost = (costText || '').replace('BYN', '').trim();
@@ -2016,6 +2127,7 @@
             room_id: roomId,
             specialist_id: specialistId || null,
             direction_id: directionId || null,
+            specialist_service_id: specialistServiceId || null,
             service_ids: serviceIds,
             comment: comment,
             total_cost: totalCost,

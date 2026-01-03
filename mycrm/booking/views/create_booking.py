@@ -12,6 +12,7 @@ from ..models import (
     Room,
     Service,
     Specialist,
+    SpecialistService,
     SpecialistWeeklyInterval,
     SpecialistScheduleOverride,
     ReservationStatusType,
@@ -260,6 +261,10 @@ def create_booking_view(request):
         scenario_id = int(scenario_id) if scenario_id else None
         specialist_id = request.POST.get("specialist_id")
         specialist_id = int(specialist_id) if specialist_id else None
+        specialist_service_id = request.POST.get("specialist_service_id")
+        specialist_service_id = (
+            int(specialist_service_id) if specialist_service_id else None
+        )
         direction_id = request.POST.get("direction_id")
         direction_id = int(direction_id) if direction_id else None
         client_id = request.POST.get("client_id")
@@ -318,6 +323,27 @@ def create_booking_view(request):
         except ClientGroup.DoesNotExist:
             return JsonResponse({"success": False, "error": "Группа не найдена"})
 
+        specialist_service = None
+        if scenario and scenario.name == "Музыкальная школа":
+            if not specialist_service_id:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Выберите услугу преподавателя",
+                    }
+                )
+            specialist_service = SpecialistService.objects.filter(
+                id=specialist_service_id,
+                active=True,
+            ).first()
+            if not specialist_service:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Выбранная услуга преподавателя неактивна",
+                    }
+                )
+
         # Извлекаем datetime в формате YYYY-MM-DD HH:MM:SS (без микросекунд и лишних символов)
         datetime_match = re.match(
             r"(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})", full_datetime.strip()
@@ -362,6 +388,7 @@ def create_booking_view(request):
                 datetimestart=start_datetime,
                 datetimeend=end_datetime,
                 specialist=specialist,
+                specialist_service=specialist_service,
                 direction=direction,
                 client_id=client_id,
                 client_group=client_group,

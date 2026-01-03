@@ -19,6 +19,7 @@ from ..models import (
     Room,
     Service,
     Specialist,
+    SpecialistService,
     ReservationStatusType,
     PaymentType,
     Payment,
@@ -218,6 +219,16 @@ def get_booking_details(request, booking_id):
                 if getattr(booking, "direction", None)
                 else "Не указано"
             ),
+            "specialist_service_id": (
+                booking.specialist_service.id
+                if getattr(booking, "specialist_service", None)
+                else None
+            ),
+            "specialist_service_name": (
+                booking.specialist_service.name
+                if getattr(booking, "specialist_service", None)
+                else None
+            ),
             "service_ids": list(booking.services.values_list("id", flat=True)),
             "scenario_id": booking.scenario_id,
             "services_by_group": services_by_group,
@@ -305,6 +316,7 @@ def edit_booking_view(request, booking_id):
         room_id = data.get("room_id")
         specialist_id = data.get("specialist_id")
         direction_id = data.get("direction_id")
+        specialist_service_id = data.get("specialist_service_id")
         comment = data.get("comment", "")
         total_cost_raw = data.get("total_cost")
         service_ids = data.get("service_ids")
@@ -367,6 +379,29 @@ def edit_booking_view(request, booking_id):
             # Раньше здесь была проверка привязки специалиста к сценариям.
             # Поле `Specialist.scenario` удалено как избыточное.
 
+        scenario_name = booking.scenario.name if booking.scenario_id else ""
+        specialist_service = None
+        if scenario_name == "Музыкальная школа":
+            if not specialist_service_id:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Выберите услугу преподавателя",
+                    },
+                    status=400,
+                )
+            specialist_service = get_object_or_404(
+                SpecialistService, id=specialist_service_id
+            )
+            if not specialist_service.active:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Выбранная услуга преподавателя неактивна",
+                    },
+                    status=400,
+                )
+
         total_cost = None
         if total_cost_raw is not None and str(total_cost_raw).strip() != "":
             try:
@@ -418,6 +453,7 @@ def edit_booking_view(request, booking_id):
             booking.room = room
             booking.specialist = specialist
             booking.direction = direction
+            booking.specialist_service = specialist_service
             booking.comment = comment
             booking.total_cost = total_cost
             booking.save()
