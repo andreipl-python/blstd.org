@@ -419,6 +419,127 @@ class TariffUnit(models.Model):
         return f"{self.scenario} - {self.min_reservation_time} ({self.tariff_unit_cost} руб.)"
 
 
+class Tariff(models.Model):
+    name = models.CharField(
+        max_length=150,
+        help_text="Название тарифа",
+        verbose_name="Название",
+    )
+    active = models.BooleanField(
+        default=True,
+        help_text="Активен ли тариф",
+        verbose_name="Активен",
+    )
+    scenarios = models.ManyToManyField(
+        "Scenario",
+        related_name="tariffs",
+        help_text="Сценарии, к которым применяется тариф",
+        verbose_name="Сценарии",
+        blank=True,
+    )
+    rooms = models.ManyToManyField(
+        "Room",
+        related_name="tariffs",
+        help_text="Комнаты, к которым привязан тариф",
+        verbose_name="Комнаты",
+        blank=True,
+    )
+    max_people = models.PositiveIntegerField(
+        help_text="Максимальное количество людей для тарифа",
+        verbose_name="Макс. людей",
+    )
+    base_duration_minutes = models.PositiveIntegerField(
+        help_text="Базовая длительность тарифа в минутах",
+        verbose_name="Базовая длительность, мин",
+    )
+    base_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Стоимость тарифа за базовую длительность",
+        verbose_name="Стоимость",
+    )
+
+    class Meta:
+        db_table = "tariffs"
+        verbose_name = "Тариф"
+        verbose_name_plural = "Тарифы"
+
+    def __str__(self):
+        return self.name
+
+
+class TariffWeeklyInterval(models.Model):
+    WEEKDAY_CHOICES = (
+        (0, "Понедельник"),
+        (1, "Вторник"),
+        (2, "Среда"),
+        (3, "Четверг"),
+        (4, "Пятница"),
+        (5, "Суббота"),
+        (6, "Воскресенье"),
+    )
+
+    tariff = models.ForeignKey(
+        "Tariff",
+        on_delete=CASCADE,
+        related_name="weekly_intervals",
+        verbose_name="Тариф",
+        help_text="Тариф, для которого задан интервал",
+    )
+    weekday = models.SmallIntegerField(
+        choices=WEEKDAY_CHOICES,
+        verbose_name="День недели",
+        help_text="0=Пн ... 6=Вс",
+    )
+    start_time = models.TimeField(
+        verbose_name="Начало",
+        help_text="Время начала интервала",
+    )
+    end_time = models.TimeField(
+        verbose_name="Конец",
+        help_text="Время окончания интервала",
+    )
+
+    class Meta:
+        db_table = "tariff_weekly_intervals"
+        verbose_name = "Интервал действия тарифа (неделя)"
+        verbose_name_plural = "Интервалы действия тарифов (неделя)"
+        ordering = ("tariff", "weekday", "start_time")
+        constraints = [
+            models.CheckConstraint(
+                name="tariff_weekly_interval_start_lt_end",
+                check=Q(start_time__lt=F("end_time")),
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        from django.core.exceptions import ValidationError
+
+        if self.start_time is not None and self.end_time is not None:
+            if self.start_time >= self.end_time:
+                raise ValidationError("Начало интервала должно быть меньше конца")
+
+        qs = TariffWeeklyInterval.objects.filter(
+            tariff_id=self.tariff_id,
+            weekday=self.weekday,
+        )
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+        if (
+            self.start_time is not None
+            and self.end_time is not None
+            and qs.filter(
+                start_time__lt=self.end_time, end_time__gt=self.start_time
+            ).exists()
+        ):
+            raise ValidationError("Интервалы расписания тарифа пересекаются")
+
+    def __str__(self):
+        weekday_label = dict(self.WEEKDAY_CHOICES).get(self.weekday, str(self.weekday))
+        return f"{self.tariff} — {weekday_label}: {self.start_time}-{self.end_time}"
+
+
 class ServiceGroup(models.Model):
     """Модель для хранения информации о группах услуг"""
 

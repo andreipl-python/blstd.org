@@ -748,6 +748,85 @@
         let currentEndTimeMinutes = null;
         let currentSelectedPeriods = null;
 
+        function getCurrentScenarioName() {
+            var currentScenarioId = scenarioId || (modalEl ? modalEl.getAttribute('data-scenario-id') : null);
+            var scenarioName = '';
+            if (currentScenarioId && Array.isArray(window.SCENARIOS)) {
+                var scenario = window.SCENARIOS.find(function(s) { return String(s.pk) === String(currentScenarioId); });
+                scenarioName = scenario && scenario.fields ? scenario.fields.name : '';
+            }
+            return scenarioName;
+        }
+
+        function getSelectedSpecialistServiceDurationMinutes() {
+            var specialistServiceSelect = document.getElementById('edit-specialist-service');
+            if (!specialistServiceSelect) return null;
+            var selectedLi = specialistServiceSelect.querySelector('ul.options li.selected');
+            if (!selectedLi) return null;
+            var raw = selectedLi.getAttribute('data-duration-minutes') || '0';
+            var n = parseInt(raw, 10);
+            return Number.isFinite(n) && n > 0 ? n : null;
+        }
+
+        function setCustomSelectDisabled(selectEl, disabled) {
+            if (!selectEl) return;
+            if (disabled) {
+                selectEl.classList.add('disabled');
+                selectEl.classList.remove('open');
+                selectEl.classList.remove('has-selection');
+                selectEl.querySelectorAll('ul.options li.selected').forEach(function(li) {
+                    li.classList.remove('selected');
+                });
+            } else {
+                selectEl.classList.remove('disabled');
+            }
+        }
+
+        function syncEditBookingMusicSchoolTimeFields(resetSelectionOnChange) {
+            var scenarioName = getCurrentScenarioName();
+            var isMusicSchool = scenarioName === 'Музыкальная школа';
+
+            if (!isMusicSchool) {
+                setCustomSelectDisabled(durationSelect, false);
+                setCustomSelectDisabled(endTimeSelect, false);
+                return;
+            }
+
+            var baseScenarioId = scenarioId || (modalEl ? modalEl.getAttribute('data-scenario-id') : null);
+            var baseMinMinutes = utils.getScenarioMinDurationMinutes(baseScenarioId);
+            var serviceMinMinutes = getSelectedSpecialistServiceDurationMinutes();
+
+            if (!serviceMinMinutes) {
+                minMinutes = baseMinMinutes;
+                currentSelectedPeriods = null;
+                currentEndTimeMinutes = null;
+
+                setCustomSelectDisabled(durationSelect, true);
+                setCustomSelectDisabled(endTimeSelect, true);
+
+                if (durationSelect) {
+                    var durationSpan = durationSelect.querySelector('.selected');
+                    if (durationSpan) durationSpan.textContent = durationSelect.getAttribute('data-placeholder') || 'Выберите длительность';
+                }
+                if (endTimeSelect) {
+                    var endSpan = endTimeSelect.querySelector('.selected');
+                    if (endSpan) endSpan.textContent = endTimeSelect.getAttribute('data-placeholder') || 'Выберите время окончания';
+                }
+                return;
+            }
+
+            var prevMinMinutes = minMinutes;
+            minMinutes = serviceMinMinutes;
+
+            setCustomSelectDisabled(durationSelect, false);
+            setCustomSelectDisabled(endTimeSelect, false);
+
+            if (resetSelectionOnChange !== false && prevMinMinutes !== minMinutes) {
+                currentSelectedPeriods = null;
+                currentEndTimeMinutes = null;
+            }
+        }
+
         function hideWarnings() {
             if (startWarn) startWarn.style.display = 'none';
             if (endWarn) endWarn.style.display = 'none';
@@ -755,11 +834,11 @@
 
         function updateSubmitButtonState() {
             if (!submitBtn) return;
-        
-        var checklist = [];
-        var hasStartTime = currentStartTimeMinutes !== null;
-        var hasEndTime = currentEndTimeMinutes !== null;
             
+            var checklist = [];
+            var hasStartTime = currentStartTimeMinutes !== null;
+            var hasEndTime = currentEndTimeMinutes !== null;
+
             // Определяем сценарий для условной валидации
             var modalEl = document.getElementById('editBookingModal');
             var currentScenarioId = modalEl ? modalEl.getAttribute('data-scenario-id') : null;
@@ -908,6 +987,32 @@
 
         function rebuildAll() {
             if (!utils || !durationSelect || !startTimeSelect || !endTimeSelect) return;
+
+            syncEditBookingMusicSchoolTimeFields();
+
+            var scenarioName = getCurrentScenarioName();
+            var isMusicSchool = scenarioName === 'Музыкальная школа';
+            var serviceMinMinutes = isMusicSchool ? getSelectedSpecialistServiceDurationMinutes() : null;
+            var isMusicSchoolNoService = isMusicSchool && !serviceMinMinutes;
+
+            if (isMusicSchoolNoService) {
+                const filteredStartSlots = utils.getStartTimeSlotsForPeriods(1, roomBookings, workStart, workEnd, minMinutes);
+                utils.rebuildStartTimeSelect(startTimeSelect, filteredStartSlots, currentStartTimeMinutes, function (minutes) {
+                    hideWarnings();
+                    currentStartTimeMinutes = minutes;
+                    currentSelectedPeriods = null;
+                    currentEndTimeMinutes = null;
+                    rebuildAll();
+                    calculateAndUpdateBookingCost();
+                    if (typeof applyEditTeacherDirectionFilters === 'function') {
+                        applyEditTeacherDirectionFilters();
+                    }
+                });
+
+                validateWarnings();
+                updateSubmitButtonState();
+                return;
+            }
 
             const maxPeriods = (currentStartTimeMinutes !== null)
                 ? utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes)
@@ -1144,7 +1249,12 @@
             get _currentSelectedPeriods() { return currentSelectedPeriods; },
             get _currentStartTimeMinutes() { return currentStartTimeMinutes; },
             get _currentEndTimeMinutes() { return currentEndTimeMinutes; },
+            get _minMinutes() { return minMinutes; },
             updateSubmitButtonState: updateSubmitButtonState,
+            syncMusicSchoolTimeFields: function () {
+                syncEditBookingMusicSchoolTimeFields();
+                rebuildAll();
+            },
             loadFromBooking: function (booking) {
                 bookingId = booking && booking.id ? booking.id : null;
                 scenarioId = booking && booking.scenario_id ? String(booking.scenario_id) : modalEl.getAttribute('data-scenario-id');
@@ -1158,8 +1268,10 @@
                 currentStartTimeMinutes = booking && booking.start_time_hm ? utils.parseTimeToMinutes(booking.start_time_hm) : null;
                 currentEndTimeMinutes = booking && booking.end_time_hm ? utils.parseTimeToMinutes(booking.end_time_hm) : null;
 
+                syncEditBookingMusicSchoolTimeFields(false);
+
                 currentSelectedPeriods = null;
-                if (booking && booking.duration_hhmm) {
+                if (booking && booking.duration_hhmm && !(durationSelect && durationSelect.classList.contains('disabled'))) {
                     const durMin = utils.parseTimeToMinutes(booking.duration_hhmm);
                     if (durMin && minMinutes && durMin % minMinutes === 0) {
                         currentSelectedPeriods = durMin / minMinutes;
@@ -1267,9 +1379,11 @@
         var checkStartMinutes = startMinutes;
         var checkEndMinutes = endMinutes;
         if (startMinutes !== null && endMinutes === null) {
-            checkEndMinutes = startMinutes + 30;
+            var minCheckMinutes = (ctrl && ctrl._minMinutes) ? ctrl._minMinutes : 30;
+            checkEndMinutes = startMinutes + minCheckMinutes;
         } else if (startMinutes === null && endMinutes !== null) {
-            checkStartMinutes = endMinutes - 30;
+            var minCheckMinutes2 = (ctrl && ctrl._minMinutes) ? ctrl._minMinutes : 30;
+            checkStartMinutes = endMinutes - minCheckMinutes2;
         }
 
         // 0) Получаем выбранную услугу преподавателя и маппинг услуга→специалисты
@@ -1375,8 +1489,9 @@
             var selectedTeacherLi2 = teacherSelect.querySelector('ul.options li.selected');
             if (selectedTeacherLi2 && selectedTeacherLi2.style.display === 'none') {
                 teacherLis.forEach(function(li) { li.classList.remove('selected'); });
+                var ts = teacherSelect.querySelector('.selected');
+                if (ts) ts.textContent = 'Выберите преподавателя';
                 selectedTeacherId = '';
-                if (teacherSpan) teacherSpan.textContent = 'Выберите преподавателя';
                 teacherSelect.classList.remove('open');
                 teacherSelect.classList.remove('has-selection');
             }
@@ -1518,9 +1633,13 @@
             }
         }
         var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+        if (ctrl && typeof ctrl.syncMusicSchoolTimeFields === 'function') {
+            ctrl.syncMusicSchoolTimeFields();
+        }
         if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
             ctrl.updateSubmitButtonState();
         }
+        
     }
 
     // =====================================================
@@ -1735,6 +1854,9 @@
             }
 
             select.addEventListener('click', function (e) {
+                if (select.classList.contains('disabled')) {
+                    return;
+                }
                 if (e.target && e.target.tagName === 'LI') {
                     e.stopPropagation();
                     optionsContainer.querySelectorAll('li').forEach(opt => opt.classList.remove('selected'));
@@ -1779,6 +1901,11 @@
                 if (select.id === 'edit-specialist-service') {
                     applyEditTeacherDirectionFilters();
                     calculateAndUpdateBookingCost();
+
+                    var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                    if (ctrl && typeof ctrl.syncMusicSchoolTimeFields === 'function') {
+                        ctrl.syncMusicSchoolTimeFields();
+                    }
 
                     var ctrl = document.getElementById('editBookingModal')?._editTimeController;
                     if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
@@ -1870,6 +1997,11 @@
                 }
                 calculateAndUpdateBookingCost();
                 applyEditTeacherDirectionFilters();
+
+                var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                if (ctrl && typeof ctrl.syncMusicSchoolTimeFields === 'function') {
+                    ctrl.syncMusicSchoolTimeFields();
+                }
 
                 var ctrl = document.getElementById('editBookingModal')?._editTimeController;
                 if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {

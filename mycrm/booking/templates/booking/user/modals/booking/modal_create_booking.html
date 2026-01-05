@@ -989,6 +989,7 @@
                 // Длительность — главный показатель. Списки начала/конца формируются по ней.
                 var currentRoomId = roomIdField ? roomIdField.value : roomId;
                 var minMinutes = getScenarioMinDurationMinutes();
+                window.currentMinMinutes = minMinutes;
                 var clickedSlotMinutes = parseTimeToMinutes(timeHm);
                 
                 // Текущие выбранные значения (null = не выбрано, показывается placeholder)
@@ -1015,6 +1016,108 @@
                 var durationSelect = document.getElementById('duration');
                 var endTimeSelect = document.getElementById('end-time');
                 var submitBtn = document.getElementById('createBookingSubmitBtn');
+
+                function getSelectedSpecialistServiceDurationMinutes() {
+                    var specialistServiceSelect = document.getElementById('specialist-service');
+                    if (!specialistServiceSelect) return null;
+                    var selectedLi = specialistServiceSelect.querySelector('ul.options li.selected');
+                    if (!selectedLi) return null;
+                    var raw = selectedLi.getAttribute('data-duration-minutes') || '0';
+                    var n = parseInt(raw, 10);
+                    return Number.isFinite(n) && n > 0 ? n : null;
+                }
+
+                function setCustomSelectDisabled(selectEl, disabled, placeholderText) {
+                    if (!selectEl) return;
+                    if (disabled) {
+                        selectEl.classList.add('disabled');
+                        selectEl.classList.remove('open');
+                    } else {
+                        selectEl.classList.remove('disabled');
+                    }
+
+                    if (disabled && placeholderText) {
+                        var selectedSpan = selectEl.querySelector('.selected');
+                        if (selectedSpan) selectedSpan.textContent = placeholderText;
+                        var optionsUl = selectEl.querySelector('ul.options');
+                        if (optionsUl) {
+                            optionsUl.querySelectorAll('li').forEach(function (li) {
+                                li.classList.remove('selected');
+                            });
+                        }
+                        selectEl.classList.remove('has-selection');
+                    }
+                }
+
+                function syncCreateBookingMusicSchoolTimeFields() {
+                    var isMusicSchool = window.currentScenarioName === 'Музыкальная школа';
+                    if (!isMusicSchool) return;
+
+                    var serviceMinMinutes = getSelectedSpecialistServiceDurationMinutes();
+                    if (!serviceMinMinutes) {
+                        currentSelectedPeriods = null;
+                        currentEndTimeMinutes = null;
+                        window.currentEndTimeMinutes = null;
+
+                        setCustomSelectDisabled(
+                            durationSelect,
+                            true,
+                            durationSelect ? (durationSelect.getAttribute('data-placeholder') || 'Выберите длительность') : null
+                        );
+                        setCustomSelectDisabled(
+                            endTimeSelect,
+                            true,
+                            endTimeSelect ? (endTimeSelect.getAttribute('data-placeholder') || 'Выберите время окончания') : null
+                        );
+
+                        if (typeof window.updateSubmitButtonState === 'function') {
+                            window.updateSubmitButtonState();
+                        }
+                        if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                            window.calculateAndUpdateBookingCost();
+                        }
+                        return;
+                    }
+
+                    var prevMinMinutes = minMinutes;
+                    minMinutes = serviceMinMinutes;
+                    window.currentMinMinutes = minMinutes;
+
+                    setCustomSelectDisabled(durationSelect, false);
+                    setCustomSelectDisabled(endTimeSelect, false);
+
+                    if (prevMinMinutes !== minMinutes) {
+                        currentSelectedPeriods = null;
+                        currentEndTimeMinutes = null;
+                        window.currentEndTimeMinutes = null;
+                    }
+
+                    var allStartSlots = getStartTimeSlotsForPeriods(1);
+                    rebuildStartTimeSelect(allStartSlots, currentStartTimeMinutes);
+
+                    var startTimeWarning = document.getElementById('start-time-warning-icon');
+                    if (startTimeWarning && currentStartTimeMinutes !== null) {
+                        startTimeWarning.style.display = allStartSlots.indexOf(currentStartTimeMinutes) === -1 ? 'inline-block' : 'none';
+                    }
+
+                    var maxPeriods = currentStartTimeMinutes !== null
+                        ? getMaxPeriodsForStartTime(currentStartTimeMinutes, currentRoomId, dateIso)
+                        : getGlobalMaxPeriods();
+
+                    rebuildDurationSelect(currentSelectedPeriods, maxPeriods);
+
+                    var endTimes = currentStartTimeMinutes !== null
+                        ? getEndTimesForStartTime(currentStartTimeMinutes)
+                        : getAllEndTimesForPeriods(1);
+
+                    rebuildEndTimeSelect(endTimes, currentEndTimeMinutes);
+
+                    updateSubmitButtonState();
+                    if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                        window.calculateAndUpdateBookingCost();
+                    }
+                }
+                window.syncCreateBookingMusicSchoolTimeFields = syncCreateBookingMusicSchoolTimeFields;
 
                 // --- Функции формирования списков времени ---
 
@@ -2069,6 +2172,10 @@
                         endTimes = getAllEndTimesForPeriods(1);
                     }
                     rebuildEndTimeSelect(endTimes, currentEndTimeMinutes);
+
+                    if (typeof window.syncCreateBookingMusicSchoolTimeFields === 'function') {
+                        window.syncCreateBookingMusicSchoolTimeFields();
+                    }
                     
                     // Синхронизируем глобальные переменные и загружаем занятых специалистов
                     window.currentStartTimeMinutes = currentStartTimeMinutes;
@@ -2205,9 +2312,11 @@
             var checkStartMinutes = startMinutes;
             var checkEndMinutes = endMinutes;
             if (startMinutes !== null && endMinutes === null) {
-                checkEndMinutes = startMinutes + 30;
+                var minCheckMinutes = window.currentMinMinutes || 30;
+                checkEndMinutes = startMinutes + minCheckMinutes;
             } else if (startMinutes === null && endMinutes !== null) {
-                checkStartMinutes = endMinutes - 30;
+                var minCheckMinutes2 = window.currentMinMinutes || 30;
+                checkStartMinutes = endMinutes - minCheckMinutes2;
             }
 
             // 0) Получаем выбранную услугу преподавателя и маппинг услуга→специалисты
@@ -2523,6 +2632,10 @@
             if (typeof window.updateSubmitButtonState === 'function') {
                 window.updateSubmitButtonState();
             }
+
+            if (typeof window.syncCreateBookingMusicSchoolTimeFields === 'function') {
+                window.syncCreateBookingMusicSchoolTimeFields();
+            }
         }
         window.applySpecialistServicesFilter = applySpecialistServicesFilter;
 
@@ -2751,6 +2864,9 @@
 
             // Обычный одиночный выбор (селект закрывается после выбора)
             select.addEventListener('click', function (e) {
+                if (select.classList.contains('disabled')) {
+                    return;
+                }
                 // не обрабатываем клики по option, они обрабатываются ниже
                 if (e.target.tagName !== 'LI') {
                     select.classList.toggle('open');
