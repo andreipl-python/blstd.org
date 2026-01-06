@@ -1,0 +1,574 @@
+    // Инициализация кастомных селектов модалки редактирования
+    function initializeEditModalSelects() {
+        const modalEl = document.getElementById('editBookingModal');
+        if (!modalEl) return;
+
+        const closeAll = function () {
+            modalEl.querySelectorAll('.custom-select.open').forEach(function (s) {
+                s.classList.remove('open');
+            });
+        };
+
+        if (window.BookingSelectsUtils && typeof window.BookingSelectsUtils.ensureCloseOnOutsideClick === 'function') {
+            window.BookingSelectsUtils.ensureCloseOnOutsideClick({
+                key: 'editBookingModal',
+                rootEl: modalEl
+            });
+        }
+
+        ['edit-start-time', 'edit-end-time', 'edit-duration'].forEach(function (selectId) {
+            var timeSelectEl = modalEl.querySelector('#' + selectId);
+            if (!timeSelectEl) return;
+            if (timeSelectEl._bookingTimeOpenBound) return;
+            timeSelectEl._bookingTimeOpenBound = true;
+
+            timeSelectEl.addEventListener('click', function (e) {
+                if (timeSelectEl.classList.contains('disabled')) return;
+
+                var clearBtn = e.target && (e.target.closest ? e.target.closest('.custom-select-clear') : null);
+                if (clearBtn) return;
+
+                if (e.target && e.target.tagName === 'LI') return;
+
+                var wasOpen = timeSelectEl.classList.contains('open');
+                closeAll();
+                if (!wasOpen) {
+                    timeSelectEl.classList.add('open');
+                }
+            });
+        });
+
+        var servicesSelect = modalEl.querySelector('#edit-services');
+        if (servicesSelect) {
+            var servicesOptionsContainer = servicesSelect.querySelector('.options');
+            if (servicesOptionsContainer) {
+                if (window.BookingServicesUtils && typeof window.BookingServicesUtils.bindServicesMultiSelect === 'function') {
+                    window.BookingServicesUtils.bindServicesMultiSelect({
+                        selectEl: servicesSelect,
+                        optionsContainerEl: servicesOptionsContainer,
+                        placeholderText: 'Выберите услугу',
+                        resetBtnId: 'reset-services',
+                        closeAll: closeAll,
+                        onSelectionChanged: function () {
+                            updateEditServicesBadges();
+                            calculateAndUpdateEditBookingCost();
+                            var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                            if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                                ctrl.updateSubmitButtonState();
+                            }
+                        }
+                    });
+                    updateEditServicesBadges();
+                    calculateAndUpdateEditBookingCost();
+                }
+            }
+        }
+
+        if (window.BookingSelectsUtils && typeof window.BookingSelectsUtils.bindSelectsInRoot === 'function') {
+            window.BookingSelectsUtils.bindSelectsInRoot({
+                rootEl: modalEl,
+                closeAll: closeAll,
+                closeOthersOnOpen: true,
+                skipSelectIds: ['edit-services', 'edit-start-time', 'edit-end-time', 'edit-duration'],
+                selectConfigs: {
+                    'edit-room': {
+                        onSelected: function () {
+                            const controller = ensureEditTimeController();
+                            if (controller && typeof controller.handleRoomOrDateChange === 'function') {
+                                controller.handleRoomOrDateChange();
+                            }
+                        }
+                    },
+                    'edit-direction': {
+                        onSelected: function () {
+                            if (typeof window.setEditTeacherDirectionLastChanged === 'function') {
+                                window.setEditTeacherDirectionLastChanged('edit-direction');
+                            }
+                            applyEditTeacherDirectionFilters();
+                            var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                            if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                                ctrl.updateSubmitButtonState();
+                            }
+                        },
+                        onCleared: function () {
+                            if (typeof window.setEditTeacherDirectionLastChanged === 'function') {
+                                window.setEditTeacherDirectionLastChanged('edit-direction');
+                            }
+                            applyEditTeacherDirectionFilters();
+                            var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                            if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                                ctrl.updateSubmitButtonState();
+                            }
+                        }
+                    },
+                    'edit-teacher': {
+                        onSelected: function () {
+                            if (typeof window.setEditTeacherDirectionLastChanged === 'function') {
+                                window.setEditTeacherDirectionLastChanged('edit-teacher');
+                            }
+                            applyEditTeacherDirectionFilters();
+                            var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                            if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                                ctrl.updateSubmitButtonState();
+                            }
+                        },
+                        onCleared: function () {
+                            if (typeof window.setEditTeacherDirectionLastChanged === 'function') {
+                                window.setEditTeacherDirectionLastChanged('edit-teacher');
+                            }
+                            applyEditTeacherDirectionFilters();
+                            var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                            if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                                ctrl.updateSubmitButtonState();
+                            }
+                        }
+                    },
+                    'edit-specialist-service': {
+                        onSelected: function () {
+                            applyEditTeacherDirectionFilters();
+                            calculateAndUpdateEditBookingCost();
+
+                            var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                            if (ctrl && typeof ctrl.syncMusicSchoolTimeFields === 'function') {
+                                ctrl.syncMusicSchoolTimeFields();
+                            }
+                            if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                                ctrl.updateSubmitButtonState();
+                            }
+                        },
+                        beforeClear: function (ctx) {
+                            var selectEl = ctx ? ctx.selectEl : null;
+                            if (!selectEl) return;
+                            var visibleServices = Array.from(selectEl.querySelectorAll('ul.options li')).filter(function (li) {
+                                return li.style.display !== 'none';
+                            });
+                            if (visibleServices.length === 1) {
+                                return false;
+                            }
+                        },
+                        onCleared: function () {
+                            calculateAndUpdateEditBookingCost();
+                            applyEditTeacherDirectionFilters();
+                            var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                            if (ctrl && typeof ctrl.syncMusicSchoolTimeFields === 'function') {
+                                ctrl.syncMusicSchoolTimeFields();
+                            }
+                            if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                                ctrl.updateSubmitButtonState();
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        const resetServices = document.getElementById('reset-services');
+        if (resetServices && !resetServices._bound && !(window.BookingServicesUtils && typeof window.BookingServicesUtils.bindServicesMultiSelect === 'function')) {
+            resetServices._bound = true;
+            resetServices.addEventListener('click', function (e) {
+                e.preventDefault();
+                setMultiSelectedValues(document.getElementById('edit-services'), []);
+                calculateAndUpdateEditBookingCost();
+                var rb = document.getElementById('reset-services');
+                if (rb) rb.style.display = 'none';
+                var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                    ctrl.updateSubmitButtonState();
+                }
+            });
+        }
+
+        const dateInput = document.getElementById('edit-date');
+        if (dateInput && !dateInput._boundTimeRefresh) {
+            dateInput._boundTimeRefresh = true;
+            dateInput.addEventListener('change', function () {
+                const controller = ensureEditTimeController();
+                if (controller && typeof controller.handleRoomOrDateChange === 'function') {
+                    controller.handleRoomOrDateChange();
+                }
+            });
+        }
+
+        const submitBtn = document.getElementById('editBookingSubmitBtn');
+        if (submitBtn && !submitBtn._bound) {
+            submitBtn._bound = true;
+            submitBtn.addEventListener('click', submitEditBooking);
+        }
+
+        var peopleCountInput = document.getElementById('edit-people-count');
+        if (peopleCountInput && !peopleCountInput._peopleCountBound) {
+            peopleCountInput._peopleCountBound = true;
+            peopleCountInput.addEventListener('input', function () {
+                var raw = String(peopleCountInput.value || '');
+                var digits = raw.replace(/\D+/g, '').slice(0, 2);
+                if (digits) {
+                    var n = parseInt(digits, 10);
+                    if (Number.isFinite(n)) {
+                        if (n > 99) n = 99;
+                        digits = String(n);
+                    }
+                }
+                if (peopleCountInput.value !== digits) {
+                    peopleCountInput.value = digits;
+                }
+                var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                    ctrl.updateSubmitButtonState();
+                }
+            });
+        }
+    }
+
+    async function loadAndPrefillEditBookingModal() {
+        const bookingId = window.currentBookingId;
+        if (!bookingId) return;
+
+        try {
+            const response = await fetch(`/booking/get-booking-details/${bookingId}/`);
+            if (!response.ok) {
+                console.error('Не удалось получить детали брони для edit-модалки:', response.status);
+                return;
+            }
+            const data = await response.json();
+            if (!data.success || !data.booking) {
+                console.error('Некорректный ответ при загрузке деталей брони для edit-модалки:', data);
+                return;
+            }
+            prefillEditBookingModal(data.booking);
+        } catch (err) {
+            console.error('Ошибка при загрузке деталей брони для edit-модалки:', err);
+        }
+    }
+
+    function prefillEditBookingModal(booking) {
+        const modalEl = document.getElementById('editBookingModal');
+        if (!modalEl) return;
+
+        const publicIdEl = modalEl.querySelector('#publicID');
+        if (publicIdEl) {
+            publicIdEl.textContent = booking.id;
+        }
+
+        const scenarioNameEl = modalEl.querySelector('#scenarioName');
+        if (scenarioNameEl) {
+            scenarioNameEl.textContent = booking.reservation_type || '';
+        }
+
+        // Адаптируем модалку под сценарий
+        if (typeof window.adaptEditModalForScenario === 'function') {
+            window.adaptEditModalForScenario(booking.reservation_type);
+        }
+
+        var peopleCountInput = modalEl.querySelector('#edit-people-count');
+        if (peopleCountInput) {
+            var isSimplifiedScenario = (booking.reservation_type === 'Репетиционная точка' || booking.reservation_type === 'Музыкальный класс');
+            peopleCountInput.value = isSimplifiedScenario && (booking.people_count !== undefined && booking.people_count !== null)
+                ? String(booking.people_count)
+                : '';
+        }
+
+        // Отображаем клиента или группу в зависимости от типа брони
+        const clientNameEl = modalEl.querySelector('#clientName');
+        if (clientNameEl) {
+            // Если есть группа и нет клиента - показываем группу
+            if (booking.client_group_id && !booking.client_id) {
+                clientNameEl.textContent = booking.client_group_name || 'Группа не указана';
+            } else {
+                clientNameEl.textContent = booking.client_name || '';
+            }
+        }
+
+        const clientPhoneEl = modalEl.querySelector('#clientPhone');
+        if (clientPhoneEl) {
+            // Телефон показываем только для клиентов, для групп скрываем
+            if (booking.client_group_id && !booking.client_id) {
+                clientPhoneEl.style.display = 'none';
+            } else {
+                clientPhoneEl.style.display = '';
+                clientPhoneEl.textContent = formatPhoneNumber(booking.client_phone || '');
+            }
+        }
+
+        if (booking.scenario_id) {
+            modalEl.setAttribute('data-scenario-id', booking.scenario_id);
+        }
+
+        const dateInput = modalEl.querySelector('#edit-date');
+        if (dateInput && booking.date_iso) {
+            dateInput.value = booking.date_iso;
+        }
+
+        // Инициализация датапикера с датой из брони
+        initEditDatepicker(booking.date_iso);
+
+        // Загрузка занятых специалистов на дату брони
+        if (booking.date_iso) {
+            loadEditBusySpecialistsForDate(booking.date_iso, function() { applyEditTeacherDirectionFilters(); });
+        }
+
+        setCustomSelectValue(modalEl.querySelector('#edit-direction'), booking.direction_id, 'Выберите направление');
+        setCustomSelectValue(modalEl.querySelector('#edit-room'), booking.room_id, 'Выберите комнату');
+        setCustomSelectValue(modalEl.querySelector('#edit-teacher'), booking.specialist_id, 'Выберите преподавателя');
+        setCustomSelectValue(modalEl.querySelector('#edit-specialist-service'), booking.specialist_service_id, 'Выберите услугу преподавателя');
+
+        const controller = ensureEditTimeController();
+        if (controller && typeof controller.loadFromBooking === 'function') {
+            controller.loadFromBooking(booking);
+        }
+
+        const commentEl = modalEl.querySelector('#editBookingComment');
+        if (commentEl) {
+            commentEl.value = booking.comment || '';
+        }
+        initCommentCounter();
+
+        setMultiSelectedValues(modalEl.querySelector('#edit-services'), Array.isArray(booking.service_ids) ? booking.service_ids : []);
+
+        const costEl = modalEl.querySelector('#editBookingCostValue');
+        if (costEl && booking.total_cost !== undefined && booking.total_cost !== null) {
+            costEl.textContent = `${booking.total_cost} BYN`;
+        }
+        calculateAndUpdateEditBookingCost();
+        setTimeout(function() {
+            saveOriginalEditValues(booking);
+        }, 150);
+    }
+
+    var originalEditValues = null;
+
+    function saveOriginalEditValues(booking) {
+        originalEditValues = {
+            date_iso: booking.date_iso || '',
+            start_time: String(booking.start_time_hm || booking.start_time || '').slice(0, 5),
+            end_time: String(booking.end_time_hm || booking.end_time || '').slice(0, 5),
+            room_id: String(booking.room_id || ''),
+            specialist_id: String(booking.specialist_id || ''),
+            direction_id: String(booking.direction_id || ''),
+            specialist_service_id: String(booking.specialist_service_id || ''),
+            people_count: (booking.people_count !== undefined && booking.people_count !== null)
+                ? String(booking.people_count)
+                : '',
+            comment: booking.comment || '',
+            service_ids: (Array.isArray(booking.service_ids) ? booking.service_ids.map(String).sort() : []).join(',')
+        };
+
+        var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+        if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+            ctrl.updateSubmitButtonState();
+        }
+    }
+
+    function getCurrentEditValues() {
+        var dateInput = document.getElementById('edit-date');
+        var startTimeSelect = document.getElementById('edit-start-time');
+        var endTimeSelect = document.getElementById('edit-end-time');
+        var roomSelect = document.getElementById('edit-room');
+        var teacherSelect = document.getElementById('edit-teacher');
+        var directionSelect = document.getElementById('edit-direction');
+        var commentEl = document.getElementById('editBookingComment');
+        var servicesSelect = document.getElementById('edit-services');
+        var peopleCountInput = document.getElementById('edit-people-count');
+
+        var currentServiceIds = [];
+        if (servicesSelect) {
+            Array.from(servicesSelect.querySelectorAll('ul.options li.selected')).forEach(function(li) {
+                var val = li.getAttribute('data-value');
+                if (val) currentServiceIds.push(String(val));
+            });
+        }
+        currentServiceIds.sort();
+
+        var specialistServiceSelect = document.getElementById('edit-specialist-service');
+        var specialistServiceId = getSelectedValue(specialistServiceSelect) || '';
+
+        return {
+            date_iso: dateInput ? dateInput.value : '',
+            start_time: getSelectedValue(startTimeSelect) || '',
+            end_time: getSelectedValue(endTimeSelect) || '',
+            room_id: String(getSelectedValue(roomSelect) || ''),
+            specialist_id: String(getSelectedValue(teacherSelect) || ''),
+            direction_id: String(getSelectedValue(directionSelect) || ''),
+            specialist_service_id: String(specialistServiceId),
+            people_count: peopleCountInput ? String(peopleCountInput.value || '').trim() : '',
+            comment: commentEl ? commentEl.value : '',
+            service_ids: currentServiceIds.join(',')
+        };
+    }
+
+    function hasEditChanges() {
+        if (!originalEditValues) return false;
+
+        var current = getCurrentEditValues();
+
+        return (
+            current.date_iso !== originalEditValues.date_iso ||
+            current.start_time !== originalEditValues.start_time ||
+            current.end_time !== originalEditValues.end_time ||
+            current.room_id !== originalEditValues.room_id ||
+            current.specialist_id !== originalEditValues.specialist_id ||
+            current.direction_id !== originalEditValues.direction_id ||
+            current.specialist_service_id !== originalEditValues.specialist_service_id ||
+            current.people_count !== originalEditValues.people_count ||
+            current.comment !== originalEditValues.comment ||
+            current.service_ids !== originalEditValues.service_ids
+        );
+    }
+
+    window.hasEditChanges = hasEditChanges;
+
+    // Функции показа/скрытия overlay сохранения
+    function showBookingSavingOverlay() {
+        var overlay = document.getElementById('booking-saving-overlay');
+        if (overlay) overlay.classList.add('is-visible');
+    }
+    function hideBookingSavingOverlay() {
+        var overlay = document.getElementById('booking-saving-overlay');
+        if (overlay) overlay.classList.remove('is-visible');
+    }
+
+    async function submitEditBooking() {
+        const bookingId = window.currentBookingId;
+        if (!bookingId) return;
+
+        // Показываем overlay сохранения
+        showBookingSavingOverlay();
+
+        const scenarioId = document.getElementById('editBookingModal')?.getAttribute('data-scenario-id') || null;
+        if (!scenarioId) {
+            console.error('Не удалось определить тип брони (scenario)');
+            hideBookingSavingOverlay();
+            return;
+        }
+
+        const dateIso = document.getElementById('edit-date')?.value;
+        const startTimeHm = getSelectedValue(document.getElementById('edit-start-time'));
+        const durationHhmm = getSelectedValue(document.getElementById('edit-duration'));
+        const roomId = getSelectedValue(document.getElementById('edit-room'));
+        const specialistId = getSelectedValue(document.getElementById('edit-teacher'));
+        const directionId = getSelectedValue(document.getElementById('edit-direction'));
+        const specialistServiceId = getSelectedValue(document.getElementById('edit-specialist-service'));
+        const comment = document.getElementById('editBookingComment')?.value || '';
+        const servicesEl = document.getElementById('edit-services');
+        const serviceIds = Array.from(
+            servicesEl ? servicesEl.querySelectorAll('ul.options li.selected') : []
+        ).map(li => li.getAttribute('data-value')).filter(Boolean);
+
+        const costText = document.getElementById('editBookingCostValue')?.textContent || '';
+        const totalCost = (costText || '').replace('BYN', '').trim();
+
+        var scenarioName = '';
+        if (scenarioId && Array.isArray(window.SCENARIOS)) {
+            var scenario = window.SCENARIOS.find(function(s) { return String(s.pk) === String(scenarioId); });
+            scenarioName = scenario && scenario.fields ? scenario.fields.name : '';
+        }
+        var isSimplifiedScenario = (scenarioName === 'Репетиционная точка' || scenarioName === 'Музыкальный класс');
+
+        var peopleCountInput = document.getElementById('edit-people-count');
+        var peopleCountVal = peopleCountInput ? String(peopleCountInput.value || '').trim() : '';
+        if (isSimplifiedScenario && !peopleCountVal) {
+            alert('Укажите количество людей');
+            hideBookingSavingOverlay();
+            return;
+        }
+        if (peopleCountVal) {
+            var pcInt = parseInt(peopleCountVal, 10);
+            if (!Number.isFinite(pcInt) || pcInt < 1 || pcInt > 99) {
+                alert('Количество людей должно быть от 1 до 99');
+                hideBookingSavingOverlay();
+                return;
+            }
+        }
+
+        const payload = {
+            date_iso: dateIso,
+            start_time_hm: startTimeHm,
+            duration_hhmm: durationHhmm,
+            room_id: roomId,
+            specialist_id: specialistId || null,
+            direction_id: directionId || null,
+            specialist_service_id: specialistServiceId || null,
+            service_ids: serviceIds,
+            comment: comment,
+            total_cost: totalCost,
+            people_count: isSimplifiedScenario ? peopleCountVal : null,
+        };
+
+        try {
+            const response = await fetch(`/booking/edit/${bookingId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': (typeof getCookie === 'function' ? getCookie('csrftoken') : '')
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data || !data.success) {
+                const msg = (data && data.error) ? data.error : 'Не удалось сохранить изменения';
+                throw new Error(msg);
+            }
+
+            if (typeof window.invalidateBookingHoverPopoverCache === 'function') {
+                window.invalidateBookingHoverPopoverCache(bookingId);
+            }
+
+            if (typeof window.reloadCalendarGridForCurrentState === 'function') {
+                await window.reloadCalendarGridForCurrentState();
+            } else if (typeof window.refreshBookingsGrid === 'function') {
+                await window.refreshBookingsGrid({ silent: true });
+            }
+
+            window._editModalShouldOpenInfo = false;
+            const editModalInst = bootstrap.Modal.getInstance(document.getElementById('editBookingModal'));
+            if (editModalInst) {
+                editModalInst.hide();
+            }
+
+            setTimeout(function () {
+                if (typeof window.openInfoModal === 'function') {
+                    window.openInfoModal();
+                } else {
+                    const infoModal = new bootstrap.Modal(document.getElementById('infoBookingModal'));
+                    infoModal.show();
+                }
+            }, 50);
+
+        } catch (err) {
+            console.error('Ошибка при сохранении изменений брони:', err);
+        } finally {
+            // Скрываем overlay после завершения
+            hideBookingSavingOverlay();
+        }
+    }
+
+    // Счетчик символов для textarea 'Комментарий'
+    function initCommentCounter() {
+        const textarea = document.getElementById('editBookingComment');
+        const counter = document.getElementById('editBookingCommentCounter');
+
+        if (!textarea || !counter) return;
+
+        const updateCounter = () => {
+            let val = textarea.value.slice(0, 1000);
+            textarea.value = val;
+            counter.textContent = `${val.length}/1000`;
+            counter.style.color =
+                val.length >= 1000 ? '#FF0000' :
+                    val.length >= 900 ? '#FFA500' :
+                        '#818EA2';
+            var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+            if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+                ctrl.updateSubmitButtonState();
+            }
+        };
+
+        textarea.addEventListener('input', updateCounter);
+        updateCounter();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCommentCounter);
+    } else {
+        initCommentCounter();
+    }

@@ -1,0 +1,1124 @@
+    (function () {
+        var modalElement = document.getElementById('createBookingModal');
+        if (!modalElement) {
+            return;
+        }
+
+        var peopleCountInput = document.getElementById('people-count');
+        if (peopleCountInput && !peopleCountInput._peopleCountBound) {
+            peopleCountInput._peopleCountBound = true;
+            peopleCountInput.addEventListener('input', function () {
+                var raw = String(peopleCountInput.value || '');
+                var digits = raw.replace(/\D+/g, '').slice(0, 2);
+                if (digits) {
+                    var n = parseInt(digits, 10);
+                    if (Number.isFinite(n)) {
+                        if (n > 99) n = 99;
+                        digits = String(n);
+                    }
+                }
+                if (peopleCountInput.value !== digits) {
+                    peopleCountInput.value = digits;
+                }
+                if (typeof window.updateSubmitButtonState === 'function') {
+                    window.updateSubmitButtonState();
+                }
+            });
+        }
+
+        var teacherDirectionLastChanged = null;
+
+        // --------------------------
+        // Вспомогательные функции
+        // --------------------------
+
+        function getSelectedValue(selectEl) {
+            if (window.BookingModalUtils && typeof window.BookingModalUtils.getSelectedValue === 'function') {
+                return window.BookingModalUtils.getSelectedValue(selectEl);
+            }
+            var selectedLi = selectEl.querySelector('ul.options li.selected');
+            return selectedLi ? (selectedLi.getAttribute('data-value') || '') : '';
+        }
+
+        function syncClearableSelectState(selectEl) {
+            if (!selectEl || !selectEl.classList.contains('custom-select--clearable')) {
+                return;
+            }
+
+            var hasValue = Boolean(getSelectedValue(selectEl));
+            if (window.BookingModalUtils && typeof window.BookingModalUtils.updateSelectHasSelection === 'function') {
+                window.BookingModalUtils.updateSelectHasSelection(selectEl, hasValue);
+                return;
+            }
+
+            if (hasValue) {
+                selectEl.classList.add('has-selection');
+            } else {
+                selectEl.classList.remove('has-selection');
+            }
+        }
+
+        function resetSelect(selectEl) {
+            if (window.BookingModalUtils && typeof window.BookingModalUtils.resetSelect === 'function') {
+                window.BookingModalUtils.resetSelect(selectEl);
+                syncClearableSelectState(selectEl);
+                return;
+            }
+            var selectedSpan = selectEl.querySelector('.selected');
+            var placeholder = selectEl.getAttribute('data-placeholder') || (selectedSpan ? selectedSpan.textContent : '');
+            var options = selectEl.querySelectorAll('ul.options li');
+
+            options.forEach(function (li) {
+                li.classList.remove('selected');
+            });
+
+            if (selectedSpan) {
+                selectedSpan.textContent = placeholder;
+            }
+
+            syncClearableSelectState(selectEl);
+        }
+
+        function resetTeacherDirectionUI() {
+            var teacherSelect = modalElement.querySelector('#teacher');
+            var directionSelect = modalElement.querySelector('#field-direction');
+            if (!teacherSelect || !directionSelect) {
+                return;
+            }
+
+            resetSelect(teacherSelect);
+            resetSelect(directionSelect);
+
+            teacherSelect.querySelectorAll('ul.options li').forEach(function (li) {
+                li.style.display = '';
+            });
+            directionSelect.querySelectorAll('ul.options li').forEach(function (li) {
+                li.style.display = '';
+            });
+        }
+
+        function applyTeacherDirectionFilters() {
+            var teacherSelect = modalElement.querySelector('#teacher');
+            var directionSelect = modalElement.querySelector('#field-direction');
+            if (!teacherSelect || !directionSelect) {
+                return;
+            }
+
+            var selectedTeacherId = getSelectedValue(teacherSelect);
+            var selectedDirectionId = getSelectedValue(directionSelect);
+
+            var teacherLis = teacherSelect.querySelectorAll('ul.options li');
+            var directionLis = directionSelect.querySelectorAll('ul.options li');
+            
+            // Получаем текущее время начала и окончания для проверки доступности (из глобальных переменных)
+            var startMinutes = window.currentStartTimeMinutes;
+            var endMinutes = window.currentEndTimeMinutes;
+            var teacherWarning = document.getElementById('teacher-warning-icon');
+            
+            // Вычисляем время для проверки доступности
+            var checkStartMinutes = startMinutes;
+            var checkEndMinutes = endMinutes;
+            if (startMinutes !== null && endMinutes === null) {
+                var minCheckMinutes = window.currentMinMinutes || 30;
+                checkEndMinutes = startMinutes + minCheckMinutes;
+            } else if (startMinutes === null && endMinutes !== null) {
+                var minCheckMinutes2 = window.currentMinMinutes || 30;
+                checkStartMinutes = endMinutes - minCheckMinutes2;
+            }
+
+            // 0) Получаем выбранную услугу преподавателя и маппинг услуга→специалисты
+            var specialistServiceSelect = modalElement.querySelector('#specialist-service');
+            var selectedServiceId = specialistServiceSelect ? getSelectedValue(specialistServiceSelect) : '';
+            var mappingEl = document.getElementById('specialist_service_to_specialists_json');
+            var serviceToSpecialists = {};
+            if (mappingEl) {
+                try {
+                    serviceToSpecialists = JSON.parse(mappingEl.textContent || '{}');
+                } catch (e) {
+                    console.warn('Не удалось распарсить specialist_service_to_specialists_json:', e);
+                }
+            }
+            // Список специалистов, оказывающих выбранную услугу (если услуга выбрана)
+            var specialistsForSelectedService = selectedServiceId ? (serviceToSpecialists[selectedServiceId] || []) : null;
+
+            // 1) Сначала определяем доступных специалистов
+            var availableTeacherIds = [];
+            var availableDirectionIds = new Set();
+            
+            teacherLis.forEach(function (li) {
+                var teacherId = parseInt(li.getAttribute('data-value'), 10);
+                var dirsRaw = li.getAttribute('data-directions') || '';
+                var dirs = dirsRaw ? dirsRaw.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : [];
+                
+                // Проверяем доступность по времени
+                var timeAvailable = true;
+                if (checkStartMinutes !== null && checkEndMinutes !== null) {
+                    timeAvailable = !window.isSpecialistBusy(teacherId, checkStartMinutes, checkEndMinutes);
+                }
+                
+                // Проверяем, оказывает ли специалист выбранную услугу (если услуга выбрана)
+                var serviceMatch = true;
+                if (specialistsForSelectedService !== null) {
+                    serviceMatch = specialistsForSelectedService.indexOf(teacherId) !== -1;
+                }
+                
+                if (timeAvailable && serviceMatch && !isNaN(teacherId)) {
+                    availableTeacherIds.push(teacherId);
+                    // Собираем направления доступных специалистов
+                    dirs.forEach(function(dirId) {
+                        availableDirectionIds.add(dirId);
+                    });
+                }
+            });
+
+            // 2) Проверка на конфликт: если оба выбраны, но не совместимы — сбрасываем противоположный
+            if (selectedTeacherId && selectedDirectionId) {
+                var selectedTeacherLi = teacherSelect.querySelector('ul.options li.selected');
+                var teacherDirectionsRaw = selectedTeacherLi ? (selectedTeacherLi.getAttribute('data-directions') || '') : '';
+                var teacherDirections = teacherDirectionsRaw ? teacherDirectionsRaw.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : [];
+
+                if (teacherDirections.indexOf(String(selectedDirectionId)) === -1) {
+                    if (teacherDirectionLastChanged === 'field-direction') {
+                        resetSelect(teacherSelect);
+                        selectedTeacherId = '';
+                    } else {
+                        resetSelect(directionSelect);
+                        selectedDirectionId = '';
+                    }
+                }
+            }
+
+            // 3) Фильтрация направлений
+            var visibleDirectionCount = 0;
+            var lastVisibleDirectionLi = null;
+            
+            if (selectedTeacherId) {
+                // Если выбран преподаватель — показываем только его направления
+                var teacherLi = teacherSelect.querySelector('ul.options li.selected');
+                var dirsRaw = teacherLi ? (teacherLi.getAttribute('data-directions') || '') : '';
+                var allowedDirs = dirsRaw ? dirsRaw.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : [];
+
+                directionLis.forEach(function (li) {
+                    var dirId = li.getAttribute('data-value') || '';
+                    var isVisible = allowedDirs.indexOf(String(dirId)) !== -1;
+                    li.style.display = isVisible ? '' : 'none';
+                    if (isVisible) {
+                        visibleDirectionCount++;
+                        lastVisibleDirectionLi = li;
+                    }
+                });
+            } else {
+                // Если преподаватель не выбран — показываем только направления доступных специалистов
+                directionLis.forEach(function (li) {
+                    var dirId = li.getAttribute('data-value') || '';
+                    var isVisible = availableDirectionIds.has(dirId);
+                    li.style.display = isVisible ? '' : 'none';
+                    if (isVisible) {
+                        visibleDirectionCount++;
+                        lastVisibleDirectionLi = li;
+                    }
+                });
+            }
+            
+            // 4) Обновляем состояние селекта направлений
+            var dirSelectedSpan = directionSelect.querySelector('span.selected');
+            if (visibleDirectionCount === 0) {
+                // Нет доступных направлений
+                directionSelect.classList.add('disabled');
+                if (dirSelectedSpan) dirSelectedSpan.textContent = 'Нет доступных направлений';
+            } else {
+                directionSelect.classList.remove('disabled');
+                if (!selectedDirectionId && dirSelectedSpan) {
+                    dirSelectedSpan.textContent = 'Выберите направление';
+                }
+                
+                // Авто-подстановка единственного направления
+                if (visibleDirectionCount === 1 && !selectedDirectionId && lastVisibleDirectionLi) {
+                    lastVisibleDirectionLi.classList.add('selected');
+                    if (dirSelectedSpan) {
+                        dirSelectedSpan.textContent = lastVisibleDirectionLi.textContent;
+                    }
+                    selectedDirectionId = lastVisibleDirectionLi.getAttribute('data-value');
+                    syncClearableSelectState(directionSelect);
+                }
+            }
+
+            // 5) Фильтрация преподавателей по выбранному направлению и доступности времени
+            var visibleTeacherCount = 0;
+            var lastVisibleTeacherLi = null;
+            
+            teacherLis.forEach(function (li) {
+                var teacherId = parseInt(li.getAttribute('data-value'), 10);
+                var dirsRaw = li.getAttribute('data-directions') || '';
+                var dirs = dirsRaw ? dirsRaw.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : [];
+                
+                // Фильтр по направлению
+                var directionMatch = !selectedDirectionId || dirs.indexOf(String(selectedDirectionId)) !== -1;
+                
+                // Фильтр по доступности времени
+                var timeAvailable = availableTeacherIds.indexOf(teacherId) !== -1;
+                
+                var isVisible = directionMatch && timeAvailable;
+                li.style.display = isVisible ? '' : 'none';
+                if (isVisible) {
+                    visibleTeacherCount++;
+                    lastVisibleTeacherLi = li;
+                }
+            });
+            
+            // 6) Обновляем состояние селекта преподавателей
+            var teacherSelectedSpan = teacherSelect.querySelector('span.selected');
+            if (visibleTeacherCount === 0) {
+                // Нет доступных специалистов
+                teacherSelect.classList.add('disabled');
+                teacherSelect.classList.remove('open');
+                teacherSelect.classList.remove('has-selection');
+                teacherLis.forEach(function (li) {
+                    li.classList.remove('selected');
+                });
+                selectedTeacherId = '';
+                if (teacherSelectedSpan) teacherSelectedSpan.textContent = 'Нет доступных преподавателей';
+                syncClearableSelectState(teacherSelect);
+                if (teacherWarning) teacherWarning.style.display = 'none';
+            } else {
+                teacherSelect.classList.remove('disabled');
+                if (!selectedTeacherId && teacherSelectedSpan) {
+                    teacherSelectedSpan.textContent = 'Выберите преподавателя';
+                }
+                
+                // Авто-подстановка единственного специалиста.
+                // ВАЖНО: автоподстановка происходит ТОЛЬКО если время установлено и по временным
+                // ограничениям доступен только один преподаватель. Без выбранного времени
+                // автоподстановка не должна срабатывать.
+                var timeIsSet = checkStartMinutes !== null && checkEndMinutes !== null;
+                if (visibleTeacherCount === 1 && !selectedTeacherId && lastVisibleTeacherLi && timeIsSet) {
+                    lastVisibleTeacherLi.classList.add('selected');
+                    if (teacherSelectedSpan) {
+                        teacherSelectedSpan.textContent = lastVisibleTeacherLi.textContent;
+                    }
+                    selectedTeacherId = lastVisibleTeacherLi.getAttribute('data-value');
+                    syncClearableSelectState(teacherSelect);
+                    
+                    // Если у единственного специалиста одно направление — подставляем его тоже
+                    var singleTeacherDirsRaw = lastVisibleTeacherLi.getAttribute('data-directions') || '';
+                    var singleTeacherDirs = singleTeacherDirsRaw ? singleTeacherDirsRaw.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : [];
+                    if (singleTeacherDirs.length === 1 && !selectedDirectionId) {
+                        var singleDirId = singleTeacherDirs[0];
+                        directionLis.forEach(function (li) {
+                            if (li.getAttribute('data-value') === singleDirId) {
+                                li.classList.add('selected');
+                                if (dirSelectedSpan) {
+                                    dirSelectedSpan.textContent = li.textContent;
+                                }
+                                syncClearableSelectState(directionSelect);
+                            }
+                        });
+                    }
+                }
+            }
+            
+            // 7) Проверка выбранного преподавателя на доступность
+            if (selectedTeacherId && checkStartMinutes !== null && checkEndMinutes !== null) {
+                var teacherIdInt = parseInt(selectedTeacherId, 10);
+                if (window.isSpecialistBusy(teacherIdInt, checkStartMinutes, checkEndMinutes)) {
+                    if (teacherWarning) teacherWarning.style.display = 'inline-block';
+                } else {
+                    if (teacherWarning) teacherWarning.style.display = 'none';
+                }
+            } else {
+                if (teacherWarning) teacherWarning.style.display = 'none';
+            }
+            
+            // Вызываем глобальную функцию для обновления состояния кнопки
+            if (typeof window.updateSubmitButtonState === 'function') {
+                window.updateSubmitButtonState();
+            }
+            
+            // Фильтруем услуги преподавателей по доступным специалистам
+            applySpecialistServicesFilter(availableTeacherIds, selectedTeacherId);
+        }
+        // Делаем функцию доступной глобально для вызова из других блоков кода
+        window.applyTeacherDirectionFilters = applyTeacherDirectionFilters;
+        
+        /**
+         * Фильтрация списка "Услуги преподавателей" по доступным специалистам.
+         * 
+         * Логика:
+         * 1. Если выбран конкретный преподаватель — показываем только его услуги
+         * 2. Если преподаватель не выбран — показываем услуги всех доступных специалистов
+         * 3. Если у выбранного преподавателя только одна услуга — автоподстановка без плейсхолдера
+         * 
+         * @param {Array<number>} availableTeacherIds - ID доступных специалистов (по времени)
+         * @param {string|number} selectedTeacherId - ID выбранного преподавателя (или пусто)
+         */
+        function applySpecialistServicesFilter(availableTeacherIds, selectedTeacherId) {
+            var specialistServiceSelect = modalElement.querySelector('#specialist-service');
+            if (!specialistServiceSelect) return;
+            
+            // Получаем маппинг услуга → специалисты из скрытого JSON элемента
+            var mappingEl = document.getElementById('specialist_service_to_specialists_json');
+            var serviceToSpecialists = {};
+            if (mappingEl) {
+                try {
+                    serviceToSpecialists = JSON.parse(mappingEl.textContent || '{}');
+                } catch (e) {
+                    console.warn('Не удалось распарсить specialist_service_to_specialists_json:', e);
+                }
+            }
+            
+            var serviceLis = specialistServiceSelect.querySelectorAll('ul.options li');
+            var visibleCount = 0;
+            var lastVisibleLi = null;
+            var selectedServiceId = getSelectedValue(specialistServiceSelect);
+            
+            // Определяем, какие специалисты учитываются при фильтрации услуг
+            var relevantSpecialistIds = [];
+            if (selectedTeacherId) {
+                // Если выбран преподаватель — фильтруем по его услугам
+                relevantSpecialistIds = [parseInt(selectedTeacherId, 10)];
+            } else {
+                // Иначе — по всем доступным специалистам
+                relevantSpecialistIds = availableTeacherIds || [];
+            }
+            
+            serviceLis.forEach(function(li) {
+                var serviceId = li.getAttribute('data-value');
+                // Получаем список специалистов, оказывающих эту услугу
+                var specialistsForService = serviceToSpecialists[serviceId] || [];
+                
+                // Услуга видима, если хотя бы один из её специалистов доступен
+                var isVisible = specialistsForService.some(function(specId) {
+                    return relevantSpecialistIds.indexOf(specId) !== -1;
+                });
+                
+                li.style.display = isVisible ? '' : 'none';
+                if (isVisible) {
+                    visibleCount++;
+                    lastVisibleLi = li;
+                }
+            });
+            
+            var selectedSpan = specialistServiceSelect.querySelector('span.selected');
+            var placeholder = specialistServiceSelect.getAttribute('data-placeholder') || 'Выберите услугу преподавателя';
+            
+            // Сбрасываем выбор, если выбранная услуга больше не видима
+            if (selectedServiceId) {
+                var selectedLi = specialistServiceSelect.querySelector('ul.options li.selected');
+                if (selectedLi && selectedLi.style.display === 'none') {
+                    selectedLi.classList.remove('selected');
+                    selectedServiceId = '';
+                    if (selectedSpan) selectedSpan.textContent = placeholder;
+                    specialistServiceSelect.classList.remove('has-selection');
+                }
+            }
+            
+            if (visibleCount === 0) {
+                // Нет доступных услуг
+                specialistServiceSelect.classList.add('disabled');
+                if (selectedSpan) selectedSpan.textContent = 'Нет доступных услуг';
+                specialistServiceSelect.classList.remove('has-selection');
+            } else if (visibleCount === 1 && !selectedServiceId) {
+                // Автоподстановка единственной услуги (без плейсхолдера)
+                specialistServiceSelect.classList.remove('disabled');
+                lastVisibleLi.classList.add('selected');
+                if (selectedSpan) {
+                    // Берём только название услуги (без стоимости)
+                    var serviceName = lastVisibleLi.querySelector('.service-name');
+                    selectedSpan.textContent = serviceName ? serviceName.textContent : lastVisibleLi.textContent;
+                }
+                specialistServiceSelect.classList.add('has-selection');
+                syncClearableSelectState(specialistServiceSelect);
+            } else {
+                // Несколько услуг доступно
+                specialistServiceSelect.classList.remove('disabled');
+                if (!selectedServiceId && selectedSpan) {
+                    selectedSpan.textContent = placeholder;
+                }
+            }
+
+            if (typeof window.updateSubmitButtonState === 'function') {
+                window.updateSubmitButtonState();
+            }
+
+            if (typeof window.syncCreateBookingMusicSchoolTimeFields === 'function') {
+                window.syncCreateBookingMusicSchoolTimeFields();
+            }
+        }
+        window.applySpecialistServicesFilter = applySpecialistServicesFilter;
+
+        function applyServicesFilters() {
+            var servicesSelect = modalElement.querySelector('#services');
+            if (!servicesSelect) {
+                return;
+            }
+
+            var roomIdField = modalElement.querySelector('#roomIdField');
+            var currentRoomId = roomIdField ? String(roomIdField.value || '') : '';
+            var currentScenarioId = (window.currentScenarioFilterId !== undefined && window.currentScenarioFilterId !== null)
+                ? String(window.currentScenarioFilterId)
+                : '';
+
+            // Фильтрация + защита от дублей:
+            // Если по какой-то причине одинаковые услуги оказались добавлены несколько раз, оставляем только одну.
+            // Ключ: service_id + room_id + scenario_id
+            var options = servicesSelect.querySelectorAll('ul.options li');
+            var seen = new Map();
+
+            Array.from(options).forEach(function (li) {
+                var liRoomId = String(li.getAttribute('data-room-id') || '');
+                var liScenarioId = String(li.getAttribute('data-scenario-id') || '');
+                var liValue = String(li.getAttribute('data-value') || '');
+
+                var dedupeKey = liValue + '|' + liRoomId + '|' + liScenarioId;
+                if (seen.has(dedupeKey)) {
+                    var kept = seen.get(dedupeKey);
+
+                    // Если выбран дубль, а сохранённый элемент не выбран — переносим выбранность на сохранённый.
+                    if (li.classList.contains('selected') && kept && !kept.classList.contains('selected')) {
+                        kept.classList.add('selected');
+
+                        if (servicesSelect._selectedOptions) {
+                            servicesSelect._selectedOptions.add(kept);
+                            servicesSelect._selectedOptions.delete(li);
+                        }
+                    }
+
+                    if (li.parentNode) {
+                        li.parentNode.removeChild(li);
+                    }
+                    return;
+                }
+                seen.set(dedupeKey, li);
+
+                var roomOk = !liRoomId || !currentRoomId || liRoomId === currentRoomId;
+                var scenarioOk = !liScenarioId || !currentScenarioId || liScenarioId === currentScenarioId;
+
+                li.style.display = (roomOk && scenarioOk) ? '' : 'none';
+            });
+
+            if (servicesSelect._selectedOptions && servicesSelect._selectedOptions.size) {
+                var changed = false;
+                Array.from(servicesSelect._selectedOptions).forEach(function (opt) {
+                    if (opt.style.display === 'none') {
+                        opt.classList.remove('selected');
+                        servicesSelect._selectedOptions.delete(opt);
+                        changed = true;
+                    }
+                });
+
+                if (changed && typeof servicesSelect._updateSelectedText === 'function') {
+                    servicesSelect._updateSelectedText();
+                }
+            }
+        }
+
+        applyServicesFilters();
+
+        // --------------------------
+        // Инициализация кастомных селектов
+        // --------------------------
+        // Один глобальный обработчик закрытия по клику вне селекта (без навешивания N одинаковых слушателей)
+        if (window.BookingSelectsUtils && typeof window.BookingSelectsUtils.ensureCloseOnOutsideClick === 'function') {
+            window.BookingSelectsUtils.ensureCloseOnOutsideClick({
+                key: 'createBookingModal',
+                rootEl: modalElement
+            });
+        }
+
+        var closeAll = function () {
+            modalElement.querySelectorAll('.custom-select.open').forEach(function (s) {
+                s.classList.remove('open');
+            });
+        };
+
+        ['start-time', 'end-time', 'duration'].forEach(function (selectId) {
+            var timeSelectEl = modalElement.querySelector('#' + selectId);
+            if (!timeSelectEl) return;
+            if (timeSelectEl._bookingTimeOpenBound) return;
+            timeSelectEl._bookingTimeOpenBound = true;
+
+            timeSelectEl.addEventListener('click', function (e) {
+                if (timeSelectEl.classList.contains('disabled')) return;
+
+                // Не перехватываем крестик очистки — у time-select'ов свой обработчик reset*
+                var clearBtn = e.target && (e.target.closest ? e.target.closest('.custom-select-clear') : null);
+                if (clearBtn) return;
+
+                // Клик по li обрабатывается внутри BookingTimeUtils.*rebuild* (там же e.stopPropagation)
+                if (e.target && e.target.tagName === 'LI') return;
+
+                var wasOpen = timeSelectEl.classList.contains('open');
+                closeAll();
+                if (!wasOpen) {
+                    timeSelectEl.classList.add('open');
+                }
+            });
+        });
+
+        var servicesSelect = modalElement.querySelector('#services');
+        if (servicesSelect) {
+            var servicesOptionsContainer = servicesSelect.querySelector('.options');
+            if (servicesOptionsContainer) {
+                if (window.BookingServicesUtils && typeof window.BookingServicesUtils.bindServicesMultiSelect === 'function') {
+                    window.BookingServicesUtils.bindServicesMultiSelect({
+                        selectEl: servicesSelect,
+                        optionsContainerEl: servicesOptionsContainer,
+                        placeholderText: 'Выберите услугу',
+                        resetBtnId: 'create-reset-services',
+                        onSelectionChanged: function () {
+                            if (typeof window.updateServicesBadges === 'function') {
+                                window.updateServicesBadges();
+                            }
+                            if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                                window.calculateAndUpdateBookingCost();
+                            }
+                        }
+                    });
+                    if (typeof window.updateServicesBadges === 'function') {
+                        window.updateServicesBadges();
+                    }
+                    if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                        window.calculateAndUpdateBookingCost();
+                    }
+                }
+            }
+        }
+
+        if (window.BookingSelectsUtils && typeof window.BookingSelectsUtils.bindSelectsInRoot === 'function') {
+            window.BookingSelectsUtils.bindSelectsInRoot({
+                rootEl: modalElement,
+                closeAll: closeAll,
+                closeOthersOnOpen: false,
+                skipSelectIds: ['services', 'start-time', 'end-time', 'duration'],
+                selectConfigs: {
+                    'client': {
+                        ignoreOptionIds: ['search-option'],
+                        searchInputSelector: '#client-search-input',
+                        searchOptionId: 'search-option',
+                        focusSearchOnOpen: true,
+                        clearSearchOnSelect: true,
+                        onSelected: function () {
+                            if (typeof window.updateSubmitButtonState === 'function') {
+                                window.updateSubmitButtonState();
+                            }
+                        }
+                    },
+                    'teacher': {
+                        onSelected: function () {
+                            teacherDirectionLastChanged = 'teacher';
+                            applyTeacherDirectionFilters();
+                        },
+                        onCleared: function () {
+                            teacherDirectionLastChanged = 'teacher';
+                            applyTeacherDirectionFilters();
+                        }
+                    },
+                    'field-direction': {
+                        onSelected: function () {
+                            teacherDirectionLastChanged = 'field-direction';
+                            applyTeacherDirectionFilters();
+                        },
+                        onCleared: function () {
+                            teacherDirectionLastChanged = 'field-direction';
+                            applyTeacherDirectionFilters();
+                        }
+                    },
+                    'specialist-service': {
+                        onSelected: function () {
+                            applyTeacherDirectionFilters();
+                        },
+                        beforeClear: function (ctx) {
+                            var selectEl = ctx ? ctx.selectEl : null;
+                            if (!selectEl) return;
+                            var visibleServices = Array.from(selectEl.querySelectorAll('ul.options li')).filter(function (li) {
+                                return li.style.display !== 'none';
+                            });
+                            if (visibleServices.length === 1) {
+                                return false;
+                            }
+                        },
+                        onCleared: function (ctx) {
+                            teacherDirectionLastChanged = ctx && ctx.selectEl ? ctx.selectEl.id : 'specialist-service';
+                            applyTeacherDirectionFilters();
+                        }
+                    }
+                }
+            });
+        }
+
+        if (!window.__createBookingClientAddedListenerAttached) {
+            window.__createBookingClientAddedListenerAttached = true;
+            document.addEventListener('booking:client-added', function (event) {
+                var clientData = event && event.detail ? event.detail : null;
+                if (!clientData || !clientData.id || !clientData.name) {
+                    return;
+                }
+
+                var clientSelect = document.getElementById('client');
+                if (!clientSelect) {
+                    return;
+                }
+
+                var optionsContainer = clientSelect.querySelector('ul.options');
+                if (!optionsContainer) {
+                    return;
+                }
+
+                var clientId = String(clientData.id);
+                var existing = optionsContainer.querySelector('li[data-type="client"][data-value="' + clientId + '"]');
+
+                if (!existing) {
+                    existing = document.createElement('li');
+                    existing.setAttribute('data-value', clientId);
+                    existing.setAttribute('data-type', 'client');
+
+                    var searchOption = optionsContainer.querySelector('#search-option');
+                    var insertBeforeEl = searchOption ? searchOption.nextElementSibling : optionsContainer.firstElementChild;
+                    if (insertBeforeEl) {
+                        optionsContainer.insertBefore(existing, insertBeforeEl);
+                    } else {
+                        optionsContainer.appendChild(existing);
+                    }
+                }
+
+                existing.textContent = clientData.name;
+
+                var bookingModalEl = document.getElementById('createBookingModal');
+                if (bookingModalEl && bookingModalEl.classList.contains('show')) {
+                    if (window.BookingSelectsUtils && typeof window.BookingSelectsUtils.selectOption === 'function') {
+                        window.BookingSelectsUtils.selectOption({
+                            selectEl: clientSelect,
+                            optionEl: existing,
+                            ignoreOptionIds: ['search-option'],
+                            onSelected: function () {
+                                var searchInput = clientSelect.querySelector('#client-search-input');
+                                if (searchInput) {
+                                    searchInput.value = '';
+                                }
+                                optionsContainer.querySelectorAll('li').forEach(function (opt) {
+                                    if (opt.id === 'search-option') return;
+                                    opt.style.display = '';
+                                });
+                                if (typeof window.updateSubmitButtonState === 'function') {
+                                    window.updateSubmitButtonState();
+                                }
+                            }
+                        });
+                    } else {
+                        var selectedSpan = clientSelect.querySelector('span.selected');
+                        if (selectedSpan) {
+                            var currentOptionsList = optionsContainer.querySelectorAll('li');
+                            currentOptionsList.forEach(function (opt) {
+                                if (opt.id !== 'search-option') {
+                                    opt.classList.remove('selected');
+                                }
+                            });
+                            existing.classList.add('selected');
+                            selectedSpan.textContent = existing.textContent;
+                            if (typeof syncClearableSelectState === 'function') {
+                                syncClearableSelectState(clientSelect);
+                            }
+                            if (typeof window.updateSubmitButtonState === 'function') {
+                                window.updateSubmitButtonState();
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // При закрытии модалки сбрасываем связанные селекты и фильтры, чтобы при следующем открытии не оставались скрытые элементы
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            teacherDirectionLastChanged = null;
+            resetTeacherDirectionUI();
+            
+            // Сбрасываем услугу преподавателя
+            var specialistServiceSelect = document.getElementById('specialist-service');
+            if (specialistServiceSelect) {
+                var specOptions = specialistServiceSelect.querySelectorAll('ul.options li');
+                specOptions.forEach(function (opt) {
+                    opt.classList.remove('selected');
+                });
+                var specSelectedSpan = specialistServiceSelect.querySelector('span.selected');
+                if (specSelectedSpan) {
+                    specSelectedSpan.textContent = 'Выберите услугу преподавателя';
+                }
+                specialistServiceSelect.classList.remove('has-selection');
+            }
+
+            var peopleCountInput = document.getElementById('people-count');
+            if (peopleCountInput) {
+                peopleCountInput.value = '';
+            }
+        });
+
+        // При открытии гарантируем корректную фильтрацию (на случай, если есть предустановленные значения)
+        modalElement.addEventListener('shown.bs.modal', function () {
+            applyTeacherDirectionFilters();
+            applyServicesFilters();
+        });
+        
+        // Функция сброса всех селектов в модалке
+        function resetAllSelects() {
+            var selectsToReset = ['client', 'teacher', 'field-direction', 'duration', 'start-time', 'end-time'];
+            selectsToReset.forEach(function (selectId) {
+                var select = document.getElementById(selectId);
+                if (!select) return;
+                
+                // Снимаем selected со всех опций
+                var options = select.querySelectorAll('ul.options li');
+                options.forEach(function (opt) {
+                    if (opt.id !== 'search-option') {
+                        opt.classList.remove('selected');
+                    }
+                });
+                
+                // Сбрасываем текст на placeholder
+                var selectedSpan = select.querySelector('span.selected');
+                var placeholder = select.getAttribute('data-placeholder');
+                if (selectedSpan) {
+                    if (selectId === 'client') {
+                        selectedSpan.textContent = 'Выберите клиента';
+                    } else if (selectId === 'teacher') {
+                        selectedSpan.textContent = 'Выберите преподавателя';
+                    } else if (selectId === 'field-direction') {
+                        selectedSpan.textContent = 'Выберите направление';
+                    } else if (selectId === 'duration') {
+                        selectedSpan.textContent = 'Выберите длительность';
+                    } else if (selectId === 'start-time') {
+                        selectedSpan.textContent = 'Начало';
+                    } else if (selectId === 'end-time') {
+                        selectedSpan.textContent = 'Конец';
+                    } else if (placeholder) {
+                        selectedSpan.textContent = placeholder;
+                    }
+                }
+                
+                // Обновляем состояние кнопки очистки для clearable селектов
+                if (typeof syncClearableSelectState === 'function') {
+                    syncClearableSelectState(select);
+                }
+            });
+            
+            // Сбрасываем услуги
+            var servicesSelect = document.getElementById('services');
+            if (servicesSelect && servicesSelect._selectedOptions) {
+                servicesSelect._selectedOptions.clear();
+                var servicesOptions = servicesSelect.querySelectorAll('ul.options li');
+                servicesOptions.forEach(function (opt) {
+                    opt.classList.remove('selected');
+                });
+                var servicesSelectedSpan = servicesSelect.querySelector('span.selected');
+                if (servicesSelectedSpan) {
+                    servicesSelectedSpan.textContent = 'Выберите услугу';
+                }
+            }
+            // Сбрасываем бейджи услуг
+            var servicesBadgesContainer = document.getElementById('create-selected-services');
+            if (servicesBadgesContainer) {
+                servicesBadgesContainer.innerHTML = '';
+            }
+            var resetServicesBtn = document.getElementById('create-reset-services');
+            if (resetServicesBtn) {
+                resetServicesBtn.style.display = 'none';
+            }
+            
+            // Сбрасываем услугу преподавателя
+            var specialistServiceSelect = document.getElementById('specialist-service');
+            if (specialistServiceSelect) {
+                var specOptions = specialistServiceSelect.querySelectorAll('ul.options li');
+                specOptions.forEach(function (opt) {
+                    opt.classList.remove('selected');
+                });
+                var specSelectedSpan = specialistServiceSelect.querySelector('span.selected');
+                if (specSelectedSpan) {
+                    specSelectedSpan.textContent = 'Выберите услугу преподавателя';
+                }
+                specialistServiceSelect.classList.remove('has-selection');
+            }
+            
+            // Сбрасываем комментарий
+            var commentField = document.getElementById('bookingComment');
+            if (commentField) {
+                commentField.value = '';
+            }
+
+            var peopleCountInput = document.getElementById('people-count');
+            if (peopleCountInput) {
+                peopleCountInput.value = '';
+            }
+            var trialCheckbox = document.getElementById('trialLessonCheckbox');
+            if (trialCheckbox) {
+                trialCheckbox.checked = false;
+            }
+            // Сбрасываем счётчик символов
+            var commentCounter = document.getElementById('bookingCommentCounter');
+            if (commentCounter) {
+                commentCounter.textContent = '0/1000';
+            }
+
+            var costElement = document.getElementById('bookingCostValue');
+            if (costElement) {
+                costElement.textContent = '0 BYN';
+            }
+
+            var startTimeWarning = document.getElementById('start-time-warning-icon');
+            var endTimeWarning = document.getElementById('end-time-warning-icon');
+            var teacherWarning = document.getElementById('teacher-warning-icon');
+            var submitWarning = document.getElementById('submit-warning-icon');
+            if (startTimeWarning) startTimeWarning.style.display = 'none';
+            if (endTimeWarning) endTimeWarning.style.display = 'none';
+            if (teacherWarning) teacherWarning.style.display = 'none';
+            if (submitWarning) submitWarning.style.display = 'none';
+            
+            // Сбрасываем глобальные переменные времени
+            window.currentStartTimeMinutes = null;
+            window.currentEndTimeMinutes = null;
+            window.currentSelectedPeriods = null;
+        }
+
+        window.resetCreateBookingModalSelects = resetAllSelects;
+
+        // --- Обработчик отправки формы создания брони ---
+        var submitBtn = document.getElementById('createBookingSubmitBtn');
+        if (submitBtn) {
+            submitBtn.addEventListener('click', function () {
+                submitCreateBookingForm();
+            });
+        }
+
+        // Функция отправки формы создания брони
+        function submitCreateBookingForm() {
+            var form = document.getElementById('bookingForm');
+            if (!form) return;
+
+            // Собираем данные формы
+            var formData = new FormData();
+
+            // CSRF token
+            var csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]');
+            if (csrfToken) {
+                formData.append('csrfmiddlewaretoken', csrfToken.value);
+            }
+
+            // Scenario ID (из глобальной переменной)
+            if (window.currentScenarioFilterId) {
+                formData.append('scenario_id', window.currentScenarioFilterId);
+            }
+
+            // Room ID
+            var roomIdField = document.getElementById('roomIdField');
+            if (roomIdField && roomIdField.value) {
+                formData.append('room_id', roomIdField.value);
+            }
+
+            // Client ID или Client Group ID (в зависимости от типа выбранного элемента)
+            var clientSelect = document.getElementById('client');
+            if (clientSelect) {
+                var selectedClient = clientSelect.querySelector('ul.options li.selected:not(#search-option)');
+                if (selectedClient && selectedClient.getAttribute('data-value')) {
+                    var selectionType = selectedClient.getAttribute('data-type') || 'client';
+                    if (selectionType === 'group') {
+                        formData.append('client_group_id', selectedClient.getAttribute('data-value'));
+                    } else {
+                        formData.append('client_id', selectedClient.getAttribute('data-value'));
+                    }
+                }
+            }
+
+            // Specialist ID (преподаватель)
+            var teacherSelect = document.getElementById('teacher');
+            if (teacherSelect) {
+                var selectedTeacher = teacherSelect.querySelector('ul.options li.selected');
+                if (selectedTeacher) {
+                    formData.append('specialist_id', selectedTeacher.getAttribute('data-value'));
+                }
+            }
+
+            // Direction ID (направление)
+            var directionSelect = document.getElementById('field-direction');
+            if (directionSelect) {
+                var selectedDirection = directionSelect.querySelector('ul.options li.selected');
+                if (selectedDirection) {
+                    formData.append('direction_id', selectedDirection.getAttribute('data-value'));
+                }
+            }
+
+            var specialistServiceSelect = document.getElementById('specialist-service');
+            if (specialistServiceSelect) {
+                var selectedSpecialistService = specialistServiceSelect.querySelector('ul.options li.selected');
+                if (selectedSpecialistService) {
+                    formData.append('specialist_service_id', selectedSpecialistService.getAttribute('data-value'));
+                }
+            }
+
+            // Full datetime (дата + время начала)
+            var modalDateInput = document.getElementById('modal-create-date');
+            var startTime = window.currentStartTimeMinutes;
+            if (modalDateInput && modalDateInput.value && startTime !== null && startTime !== undefined) {
+                var timeHm = null;
+                if (window.BookingTimeUtils && typeof window.BookingTimeUtils.formatTimeHHMM === 'function') {
+                    timeHm = window.BookingTimeUtils.formatTimeHHMM(startTime);
+                } else {
+                    var hours = Math.floor(startTime / 60);
+                    var mins = startTime % 60;
+                    timeHm = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+                }
+                formData.append('full_datetime', modalDateInput.value + ' ' + timeHm + ':00');
+            }
+
+            // Duration (длительность в формате HH:MM)
+            var durationSelect = document.getElementById('duration');
+            var startMinutesForDuration = window.currentStartTimeMinutes;
+            var endMinutesForDuration = window.currentEndTimeMinutes;
+            if (
+                startMinutesForDuration !== null && startMinutesForDuration !== undefined &&
+                endMinutesForDuration !== null && endMinutesForDuration !== undefined &&
+                endMinutesForDuration > startMinutesForDuration
+            ) {
+                var durationMinutes = endMinutesForDuration - startMinutesForDuration;
+                var durationStr = null;
+                if (window.BookingTimeUtils && typeof window.BookingTimeUtils.formatDurationHHMM === 'function') {
+                    durationStr = window.BookingTimeUtils.formatDurationHHMM(durationMinutes);
+                } else {
+                    var durationHours = Math.floor(durationMinutes / 60);
+                    var durationMins = durationMinutes % 60;
+                    durationStr = String(durationHours).padStart(2, '0') + ':' + String(durationMins).padStart(2, '0');
+                }
+                formData.append('duration', durationStr);
+            } else if (durationSelect) {
+                var selectedDuration = durationSelect.querySelector('ul.options li.selected');
+                if (selectedDuration) {
+                    var durationStr = selectedDuration.getAttribute('data-value');
+                    if (!durationStr) {
+                        var periods = parseInt(selectedDuration.getAttribute('data-periods'), 10);
+                        var minMinutes = window.getScenarioMinDurationMinutes ? window.getScenarioMinDurationMinutes() : 60;
+                        var totalMinutes = periods * minMinutes;
+                        if (window.BookingTimeUtils && typeof window.BookingTimeUtils.formatDurationHHMM === 'function') {
+                            durationStr = window.BookingTimeUtils.formatDurationHHMM(totalMinutes);
+                        } else {
+                            var durationHours = Math.floor(totalMinutes / 60);
+                            var durationMins = totalMinutes % 60;
+                            durationStr = String(durationHours).padStart(2, '0') + ':' + String(durationMins).padStart(2, '0');
+                        }
+                    }
+                    formData.append('duration', durationStr);
+                }
+            }
+
+            // Services (услуги)
+            var servicesSelect = document.getElementById('services');
+            if (servicesSelect && servicesSelect._selectedOptions) {
+                servicesSelect._selectedOptions.forEach(function (li) {
+                    var serviceId = li.getAttribute('data-value');
+                    if (serviceId) {
+                        formData.append('services', serviceId);
+                    }
+                });
+            }
+
+            // Total cost (стоимость)
+            var costElement = document.getElementById('bookingCostValue');
+            if (costElement) {
+                var costText = costElement.textContent.replace(/[^\d.,]/g, '').replace(',', '.');
+                if (costText) {
+                    formData.append('total_cost', costText);
+                }
+            }
+
+            // Comment (комментарий)
+            var commentField = document.getElementById('bookingComment');
+            if (commentField && commentField.value) {
+                formData.append('comment', commentField.value);
+            }
+
+            var peopleCountInput = document.getElementById('people-count');
+            if (peopleCountInput) {
+                var peopleCountVal = String(peopleCountInput.value || '').trim();
+                if (peopleCountVal) {
+                    formData.append('people_count', peopleCountVal);
+                }
+            }
+
+            var trialCheckbox = document.getElementById('trialLessonCheckbox');
+            if (trialCheckbox) {
+                formData.append('trialLesson', trialCheckbox.checked ? '1' : '0');
+            }
+
+            // Валидация обязательных полей
+            // Для "Репетиционная точка" нужен либо клиент, либо группа
+            var isRepPointScenario = window.currentScenarioName === 'Репетиционная точка';
+            var hasClientOrGroup = formData.get('client_id') || formData.get('client_group_id');
+            if (!hasClientOrGroup) {
+                alert(isRepPointScenario ? 'Выберите клиента или группу' : 'Выберите клиента');
+                return;
+            }
+
+            var isMusicClassScenario = window.currentScenarioName === 'Музыкальный класс';
+            var isPeopleCountScenario = isRepPointScenario || isMusicClassScenario;
+            if (isPeopleCountScenario) {
+                var peopleCountVal = formData.get('people_count');
+                if (!peopleCountVal) {
+                    alert('Укажите количество людей');
+                    return;
+                }
+            }
+            if (!formData.get('full_datetime')) {
+                alert('Выберите время начала');
+                return;
+            }
+            if (!formData.get('duration')) {
+                alert('Выберите длительность');
+                return;
+            }
+
+            // Отправка запроса
+            var submitBtn = document.getElementById('createBookingSubmitBtn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Сохранение...';
+            }
+
+            fetch('/create_booking/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                if (data.success) {
+                    if (typeof window.refreshBookingsGrid === 'function') {
+                        try {
+                            window.__suppressBookingsRefreshUntil = Date.now() + 6000;
+                            window.refreshBookingsGrid({ silent: true });
+                        } catch (e) {}
+                    }
+
+                    // Закрываем модалку (данные обновятся автоматически через AJAX)
+                    modalElement.addEventListener('hidden.bs.modal', function () {
+                        var successEl = document.getElementById('bookingAddedSuccessModal');
+                        if (!successEl) {
+                            return;
+                        }
+                        var successModal = bootstrap.Modal.getOrCreateInstance(successEl);
+                        successModal.show();
+                    }, { once: true });
+
+                    var modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+                    modal.hide();
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(function (error) {
+                alert('Ошибка сети: ' + error.message);
+            })
+            .finally(function () {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Добавить';
+                }
+            });
+        }
+    })();
