@@ -527,6 +527,16 @@
     // Следит за кликом вне кастомных селектов, чтобы закрывать открытые выпадающие списки
     function ensurePaymentSelectCloseListener() {
         if (paymentSelectCloseListenerAttached) return;
+
+        if (window.BookingSelectsUtils && typeof window.BookingSelectsUtils.ensureCloseOnOutsideClick === 'function') {
+            window.BookingSelectsUtils.ensureCloseOnOutsideClick({
+                key: 'paymentBookingModal',
+                rootEl: paymentModalElement
+            });
+            paymentSelectCloseListenerAttached = true;
+            return;
+        }
+
         document.addEventListener('click', function (event) {
             document.querySelectorAll('#paymentBookingModal .custom-select.open').forEach(select => {
                 if (!select.contains(event.target)) {
@@ -595,10 +605,6 @@
             if (String(type.id) === currentSelectedId) {
                 option.classList.add('selected');
             }
-            option.addEventListener('click', (event) => {
-                event.stopPropagation();
-                setBlockSelectedPaymentType(block, type);
-            });
             block.optionsContainer.appendChild(option);
         });
 
@@ -704,12 +710,28 @@
         }
 
         if (selectElement) {
-            selectElement.addEventListener('click', (event) => {
-                event.stopPropagation();
-                if (!selectElement.classList.contains('disabled')) {
-                    selectElement.classList.toggle('open');
-                }
-            });
+            const closeAll = function () {
+                if (!paymentModalElement) return;
+                paymentModalElement.querySelectorAll('.custom-select.open').forEach(function (s) {
+                    s.classList.remove('open');
+                });
+            };
+
+            if (window.BookingSelectsUtils && typeof window.BookingSelectsUtils.bindSingleSelect === 'function') {
+                window.BookingSelectsUtils.bindSingleSelect({
+                    selectEl: selectElement,
+                    closeAll: closeAll,
+                    closeOthersOnOpen: true,
+                    onSelected: function (ctx) {
+                        const selectedId = ctx ? (ctx.value || '') : '';
+                        const paymentTypes = getPaymentTypes();
+                        const type = paymentTypes.find(t => String(t.id) === String(selectedId));
+                        if (type) {
+                            setBlockSelectedPaymentType(blockData, type);
+                        }
+                    }
+                });
+            }
         }
 
         if (paymentInput) {

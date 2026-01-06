@@ -297,6 +297,8 @@
 
     <script src="{% static 'js/booking_time_utils.js' %}?v={% now 'U' %}"></script>
     <script src="{% static 'js/booking_modal_utils.js' %}?v={% now 'U' %}"></script>
+    <script src="{% static 'js/booking_selects_utils.js' %}?v={% now 'U' %}"></script>
+    <script src="{% static 'js/booking_services_utils.js' %}?v={% now 'U' %}"></script>
 
     {% include "booking/user/modals/booking/modal_create_booking.html" %}
     {% include "booking/user/modals/booking/modal_edit_booking.html" %}
@@ -1478,78 +1480,74 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Поведение выпадающих списков только для фильтров в шапке календаря
-            const customSelects = document.querySelectorAll('#booking-filters .custom-select');
+            var rootEl = document.getElementById('booking-filters');
+            if (!rootEl) return;
+            if (!window.BookingSelectsUtils) return;
 
-            customSelects.forEach(select => {
-                const selected = select.querySelector('.selected');
-                const optionsContainer = select.querySelector('.options');
-                if (!selected || !optionsContainer) {
-                    return;
+            function handleFilterSelected(filterType, value) {
+                if (filterType === 'scenario') {
+                    window.currentScenarioFilterId = value || null;
+                    if (typeof window.applyScenarioWorkTimeRestrictions === 'function') {
+                        window.applyScenarioWorkTimeRestrictions();
+                    }
+                    if (typeof window.refreshBookingsGrid === 'function') {
+                        window.refreshBookingsGrid();
+                    }
+                } else if (filterType === 'area') {
+                    window.currentAreaFilterId = value || null;
+                    if (typeof window.reloadCalendarGridForAreaChange === 'function') {
+                        window.reloadCalendarGridForAreaChange();
+                    } else if (typeof window.reloadCalendarGridForCurrentState === 'function') {
+                        window.reloadCalendarGridForCurrentState();
+                    } else if (typeof window.refreshBookingsGrid === 'function') {
+                        window.refreshBookingsGrid();
+                    }
                 }
+            }
 
-                const optionsList = optionsContainer.querySelectorAll('li');
-                const filterType = select.getAttribute('data-filter-type');
-
-                // событие на весь div
-                select.addEventListener('click', () => {
-                    select.classList.toggle('open');
+            function closeAll() {
+                rootEl.querySelectorAll('.custom-select.open').forEach(function (s) {
+                    s.classList.remove('open');
                 });
+            }
 
-                optionsList.forEach(option => {
-                    option.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        // убрать выделение со всех
-                        optionsList.forEach(opt => opt.classList.remove('selected'));
-                        // добавить выбранному
-                        option.classList.add('selected');
-                        selected.textContent = option.textContent;
-                        select.classList.remove('open');
+            if (typeof window.BookingSelectsUtils.ensureCloseOnOutsideClick === 'function') {
+                window.BookingSelectsUtils.ensureCloseOnOutsideClick({
+                    key: 'bookingFilters',
+                    rootEl: rootEl
+                });
+            }
 
-                        const value = option.getAttribute('data-value') || null;
-                        if (filterType === 'scenario') {
-                            window.currentScenarioFilterId = value;
-                            if (typeof window.applyScenarioWorkTimeRestrictions === 'function') {
-                                window.applyScenarioWorkTimeRestrictions();
-                            }
-                            if (typeof window.refreshBookingsGrid === 'function') {
-                                window.refreshBookingsGrid();
-                            }
-                        } else if (filterType === 'area') {
-                            window.currentAreaFilterId = value;
-                            if (typeof window.reloadCalendarGridForAreaChange === 'function') {
-                                window.reloadCalendarGridForAreaChange();
-                            } else if (typeof window.reloadCalendarGridForCurrentState === 'function') {
-                                window.reloadCalendarGridForCurrentState();
-                            } else if (typeof window.refreshBookingsGrid === 'function') {
-                                window.refreshBookingsGrid();
-                            }
+            rootEl.querySelectorAll('.custom-select').forEach(function (selectEl) {
+                var filterType = selectEl.getAttribute('data-filter-type');
+                if (!filterType) return;
+
+                if (typeof window.BookingSelectsUtils.bindSingleSelect === 'function') {
+                    window.BookingSelectsUtils.bindSingleSelect({
+                        selectEl: selectEl,
+                        closeAll: closeAll,
+                        closeOthersOnOpen: true,
+                        onSelected: function (ctx) {
+                            handleFilterSelected(filterType, ctx ? ctx.value : null);
                         }
                     });
-                });
+                }
 
-                document.addEventListener('click', (e) => {
-                    if (!select.contains(e.target)) {
-                        select.classList.remove('open');
-                    }
-                });
-
-                // Для фильтров (area/scenario) сразу выбираем первый элемент из БД
-                if (optionsList.length > 0 && (filterType === 'area' || filterType === 'scenario')) {
-                    const firstOption = optionsList[0];
-                    firstOption.classList.add('selected');
-                    selected.textContent = firstOption.textContent;
-
-                    const initialValue = firstOption.getAttribute('data-value') || null;
-                    if (filterType === 'scenario') {
-                        window.currentScenarioFilterId = initialValue;
-                        if (typeof window.applyScenarioWorkTimeRestrictions === 'function') {
-                            window.applyScenarioWorkTimeRestrictions();
-                        }
-                        if (typeof window.refreshBookingsGrid === 'function') {
-                            window.refreshBookingsGrid();
-                        }
-                    } else if (filterType === 'area') {
-                        window.currentAreaFilterId = initialValue;
+                var optionsEl = selectEl.querySelector('ul.options');
+                var firstOption = optionsEl ? optionsEl.querySelector('li') : null;
+                if (firstOption && (filterType === 'area' || filterType === 'scenario')) {
+                    if (typeof window.BookingSelectsUtils.selectOption === 'function') {
+                        window.BookingSelectsUtils.selectOption({
+                            selectEl: selectEl,
+                            optionEl: firstOption,
+                            onSelected: function (ctx) {
+                                if (filterType === 'scenario') {
+                                    handleFilterSelected(filterType, ctx ? ctx.value : null);
+                                } else if (filterType === 'area') {
+                                    window.currentAreaFilterId = (ctx && ctx.value) ? ctx.value : null;
+                                }
+                            }
+                        });
                     }
                 }
             });

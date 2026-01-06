@@ -214,17 +214,6 @@
                 paymentTypeSelect.dataset.value = String(pt.id);
                 selectedDisplay.textContent = pt.name;
             }
-            li.addEventListener('click', (event) => {
-                event.stopPropagation();
-                optionsContainer.querySelectorAll('li').forEach(o => o.classList.remove('selected'));
-                li.classList.add('selected');
-                paymentTypeSelect.dataset.value = li.dataset.value || '';
-                selectedDisplay.textContent = li.textContent;
-                paymentTypeSelect.classList.remove('open');
-                if (typeof window.updateEditPaymentSaveButton === 'function') {
-                    window.updateEditPaymentSaveButton();
-                }
-            });
             optionsContainer.appendChild(li);
         });
 
@@ -432,52 +421,40 @@
         // Открытие/закрытие кастомного селекта "Способ оплаты" и выбор опции
         const paymentTypeSelect = document.getElementById('editPaymentType');
         let resetPaymentTypeSelect = null;
-        if (paymentTypeSelect && !paymentTypeSelect.dataset.init) {
+        if (paymentTypeSelect) {
             const selected = paymentTypeSelect.querySelector('.selected');
-            const optionsContainer = paymentTypeSelect.querySelector('.options');
-            const optionsList = optionsContainer ? optionsContainer.querySelectorAll('li') : [];
-            const chevron = paymentTypeSelect.querySelector('.chevron');
-
             const initialSelectedText = selected ? selected.textContent : '';
-            const initialSelectedValue = paymentTypeSelect.dataset.value || (optionsList[0]?.dataset.value || '');
+            const initialSelectedValue = paymentTypeSelect.dataset.value || '';
 
-            const toggleOpen = (event) => {
-                if (event) event.stopPropagation();
-                paymentTypeSelect.classList.toggle('open');
+            const closeAll = function () {
+                editModalElement.querySelectorAll('.custom-select.open').forEach(function (s) {
+                    s.classList.remove('open');
+                });
             };
 
-            if (selected) {
-                selected.addEventListener('click', toggleOpen);
-            }
-            if (chevron) {
-                chevron.addEventListener('click', toggleOpen);
-            }
-            paymentTypeSelect.addEventListener('click', (event) => {
-                if (event.target.tagName !== 'LI') {
-                    toggleOpen(event);
-                }
-            });
-
-            optionsList.forEach(option => {
-                option.addEventListener('click', (event) => {
-                    event.stopPropagation();
-                    optionsList.forEach(opt => opt.classList.remove('selected'));
-                    option.classList.add('selected');
-                    if (selected) {
-                        selected.textContent = option.textContent;
-                    }
-                    paymentTypeSelect.dataset.value = option.dataset.value || '';
-                    paymentTypeSelect.classList.remove('open');
+            if (window.BookingSelectsUtils && typeof window.BookingSelectsUtils.ensureCloseOnOutsideClick === 'function') {
+                window.BookingSelectsUtils.ensureCloseOnOutsideClick({
+                    key: 'editPaymentModal',
+                    rootEl: editModalElement
                 });
-            });
+            }
 
-            document.addEventListener('click', (event) => {
-                if (!paymentTypeSelect.contains(event.target)) {
-                    paymentTypeSelect.classList.remove('open');
-                }
-            });
+            if (window.BookingSelectsUtils && typeof window.BookingSelectsUtils.bindSingleSelect === 'function') {
+                window.BookingSelectsUtils.bindSingleSelect({
+                    selectEl: paymentTypeSelect,
+                    closeAll: closeAll,
+                    closeOthersOnOpen: true,
+                    onSelected: function (ctx) {
+                        paymentTypeSelect.dataset.value = (ctx && ctx.value) ? ctx.value : '';
+                        updateSaveButtonState();
+                    }
+                });
+            }
 
             resetPaymentTypeSelect = () => {
+                const optionsContainer = paymentTypeSelect.querySelector('.options');
+                const optionsList = optionsContainer ? optionsContainer.querySelectorAll('li') : [];
+
                 optionsList.forEach(opt => opt.classList.remove('selected'));
                 if (optionsList[0]) {
                     optionsList[0].classList.add('selected');
@@ -485,11 +462,10 @@
                 if (selected) {
                     selected.textContent = initialSelectedText || (optionsList[0]?.textContent || 'Выберите способ');
                 }
-                paymentTypeSelect.dataset.value = initialSelectedValue || '';
+                paymentTypeSelect.dataset.value = initialSelectedValue || (optionsList[0]?.dataset.value || '');
                 paymentTypeSelect.classList.remove('open');
+                updateSaveButtonState();
             };
-
-            paymentTypeSelect.dataset.init = 'true';
         }
 
         if (amountInput) {
