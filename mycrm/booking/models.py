@@ -286,6 +286,12 @@ class Reservation(models.Model):
         verbose_name="ID группы клиента",
         null=True,
     )
+    people_count = models.PositiveIntegerField(
+        help_text="Количество людей (необязательное поле)",
+        verbose_name="Количество людей",
+        null=True,
+        blank=True,
+    )
     room = models.ForeignKey(
         "Room",
         on_delete=models.PROTECT,

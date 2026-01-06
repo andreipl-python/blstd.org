@@ -271,6 +271,25 @@ def create_booking_view(request):
         client_id = int(client_id) if client_id else None
         client_group_id = request.POST.get("client_group_id")
         client_group_id = int(client_group_id) if client_group_id else None
+        people_count_raw = request.POST.get("people_count")
+        people_count = None
+        if people_count_raw is not None and str(people_count_raw).strip() != "":
+            try:
+                people_count = int(people_count_raw)
+            except (TypeError, ValueError):
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Некорректное количество людей",
+                    }
+                )
+            if people_count < 1 or people_count > 99:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Количество людей должно быть от 1 до 99",
+                    }
+                )
         booking_duration = request.POST.get("duration")
         comment = request.POST.get("comment", "")
         room_id = request.POST.get("room_id")
@@ -392,6 +411,7 @@ def create_booking_view(request):
                 direction=direction,
                 client_id=client_id,
                 client_group=client_group,
+                people_count=people_count,
                 room=room,
                 scenario=scenario,
                 status=approved_status,

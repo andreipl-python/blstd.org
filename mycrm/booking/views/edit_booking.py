@@ -209,6 +209,7 @@ def get_booking_details(request, booking_id):
                 if booking.client and booking.client.email
                 else None
             ),
+            "people_count": booking.people_count,
             "specialist_id": booking.specialist.id if booking.specialist else None,
             "specialist_name": str(booking.specialist) if booking.specialist else None,
             "direction_id": (
@@ -320,6 +321,27 @@ def edit_booking_view(request, booking_id):
         comment = data.get("comment", "")
         total_cost_raw = data.get("total_cost")
         service_ids = data.get("service_ids")
+        people_count_raw = data.get("people_count")
+        people_count = None
+        if people_count_raw is not None and str(people_count_raw).strip() != "":
+            try:
+                people_count = int(people_count_raw)
+            except (TypeError, ValueError):
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Некорректное количество людей",
+                    },
+                    status=400,
+                )
+            if people_count < 1 or people_count > 99:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Количество людей должно быть от 1 до 99",
+                    },
+                    status=400,
+                )
 
         if not all([date_iso, start_time_hm, duration_hhmm, room_id]):
             return JsonResponse(
@@ -454,6 +476,7 @@ def edit_booking_view(request, booking_id):
             booking.specialist = specialist
             booking.direction = direction
             booking.specialist_service = specialist_service
+            booking.people_count = people_count
             booking.comment = comment
             booking.total_cost = total_cost
             booking.save()

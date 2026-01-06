@@ -1754,6 +1754,7 @@
                             var commentTextElement = infoModalElement.querySelector('#infoBookingCommentText');
                             var totalAmountElement = infoModalElement.querySelector('#infoBookingTotalAmount');
                             var paidAmountElement = infoModalElement.querySelector('#infoBookingPaidAmount');
+                            var peopleCountElement = infoModalElement.querySelector('#infoPeopleCountValue');
 
                             if (scenarioElement && typeof booking.reservation_type === 'string') {
                                 scenarioElement.textContent = booking.reservation_type;
@@ -1776,6 +1777,12 @@
 
                             if (durationElement && typeof booking.duration === 'string') {
                                 durationElement.textContent = booking.duration;
+                            }
+
+                            if (peopleCountElement) {
+                                peopleCountElement.textContent = (booking.people_count !== undefined && booking.people_count !== null && String(booking.people_count).trim() !== '')
+                                    ? String(booking.people_count)
+                                    : '—';
                             }
 
                             if (directionElement && typeof booking.direction_name === 'string') {

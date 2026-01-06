@@ -50,7 +50,7 @@
 
                     <div class="row mb-3">
                         <!--Выпадающий список "Клиент" / "Клиент / группа"-->
-                        <div class="col-md-6">
+                        <div class="col-md-6" id="client-field-container">
                             <label for="client" class="form-label" id="client-label">Клиент</label>
                             <div class="custom-select" id="client" name="client">
                                 <span class="selected">Выберите клиента</span>
@@ -85,6 +85,33 @@
                                     {% endfor %}
                                 </ul>
                             </div>
+                        </div>
+
+                        <div class="col-md-3" id="contact-person-field-container" style="display: none;">
+                            <label for="contact-person" class="form-label">Контактное лицо</label>
+                            <div class="custom-select disabled" id="contact-person" name="contact-person">
+                                <span class="selected">Контактное лицо</span>
+                                <span class="chevron">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                    </svg>
+                                </span>
+                                <ul class="options"></ul>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3" id="people-count-field-container" style="display: none;">
+                            <label for="people-count" class="form-label">Количество людей</label>
+                            <input
+                                class="payment-value-input"
+                                id="people-count"
+                                name="people-count"
+                                type="text"
+                                inputmode="numeric"
+                                maxlength="2"
+                                autocomplete="off"
+                            />
                         </div>
 
                         <!-- Выпадающий список "Направление" (скрывается для Репетиционной точки) -->
@@ -447,7 +474,10 @@
         var isSimplifiedScenario = isRepPoint || isMusicClass;
         
         // Контейнеры полей
+        var clientFieldContainer = document.getElementById('client-field-container');
         var directionContainer = document.getElementById('direction-field-container');
+        var contactPersonContainer = document.getElementById('contact-person-field-container');
+        var peopleCountFieldContainer = document.getElementById('people-count-field-container');
         var teacherFieldContainer = document.getElementById('teacher-field-container');
         var tariffFieldContainer = document.getElementById('tariff-field-container');
         var abonementContainer = document.getElementById('abonement-row-container');
@@ -458,6 +488,23 @@
         // Показать/скрыть Направление (только для Музыкальной школы)
         if (directionContainer) {
             directionContainer.style.display = isSimplifiedScenario ? 'none' : '';
+        }
+
+        if (clientFieldContainer) {
+            clientFieldContainer.classList.remove('col-md-6', 'col-md-5');
+            clientFieldContainer.classList.add(isRepPoint ? 'col-md-5' : 'col-md-6');
+        }
+
+        if (contactPersonContainer) {
+            contactPersonContainer.style.display = isRepPoint ? '' : 'none';
+            contactPersonContainer.classList.remove('col-md-3', 'col-md-5');
+            contactPersonContainer.classList.add(isRepPoint ? 'col-md-5' : 'col-md-3');
+        }
+
+        if (peopleCountFieldContainer) {
+            peopleCountFieldContainer.style.display = isSimplifiedScenario ? '' : 'none';
+            peopleCountFieldContainer.classList.remove('col-md-6', 'col-md-3', 'col-md-2');
+            peopleCountFieldContainer.classList.add(isRepPoint ? 'col-md-2' : 'col-md-3');
         }
         
         // Показать/скрыть Абонемент (только для Музыкальной школы)
@@ -534,6 +581,11 @@
         if (typeof window.updateSubmitButtonState === 'function') {
             window.updateSubmitButtonState();
         }
+
+        var peopleCountInput = document.getElementById('people-count');
+        if (peopleCountInput && !isSimplifiedScenario) {
+            peopleCountInput.value = '';
+        }
     }
 
     // Функция открытия модального окна: подставляет комнату и сценарий в шапку + базовые hidden-поля
@@ -549,6 +601,11 @@
         var commentCounter = document.getElementById('bookingCommentCounter');
         if (commentCounter) {
             commentCounter.textContent = '0/1000';
+        }
+
+        var peopleCountInput = document.getElementById('people-count');
+        if (peopleCountInput) {
+            peopleCountInput.value = '';
         }
         
         // Комната
@@ -1292,6 +1349,19 @@
                     // Для Репточки - клиент или группа, для остальных - только клиент
                     if (!hasClientOrGroup) {
                         checklist.push(isRepPoint ? 'Выберите клиента или группу' : 'Выберите клиента');
+                    }
+
+                    var peopleCountInput = document.getElementById('people-count');
+                    var peopleCountVal = peopleCountInput ? String(peopleCountInput.value || '').trim() : '';
+                    if (isSimplifiedScenario) {
+                        if (!peopleCountVal) {
+                            checklist.push('Укажите количество людей');
+                        } else {
+                            var pcInt = parseInt(peopleCountVal, 10);
+                            if (!Number.isFinite(pcInt) || pcInt < 1 || pcInt > 99) {
+                                checklist.push('Количество людей должно быть от 1 до 99');
+                            }
+                        }
                     }
                     
                     // Обновляем чек-лист в тултипе
@@ -2232,6 +2302,28 @@
             return;
         }
 
+        var peopleCountInput = document.getElementById('people-count');
+        if (peopleCountInput && !peopleCountInput._peopleCountBound) {
+            peopleCountInput._peopleCountBound = true;
+            peopleCountInput.addEventListener('input', function () {
+                var raw = String(peopleCountInput.value || '');
+                var digits = raw.replace(/\D+/g, '').slice(0, 2);
+                if (digits) {
+                    var n = parseInt(digits, 10);
+                    if (Number.isFinite(n)) {
+                        if (n > 99) n = 99;
+                        digits = String(n);
+                    }
+                }
+                if (peopleCountInput.value !== digits) {
+                    peopleCountInput.value = digits;
+                }
+                if (typeof window.updateSubmitButtonState === 'function') {
+                    window.updateSubmitButtonState();
+                }
+            });
+        }
+
         var teacherDirectionLastChanged = null;
 
         // --------------------------
@@ -3034,6 +3126,11 @@
                 }
                 specialistServiceSelect.classList.remove('has-selection');
             }
+
+            var peopleCountInput = document.getElementById('people-count');
+            if (peopleCountInput) {
+                peopleCountInput.value = '';
+            }
         });
 
         // При открытии гарантируем корректную фильтрацию (на случай, если есть предустановленные значения)
@@ -3125,6 +3222,11 @@
             var commentField = document.getElementById('bookingComment');
             if (commentField) {
                 commentField.value = '';
+            }
+
+            var peopleCountInput = document.getElementById('people-count');
+            if (peopleCountInput) {
+                peopleCountInput.value = '';
             }
             var trialCheckbox = document.getElementById('trialLessonCheckbox');
             if (trialCheckbox) {
@@ -3311,6 +3413,14 @@
                 formData.append('comment', commentField.value);
             }
 
+            var peopleCountInput = document.getElementById('people-count');
+            if (peopleCountInput) {
+                var peopleCountVal = String(peopleCountInput.value || '').trim();
+                if (peopleCountVal) {
+                    formData.append('people_count', peopleCountVal);
+                }
+            }
+
             var trialCheckbox = document.getElementById('trialLessonCheckbox');
             if (trialCheckbox) {
                 formData.append('trialLesson', trialCheckbox.checked ? '1' : '0');
@@ -3323,6 +3433,16 @@
             if (!hasClientOrGroup) {
                 alert(isRepPointScenario ? 'Выберите клиента или группу' : 'Выберите клиента');
                 return;
+            }
+
+            var isMusicClassScenario = window.currentScenarioName === 'Музыкальный класс';
+            var isPeopleCountScenario = isRepPointScenario || isMusicClassScenario;
+            if (isPeopleCountScenario) {
+                var peopleCountVal = formData.get('people_count');
+                if (!peopleCountVal) {
+                    alert('Укажите количество людей');
+                    return;
+                }
             }
             if (!formData.get('full_datetime')) {
                 alert('Выберите время начала');
