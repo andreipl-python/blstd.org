@@ -286,6 +286,48 @@
                     return window.BookingTimeUtils.getScenarioTariffUnitCost(window.currentScenarioFilterId) || 0;
                 }
 
+                function isTariffScenario() {
+                    return window.currentScenarioName === 'Репетиционная точка' || window.currentScenarioName === 'Музыкальный класс';
+                }
+
+                function getSelectedTariffData() {
+                    var tariffSelect = document.getElementById('tariff');
+                    if (!tariffSelect) return null;
+
+                    var selectedLi = tariffSelect.querySelector('ul.options li.selected');
+                    if (!selectedLi) return null;
+
+                    var baseCostRaw = String(selectedLi.getAttribute('data-base-cost') || '0').replace(',', '.');
+                    var baseCost = parseFloat(baseCostRaw);
+                    var baseDurationMinutes = parseInt(selectedLi.getAttribute('data-base-duration-minutes') || '0', 10);
+
+                    var dayIntervalsRaw = selectedLi.getAttribute('data-day-intervals') || '[]';
+                    var dayIntervals = [];
+                    try {
+                        dayIntervals = JSON.parse(dayIntervalsRaw);
+                    } catch (e) {
+                        dayIntervals = [];
+                    }
+
+                    var dayIntervalsMinutes = [];
+                    if (Array.isArray(dayIntervals)) {
+                        dayIntervals.forEach(function (it) {
+                            if (!it) return;
+                            var s = parseTimeToMinutes(it.start_time);
+                            var e = parseTimeToMinutes(it.end_time);
+                            if (Number.isFinite(s) && Number.isFinite(e) && e > s) {
+                                dayIntervalsMinutes.push({ startMinutes: s, endMinutes: e });
+                            }
+                        });
+                    }
+
+                    return {
+                        baseCost: Number.isFinite(baseCost) ? baseCost : 0,
+                        baseDurationMinutes: Number.isFinite(baseDurationMinutes) ? baseDurationMinutes : 0,
+                        dayIntervalsMinutes: dayIntervalsMinutes
+                    };
+                }
+
                 // Получить сумму стоимости выбранных услуг
                 function getSelectedServicesCost() {
                     var servicesSelect = document.getElementById('services');
@@ -376,7 +418,7 @@
                 // Стоимость = (кол-во периодов × стоимость периода) + сумма услуг
                 // Если время не выбрано — показываем только стоимость услуг
                 function calculateAndUpdateBookingCost() {
-                    if (window.BookingServicesUtils && typeof window.BookingServicesUtils.calculateAndUpdateTotalCost === 'function') {
+                    if (!isTariffScenario() && window.BookingServicesUtils && typeof window.BookingServicesUtils.calculateAndUpdateTotalCost === 'function') {
                         window.BookingServicesUtils.calculateAndUpdateTotalCost({
                             costElementId: 'bookingCostValue',
                             servicesSelectId: 'services',
@@ -388,6 +430,32 @@
 
                     var costElement = document.getElementById('bookingCostValue');
                     if (!costElement) return;
+
+                    if (isTariffScenario()) {
+                        var servicesCostForTariff = getSelectedServicesCost();
+                        var tariffData = getSelectedTariffData();
+
+                        var durationMinutes = null;
+                        if (
+                            currentStartTimeMinutes !== null && currentStartTimeMinutes !== undefined &&
+                            currentEndTimeMinutes !== null && currentEndTimeMinutes !== undefined &&
+                            currentEndTimeMinutes > currentStartTimeMinutes
+                        ) {
+                            durationMinutes = currentEndTimeMinutes - currentStartTimeMinutes;
+                        } else if (currentSelectedPeriods !== null && currentSelectedPeriods !== undefined) {
+                            durationMinutes = minMinutes * currentSelectedPeriods;
+                        }
+
+                        var rentalCost = 0;
+                        if (tariffData && durationMinutes !== null && tariffData.baseDurationMinutes > 0) {
+                            rentalCost = tariffData.baseCost * (durationMinutes / tariffData.baseDurationMinutes);
+                        }
+
+                        var totalTariffCost = rentalCost + servicesCostForTariff;
+                        var formattedTariff = Number(totalTariffCost || 0).toFixed(2).replace(/\.00$/, '');
+                        costElement.textContent = formattedTariff + ' BYN';
+                        return;
+                    }
                     
                     // Стоимость периодов (0 если время не выбрано)
                     var periodsTotalCost = 0;
@@ -599,7 +667,8 @@
                         return [];
                     }
 
-                    return window.BookingTimeUtils.getAvailableStartTimeSlots(roomBookings, workStart, workEnd, minMinutes);
+                    var slots = window.BookingTimeUtils.getAvailableStartTimeSlots(roomBookings, workStart, workEnd, minMinutes);
+                    return filterStartSlotsByTariffDayIntervals(slots, 1);
                 }
 
                 // Вычислить максимальное количество периодов для заданного времени начала
@@ -611,7 +680,8 @@
                         return 0;
                     }
 
-                    return window.BookingTimeUtils.getMaxPeriodsForStartTime(startTimeMinutes, roomBookings, workEnd, minMinutes);
+                    var baseMax = window.BookingTimeUtils.getMaxPeriodsForStartTime(startTimeMinutes, roomBookings, workEnd, minMinutes);
+                    return limitMaxPeriodsByTariffForStart(startTimeMinutes, baseMax);
                 }
 
                 // --- Состояние модуля ---
@@ -626,6 +696,8 @@
                 var currentStartTimeMinutes = null;
                 var currentSelectedPeriods = 1;
                 var currentEndTimeMinutes = null;
+                var tariffTimeFrozen = false;
+                var lastTariffBaseDurationMinutes = null;
                 
                 // Функции для синхронизации с глобальными переменными
                 function setStartTimeMinutes(val) {
@@ -678,6 +750,16 @@
                     }
                 }
 
+                function setCustomSelectFrozenDisabled(selectEl, disabled) {
+                    if (!selectEl) return;
+                    if (disabled) {
+                        selectEl.classList.add('disabled');
+                        selectEl.classList.remove('open');
+                    } else {
+                        selectEl.classList.remove('disabled');
+                    }
+                }
+
                 function syncCreateBookingMusicSchoolTimeFields() {
                     var isMusicSchool = window.currentScenarioName === 'Музыкальная школа';
                     if (!isMusicSchool) return;
@@ -715,7 +797,7 @@
                     setCustomSelectDisabled(durationSelect, false);
                     setCustomSelectDisabled(endTimeSelect, false);
 
-                    if (prevMinMinutes !== minMinutes) {
+                    if (shouldResetByTariffBase || prevMinMinutes !== minMinutes) {
                         currentSelectedPeriods = null;
                         currentEndTimeMinutes = null;
                         window.currentEndTimeMinutes = null;
@@ -748,6 +830,211 @@
                 }
                 window.syncCreateBookingMusicSchoolTimeFields = syncCreateBookingMusicSchoolTimeFields;
 
+                function getTariffDayIntervalsMinutesOrNull() {
+                    if (!isTariffScenario()) return null;
+                    var td = getSelectedTariffData();
+                    if (!td || !Array.isArray(td.dayIntervalsMinutes) || td.dayIntervalsMinutes.length === 0) {
+                        return null;
+                    }
+                    return td.dayIntervalsMinutes;
+                }
+
+                function filterStartSlotsByTariffDayIntervals(slotsMinutes, requiredPeriods) {
+                    var slots = Array.isArray(slotsMinutes) ? slotsMinutes : [];
+                    var intervals = getTariffDayIntervalsMinutesOrNull();
+                    if (!intervals) return slots;
+                    var req = (Number.isFinite(requiredPeriods) ? requiredPeriods : 1) * minMinutes;
+                    return slots.filter(function (s) {
+                        for (var i = 0; i < intervals.length; i++) {
+                            var it = intervals[i];
+                            if (s >= it.startMinutes && (s + req) <= it.endMinutes) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+                }
+
+                function filterEndTimesByTariffForStart(endTimesMinutes, startTimeMinutes) {
+                    var endTimes = Array.isArray(endTimesMinutes) ? endTimesMinutes : [];
+                    var intervals = getTariffDayIntervalsMinutesOrNull();
+                    if (!intervals) return endTimes;
+
+                    var matched = null;
+                    for (var i = 0; i < intervals.length; i++) {
+                        var it = intervals[i];
+                        if (startTimeMinutes >= it.startMinutes && startTimeMinutes < it.endMinutes) {
+                            matched = it;
+                            break;
+                        }
+                    }
+                    if (!matched) return [];
+
+                    return endTimes.filter(function (e) {
+                        return e > startTimeMinutes && e <= matched.endMinutes;
+                    });
+                }
+
+                function filterEndTimesByTariffForPeriods(endTimesMinutes, requiredPeriods) {
+                    var endTimes = Array.isArray(endTimesMinutes) ? endTimesMinutes : [];
+                    var intervals = getTariffDayIntervalsMinutesOrNull();
+                    if (!intervals) return endTimes;
+                    var req = (Number.isFinite(requiredPeriods) ? requiredPeriods : 1) * minMinutes;
+                    return endTimes.filter(function (e) {
+                        for (var i = 0; i < intervals.length; i++) {
+                            var it = intervals[i];
+                            if (e >= (it.startMinutes + req) && e <= it.endMinutes) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+                }
+
+                function filterStartTimesByTariffForEnd(startTimesMinutes, endTimeMinutes) {
+                    var startTimes = Array.isArray(startTimesMinutes) ? startTimesMinutes : [];
+                    var intervals = getTariffDayIntervalsMinutesOrNull();
+                    if (!intervals) return startTimes;
+
+                    var matched = null;
+                    for (var i = 0; i < intervals.length; i++) {
+                        var it = intervals[i];
+                        if (endTimeMinutes > it.startMinutes && endTimeMinutes <= it.endMinutes) {
+                            matched = it;
+                            break;
+                        }
+                    }
+                    if (!matched) return [];
+
+                    return startTimes.filter(function (s) {
+                        return s >= matched.startMinutes && s < endTimeMinutes;
+                    });
+                }
+
+                function limitMaxPeriodsByTariffForStart(startTimeMinutes, baseMaxPeriods) {
+                    var intervals = getTariffDayIntervalsMinutesOrNull();
+                    if (!intervals) return baseMaxPeriods;
+
+                    for (var i = 0; i < intervals.length; i++) {
+                        var it = intervals[i];
+                        if (startTimeMinutes >= it.startMinutes && startTimeMinutes < it.endMinutes) {
+                            var maxByTariff = Math.floor((it.endMinutes - startTimeMinutes) / minMinutes);
+                            return Math.max(0, Math.min(baseMaxPeriods, maxByTariff));
+                        }
+                    }
+                    return 0;
+                }
+
+                function limitMaxPeriodsByTariffForEnd(endTimeMinutes, baseMaxPeriods) {
+                    var intervals = getTariffDayIntervalsMinutesOrNull();
+                    if (!intervals) return baseMaxPeriods;
+
+                    for (var i = 0; i < intervals.length; i++) {
+                        var it = intervals[i];
+                        if (endTimeMinutes > it.startMinutes && endTimeMinutes <= it.endMinutes) {
+                            var maxByTariff = Math.floor((endTimeMinutes - it.startMinutes) / minMinutes);
+                            return Math.max(0, Math.min(baseMaxPeriods, maxByTariff));
+                        }
+                    }
+                    return 0;
+                }
+
+                function limitGlobalMaxPeriodsByTariff(baseMaxPeriods) {
+                    var intervals = getTariffDayIntervalsMinutesOrNull();
+                    if (!intervals) return baseMaxPeriods;
+
+                    var maxByTariff = 0;
+                    for (var i = 0; i < intervals.length; i++) {
+                        var it = intervals[i];
+                        var n = Math.floor((it.endMinutes - it.startMinutes) / minMinutes);
+                        if (n > maxByTariff) maxByTariff = n;
+                    }
+                    return Math.max(0, Math.min(baseMaxPeriods, maxByTariff));
+                }
+
+                function syncCreateBookingTariffTimeFields() {
+                    if (!isTariffScenario()) return;
+
+                    var tariffData = getSelectedTariffData();
+                    var tariffMinMinutes = tariffData ? tariffData.baseDurationMinutes : null;
+                    var hasTariff = !!(tariffMinMinutes && Number.isFinite(tariffMinMinutes) && tariffMinMinutes > 0);
+
+                    if (!hasTariff) {
+                        tariffTimeFrozen = true;
+                        minMinutes = getScenarioMinDurationMinutes();
+                        window.currentMinMinutes = minMinutes;
+
+                        setCustomSelectFrozenDisabled(durationSelect, true);
+                        setCustomSelectFrozenDisabled(endTimeSelect, true);
+
+                        var allStartSlotsNoTariff = getStartTimeSlotsForPeriods(1);
+                        rebuildStartTimeSelect(allStartSlotsNoTariff, currentStartTimeMinutes);
+
+                        var startTimeWarningNoTariff = document.getElementById('start-time-warning-icon');
+                        if (startTimeWarningNoTariff && currentStartTimeMinutes !== null) {
+                            startTimeWarningNoTariff.style.display = allStartSlotsNoTariff.indexOf(currentStartTimeMinutes) === -1 ? 'inline-block' : 'none';
+                        }
+
+                        if (typeof window.updateSubmitButtonState === 'function') {
+                            window.updateSubmitButtonState();
+                        }
+                        if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                            window.calculateAndUpdateBookingCost();
+                        }
+                        return;
+                    }
+
+                    tariffTimeFrozen = false;
+
+                    var shouldResetByTariffBase = (lastTariffBaseDurationMinutes !== null && lastTariffBaseDurationMinutes !== tariffMinMinutes);
+                    lastTariffBaseDurationMinutes = tariffMinMinutes;
+
+                    var prevMinMinutes = minMinutes;
+                    minMinutes = tariffMinMinutes;
+                    window.currentMinMinutes = minMinutes;
+
+                    setCustomSelectFrozenDisabled(durationSelect, false);
+                    setCustomSelectFrozenDisabled(endTimeSelect, false);
+
+                    if (prevMinMinutes !== minMinutes) {
+                        currentSelectedPeriods = null;
+                        currentEndTimeMinutes = null;
+                        window.currentEndTimeMinutes = null;
+                    }
+
+                    var allStartSlots = getStartTimeSlotsForPeriods(1);
+                    rebuildStartTimeSelect(allStartSlots, currentStartTimeMinutes);
+
+                    var startTimeWarning = document.getElementById('start-time-warning-icon');
+                    if (startTimeWarning && currentStartTimeMinutes !== null) {
+                        startTimeWarning.style.display = allStartSlots.indexOf(currentStartTimeMinutes) === -1 ? 'inline-block' : 'none';
+                    }
+
+                    var maxPeriods = currentStartTimeMinutes !== null
+                        ? getMaxPeriodsForStartTime(currentStartTimeMinutes, currentRoomId, dateIso)
+                        : getGlobalMaxPeriods();
+
+                    rebuildDurationSelect(currentSelectedPeriods, maxPeriods);
+
+                    var endTimes;
+                    if (currentSelectedPeriods !== null) {
+                        endTimes = getAllEndTimesForPeriods(currentSelectedPeriods);
+                    } else if (currentStartTimeMinutes !== null) {
+                        endTimes = getEndTimesForStartTime(currentStartTimeMinutes);
+                    } else {
+                        endTimes = getAllEndTimesForPeriods(1);
+                    }
+                    rebuildEndTimeSelect(endTimes, currentEndTimeMinutes);
+
+                    if (typeof window.updateSubmitButtonState === 'function') {
+                        window.updateSubmitButtonState();
+                    }
+                    if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                        window.calculateAndUpdateBookingCost();
+                    }
+                }
+                window.syncCreateBookingTariffTimeFields = syncCreateBookingTariffTimeFields;
+
                 // --- Функции формирования списков времени ---
 
                 // Получить слоты времени начала, с которых доступно >= requiredPeriods периодов
@@ -760,7 +1047,8 @@
                         return [];
                     }
 
-                    return window.BookingTimeUtils.getStartTimeSlotsForPeriods(requiredPeriods, roomBookings, workStart, workEnd, minMinutes);
+                    var slots = window.BookingTimeUtils.getStartTimeSlotsForPeriods(requiredPeriods, roomBookings, workStart, workEnd, minMinutes);
+                    return filterStartSlotsByTariffDayIntervals(slots, requiredPeriods);
                 }
 
                 // Получить все возможные времена окончания для заданного кол-ва периодов (глобально)
@@ -773,7 +1061,8 @@
                         return [];
                     }
 
-                    return window.BookingTimeUtils.getAllEndTimesForPeriods(requiredPeriods, roomBookings, workStart, workEnd, minMinutes);
+                    var endTimes = window.BookingTimeUtils.getAllEndTimesForPeriods(requiredPeriods, roomBookings, workStart, workEnd, minMinutes);
+                    return filterEndTimesByTariffForPeriods(endTimes, requiredPeriods);
                 }
 
                 // Получить времена окончания "вправо" от заданного времени начала (для конкретного слота)
@@ -785,7 +1074,8 @@
                         return [];
                     }
 
-                    return window.BookingTimeUtils.getEndTimesForStartTime(startTimeMinutes, roomBookings, workEnd, minMinutes);
+                    var endTimes = window.BookingTimeUtils.getEndTimesForStartTime(startTimeMinutes, roomBookings, workEnd, minMinutes);
+                    return filterEndTimesByTariffForStart(endTimes, startTimeMinutes);
                 }
 
                 // Получить времена начала "влево" от заданного времени окончания (для конкретного слота)
@@ -798,7 +1088,8 @@
                         return [];
                     }
 
-                    return window.BookingTimeUtils.getStartTimesForEndTime(endTimeMinutes, roomBookings, workStart, workEnd, minMinutes);
+                    var startTimes = window.BookingTimeUtils.getStartTimesForEndTime(endTimeMinutes, roomBookings, workStart, workEnd, minMinutes);
+                    return filterStartTimesByTariffForEnd(startTimes, endTimeMinutes);
                 }
 
                 // --- Вычислить глобальное максимальное количество периодов ---
@@ -811,7 +1102,8 @@
                         return 0;
                     }
 
-                    return window.BookingTimeUtils.getGlobalMaxPeriods(roomBookings, workStart, workEnd, minMinutes);
+                    var baseMax = window.BookingTimeUtils.getGlobalMaxPeriods(roomBookings, workStart, workEnd, minMinutes);
+                    return limitGlobalMaxPeriodsByTariff(baseMax);
                 }
 
                 // --- Вычислить максимальное количество периодов для времени окончания ---
@@ -824,7 +1116,8 @@
                         return 0;
                     }
 
-                    return window.BookingTimeUtils.getMaxPeriodsForEndTime(endTimeMinutes, roomBookings, workStart, workEnd, minMinutes);
+                    var baseMax = window.BookingTimeUtils.getMaxPeriodsForEndTime(endTimeMinutes, roomBookings, workStart, workEnd, minMinutes);
+                    return limitMaxPeriodsByTariffForEnd(endTimeMinutes, baseMax);
                 }
 
                 // --- Функции управления UI ---
@@ -934,6 +1227,12 @@
                                 checklist.push('Количество людей должно быть от 1 до 99');
                             }
                         }
+
+                        var tariffSelect = document.getElementById('tariff');
+                        var tariffSelectedLi = tariffSelect ? tariffSelect.querySelector('ul.options li.selected') : null;
+                        if (!tariffSelectedLi) {
+                            checklist.push('Выберите тариф');
+                        }
                     }
                     
                     // Обновляем чек-лист в тултипе
@@ -994,6 +1293,22 @@
                     window.BookingTimeUtils.rebuildStartTimeSelect(startTimeSelect, slotsMinutes, selectedMinutes, function (liMinutes, liTimeStr) {
                         currentStartTimeMinutes = liMinutes;
                         if (timeField) timeField.value = liTimeStr;
+
+                        if (tariffTimeFrozen) {
+                            window.currentStartTimeMinutes = currentStartTimeMinutes;
+                            window.currentEndTimeMinutes = currentEndTimeMinutes;
+                            applyTeacherDirectionFilters();
+                            updateSubmitButtonState();
+
+                            if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                                window.calculateAndUpdateBookingCost();
+                            }
+
+                            if (typeof window.syncCreateBookingTariffs === 'function') {
+                                window.syncCreateBookingTariffs();
+                            }
+                            return;
+                        }
 
                         // Скрываем предупреждения (выбрано доступное время из списка)
                         var startTimeWarning = document.getElementById('start-time-warning-icon');
@@ -1066,6 +1381,10 @@
                         // Пересчитываем стоимость брони
                         if (typeof window.calculateAndUpdateBookingCost === 'function') {
                             window.calculateAndUpdateBookingCost();
+                        }
+
+                        if (typeof window.syncCreateBookingTariffs === 'function') {
+                            window.syncCreateBookingTariffs();
                         }
                     });
                 }
@@ -1150,6 +1469,10 @@
                         // Пересчитываем стоимость брони
                         if (typeof window.calculateAndUpdateBookingCost === 'function') {
                             window.calculateAndUpdateBookingCost();
+                        }
+
+                        if (typeof window.syncCreateBookingTariffs === 'function') {
+                            window.syncCreateBookingTariffs();
                         }
                     });
                 }
@@ -1241,6 +1564,10 @@
                     
                     // Пересчитываем стоимость брони
                     calculateAndUpdateBookingCost();
+
+                    if (typeof window.syncCreateBookingTariffs === 'function') {
+                        window.syncCreateBookingTariffs();
+                    }
                 }
 
                 // --- Функции сброса селектов (по нажатию крестика) ---
@@ -1279,6 +1606,10 @@
                     // Пересчитываем стоимость брони
                     if (typeof window.calculateAndUpdateBookingCost === 'function') {
                         window.calculateAndUpdateBookingCost();
+                    }
+
+                    if (typeof window.syncCreateBookingTariffs === 'function') {
+                        window.syncCreateBookingTariffs();
                     }
                 }
 
@@ -1361,6 +1692,10 @@
                     
                     // Пересчитываем стоимость брони (длительность сброшена — стоимость 0)
                     calculateAndUpdateBookingCost();
+
+                    if (typeof window.syncCreateBookingTariffs === 'function') {
+                        window.syncCreateBookingTariffs();
+                    }
                 }
 
                 // --- Привязка обработчиков сброса (крестиков) ---
@@ -1382,6 +1717,9 @@
                         endClearBtn.addEventListener('click', function (e) {
                             e.preventDefault();
                             e.stopPropagation();
+                            if (endTimeSelect && endTimeSelect.classList.contains('disabled')) {
+                                return;
+                            }
                             resetEndTime();
                             endTimeSelect.classList.remove('open');
                         });
@@ -1391,6 +1729,9 @@
                         durationClearBtn.addEventListener('click', function (e) {
                             e.preventDefault();
                             e.stopPropagation();
+                            if (durationSelect && durationSelect.classList.contains('disabled')) {
+                                return;
+                            }
                             resetDuration();
                             durationSelect.classList.remove('open');
                         });
@@ -1663,6 +2004,10 @@
                         loadBusySpecialistsForDate(dateIso, function() {
                             // applyTeacherDirectionFilters вызовет updateSubmitButtonState внутри
                             applyTeacherDirectionFilters();
+
+                            if (typeof window.syncCreateBookingTariffs === 'function') {
+                                window.syncCreateBookingTariffs();
+                            }
                         });
                     });
                 }
@@ -1818,6 +2163,10 @@
                     if (typeof window.syncCreateBookingMusicSchoolTimeFields === 'function') {
                         window.syncCreateBookingMusicSchoolTimeFields();
                     }
+
+                    if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
+                        window.syncCreateBookingTariffTimeFields();
+                    }
                     
                     // Синхронизируем глобальные переменные и загружаем занятых специалистов
                     window.currentStartTimeMinutes = currentStartTimeMinutes;
@@ -1825,6 +2174,10 @@
                     loadBusySpecialistsForDate(dateIso, function() {
                         // applyTeacherDirectionFilters вызовет updateSubmitButtonState внутри
                         applyTeacherDirectionFilters();
+
+                        if (typeof window.syncCreateBookingTariffs === 'function') {
+                            window.syncCreateBookingTariffs();
+                        }
                     });
                 });
 

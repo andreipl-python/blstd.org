@@ -36,6 +36,7 @@ from .views.user_index import (
     get_room_bookings_for_date,
     get_busy_specialists_for_date,
 )
+from .views.tariffs import get_available_tariffs_view
 from .views.edit_booking import (
     get_booking_details,
     delete_booking_view,
@@ -131,6 +132,11 @@ urlpatterns = [
         "booking/busy-specialists-for-date/",
         get_busy_specialists_for_date,
         name="get_busy_specialists_for_date",
+    ),
+    path(
+        "booking/get-available-tariffs/",
+        get_available_tariffs_view,
+        name="get_available_tariffs",
     ),
     path("booking/edit/<int:booking_id>/", edit_booking_view, name="edit_booking"),
     path(

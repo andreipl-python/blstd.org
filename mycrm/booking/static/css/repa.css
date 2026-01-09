@@ -880,7 +880,11 @@
   /* Стиль для disabled селектов */
   #duration.disabled,
   #end-time.disabled,
+  #tariff.disabled,
   #teacher.disabled,
+  #edit-duration.disabled,
+  #edit-end-time.disabled,
+  #edit-tariff.disabled,
   #edit-teacher.disabled,
   #field-direction.disabled,
   #edit-direction.disabled {
@@ -890,7 +894,11 @@
 
   #duration.disabled .selected,
   #end-time.disabled .selected,
+  #tariff.disabled .selected,
   #teacher.disabled .selected,
+  #edit-duration.disabled .selected,
+  #edit-end-time.disabled .selected,
+  #edit-tariff.disabled .selected,
   #edit-teacher.disabled .selected,
   #field-direction.disabled .selected,
   #edit-direction.disabled .selected {

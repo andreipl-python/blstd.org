@@ -13,8 +13,12 @@
                 if (digits) {
                     var n = parseInt(digits, 10);
                     if (Number.isFinite(n)) {
+                        if (n <= 0) {
+                            digits = '';
+                        } else {
                         if (n > 99) n = 99;
                         digits = String(n);
+                        }
                     }
                 }
                 if (peopleCountInput.value !== digits) {
@@ -22,6 +26,9 @@
                 }
                 if (typeof window.updateSubmitButtonState === 'function') {
                     window.updateSubmitButtonState();
+                }
+                if (typeof window.syncCreateBookingTariffs === 'function') {
+                    window.syncCreateBookingTariffs();
                 }
             });
         }
@@ -96,6 +103,210 @@
                 li.style.display = '';
             });
         }
+
+        function isTariffScenario() {
+            return window.currentScenarioName === 'Репетиционная точка' || window.currentScenarioName === 'Музыкальный класс';
+        }
+
+        function formatMinutesToHHMM(totalMinutes) {
+            if (window.BookingTimeUtils && typeof window.BookingTimeUtils.formatTimeHHMM === 'function') {
+                return window.BookingTimeUtils.formatTimeHHMM(totalMinutes);
+            }
+            var hours = Math.floor(totalMinutes / 60);
+            var mins = totalMinutes % 60;
+            return String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+        }
+
+        function setTariffSelectDisabled(selectEl, text) {
+            if (!selectEl) return;
+            selectEl.classList.add('disabled');
+            selectEl.classList.remove('open');
+
+            var span = selectEl.querySelector('span.selected');
+            if (span) {
+                span.textContent = text || (selectEl.getAttribute('data-placeholder') || 'Выберите тариф');
+            }
+
+            selectEl.querySelectorAll('ul.options li').forEach(function (li) {
+                li.classList.remove('selected');
+            });
+
+            syncClearableSelectState(selectEl);
+
+            if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
+                window.syncCreateBookingTariffTimeFields();
+            }
+        }
+
+        function renderTariffOptions(selectEl, tariffs) {
+            if (!selectEl) return;
+
+            var optionsEl = selectEl.querySelector('ul.options');
+            if (!optionsEl) return;
+
+            var prevSelected = getSelectedValue(selectEl);
+
+            optionsEl.innerHTML = '';
+            (tariffs || []).forEach(function (t) {
+                var li = document.createElement('li');
+                li.setAttribute('data-value', String(t.id));
+                li.setAttribute('data-base-cost', String(t.base_cost || '0'));
+                li.setAttribute('data-base-duration-minutes', String(t.base_duration_minutes || 0));
+                li.setAttribute('data-max-people', String(t.max_people || 0));
+                li.setAttribute('data-day-intervals', JSON.stringify(t.day_intervals || []));
+                li.textContent = String(t.name || '') + ' (' + String(t.base_cost || '0') + ' BYN / ' + String(t.base_duration_minutes || 0) + ' мин)';
+                optionsEl.appendChild(li);
+            });
+
+            selectEl.classList.remove('disabled');
+
+            var selectedSpan = selectEl.querySelector('span.selected');
+            var placeholder = selectEl.getAttribute('data-placeholder') || 'Выберите тариф';
+
+            var restore = prevSelected
+                ? optionsEl.querySelector('li[data-value="' + String(prevSelected) + '"]')
+                : null;
+            if (restore) {
+                restore.classList.add('selected');
+                if (selectedSpan) selectedSpan.textContent = restore.textContent;
+                syncClearableSelectState(selectEl);
+
+                if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
+                    window.syncCreateBookingTariffTimeFields();
+                }
+                return;
+            }
+
+            resetSelect(selectEl);
+            if (selectedSpan) {
+                selectedSpan.textContent = placeholder;
+            }
+
+            if ((tariffs || []).length === 1) {
+                var onlyLi = optionsEl.querySelector('li');
+                if (onlyLi && window.BookingSelectsUtils && typeof window.BookingSelectsUtils.selectOption === 'function') {
+                    window.BookingSelectsUtils.selectOption({
+                        selectEl: selectEl,
+                        optionEl: onlyLi,
+                        onSelected: function () {
+                            if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                                window.calculateAndUpdateBookingCost();
+                            }
+                            if (typeof window.updateSubmitButtonState === 'function') {
+                                window.updateSubmitButtonState();
+                            }
+                            if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
+                                window.syncCreateBookingTariffTimeFields();
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        function syncCreateBookingTariffs() {
+            var selectEl = document.getElementById('tariff');
+            if (!selectEl) return;
+
+            if (!isTariffScenario()) {
+                return;
+            }
+
+            var roomIdField = document.getElementById('roomIdField');
+            var roomId = roomIdField ? String(roomIdField.value || '').trim() : '';
+            var scenarioId = (window.currentScenarioFilterId !== undefined && window.currentScenarioFilterId !== null)
+                ? String(window.currentScenarioFilterId)
+                : '';
+
+            var modalDateInput = document.getElementById('modal-create-date');
+            var dateIso = modalDateInput ? String(modalDateInput.value || '').trim() : '';
+
+            var startMinutes = window.currentStartTimeMinutes;
+            var startHm = (startMinutes !== null && startMinutes !== undefined) ? formatMinutesToHHMM(startMinutes) : '';
+            var endMinutes = window.currentEndTimeMinutes;
+            var endHm = (endMinutes !== null && endMinutes !== undefined) ? formatMinutesToHHMM(endMinutes) : '';
+
+            var peopleCountEl = document.getElementById('people-count');
+            var peopleCount = peopleCountEl ? String(peopleCountEl.value || '').trim() : '';
+
+            if (!scenarioId || !roomId || !dateIso || !startHm) {
+                selectEl._tariffsLastRequestKey = null;
+                setTariffSelectDisabled(selectEl, 'Выберите время начала');
+                if (typeof window.updateSubmitButtonState === 'function') {
+                    window.updateSubmitButtonState();
+                }
+                if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                    window.calculateAndUpdateBookingCost();
+                }
+                return;
+            }
+
+            var peopleCountInt = peopleCount ? parseInt(peopleCount, 10) : NaN;
+            if (!peopleCount || !Number.isFinite(peopleCountInt) || peopleCountInt < 1) {
+                selectEl._tariffsLastRequestKey = null;
+                setTariffSelectDisabled(selectEl, 'Укажите количество людей');
+                if (typeof window.updateSubmitButtonState === 'function') {
+                    window.updateSubmitButtonState();
+                }
+                if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                    window.calculateAndUpdateBookingCost();
+                }
+                return;
+            }
+
+            var qs = new URLSearchParams({
+                scenario_id: scenarioId,
+                room_id: roomId,
+                date_iso: dateIso,
+                start_time_hm: startHm,
+                people_count: peopleCount
+            });
+            if (endHm) {
+                qs.set('end_time_hm', endHm);
+            }
+
+            var requestKey = qs.toString();
+            if (selectEl._tariffsLastRequestKey === requestKey) {
+                return;
+            }
+            selectEl._tariffsLastRequestKey = requestKey;
+
+            fetch('/booking/get-available-tariffs/?' + requestKey, {
+                method: 'GET'
+            })
+            .then(function (resp) { return resp.json(); })
+            .then(function (data) {
+                if (!data || !data.success) {
+                    setTariffSelectDisabled(selectEl, 'Нет доступных тарифов');
+                    return;
+                }
+
+                var tariffs = Array.isArray(data.tariffs) ? data.tariffs : [];
+                if (!tariffs.length) {
+                    setTariffSelectDisabled(selectEl, 'Нет доступных тарифов');
+                    return;
+                }
+
+                renderTariffOptions(selectEl, tariffs);
+            })
+            .catch(function () {
+                setTariffSelectDisabled(selectEl, 'Нет доступных тарифов');
+            })
+            .finally(function () {
+                if (typeof window.updateSubmitButtonState === 'function') {
+                    window.updateSubmitButtonState();
+                }
+                if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                    window.calculateAndUpdateBookingCost();
+                }
+
+                if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
+                    window.syncCreateBookingTariffTimeFields();
+                }
+            });
+        }
+
+        window.syncCreateBookingTariffs = syncCreateBookingTariffs;
 
         function applyTeacherDirectionFilters() {
             var teacherSelect = modalElement.querySelector('#teacher');
@@ -641,6 +852,45 @@
                             teacherDirectionLastChanged = ctx && ctx.selectEl ? ctx.selectEl.id : 'specialist-service';
                             applyTeacherDirectionFilters();
                         }
+                    },
+                    'tariff': {
+                        beforeClear: function (ctx) {
+                            var selectEl = ctx ? ctx.selectEl : null;
+                            if (!selectEl) return;
+                            if (selectEl.classList.contains('disabled')) {
+                                return false;
+                            }
+                            var visibleTariffs = Array.from(selectEl.querySelectorAll('ul.options li')).filter(function (li) {
+                                return li.style.display !== 'none';
+                            });
+                            if (visibleTariffs.length === 1) {
+                                return false;
+                            }
+                        },
+                        onSelected: function () {
+                            if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                                window.calculateAndUpdateBookingCost();
+                            }
+                            if (typeof window.updateSubmitButtonState === 'function') {
+                                window.updateSubmitButtonState();
+                            }
+
+                            if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
+                                window.syncCreateBookingTariffTimeFields();
+                            }
+                        },
+                        onCleared: function () {
+                            if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                                window.calculateAndUpdateBookingCost();
+                            }
+                            if (typeof window.updateSubmitButtonState === 'function') {
+                                window.updateSubmitButtonState();
+                            }
+
+                            if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
+                                window.syncCreateBookingTariffTimeFields();
+                            }
+                        }
                     }
                 }
             });
@@ -756,11 +1006,14 @@
         modalElement.addEventListener('shown.bs.modal', function () {
             applyTeacherDirectionFilters();
             applyServicesFilters();
+            if (typeof window.syncCreateBookingTariffs === 'function') {
+                window.syncCreateBookingTariffs();
+            }
         });
         
         // Функция сброса всех селектов в модалке
         function resetAllSelects() {
-            var selectsToReset = ['client', 'teacher', 'field-direction', 'duration', 'start-time', 'end-time'];
+            var selectsToReset = ['client', 'teacher', 'field-direction', 'tariff', 'duration', 'start-time', 'end-time'];
             selectsToReset.forEach(function (selectId) {
                 var select = document.getElementById(selectId);
                 if (!select) return;
@@ -783,6 +1036,8 @@
                         selectedSpan.textContent = 'Выберите преподавателя';
                     } else if (selectId === 'field-direction') {
                         selectedSpan.textContent = 'Выберите направление';
+                    } else if (selectId === 'tariff') {
+                        selectedSpan.textContent = 'Выберите тариф';
                     } else if (selectId === 'duration') {
                         selectedSpan.textContent = 'Выберите длительность';
                     } else if (selectId === 'start-time') {
@@ -875,6 +1130,17 @@
             window.currentStartTimeMinutes = null;
             window.currentEndTimeMinutes = null;
             window.currentSelectedPeriods = null;
+
+            var tariffSelect = document.getElementById('tariff');
+            if (tariffSelect) {
+                tariffSelect._tariffsLastRequestKey = null;
+                var tariffOptions = tariffSelect.querySelector('ul.options');
+                if (tariffOptions) {
+                    tariffOptions.innerHTML = '';
+                }
+
+                setTariffSelectDisabled(tariffSelect, 'Выберите время начала');
+            }
         }
 
         window.resetCreateBookingModalSelects = resetAllSelects;
@@ -932,6 +1198,14 @@
                 var selectedTeacher = teacherSelect.querySelector('ul.options li.selected');
                 if (selectedTeacher) {
                     formData.append('specialist_id', selectedTeacher.getAttribute('data-value'));
+                }
+            }
+
+            var tariffSelect = document.getElementById('tariff');
+            if (tariffSelect) {
+                var selectedTariff = tariffSelect.querySelector('ul.options li.selected');
+                if (selectedTariff) {
+                    formData.append('tariff_id', selectedTariff.getAttribute('data-value'));
                 }
             }
 
@@ -1036,7 +1310,10 @@
             if (peopleCountInput) {
                 var peopleCountVal = String(peopleCountInput.value || '').trim();
                 if (peopleCountVal) {
-                    formData.append('people_count', peopleCountVal);
+                    var pcInt = parseInt(peopleCountVal, 10);
+                    if (Number.isFinite(pcInt) && pcInt >= 1) {
+                        formData.append('people_count', String(pcInt));
+                    }
                 }
             }
 
@@ -1060,6 +1337,19 @@
                 var peopleCountVal = formData.get('people_count');
                 if (!peopleCountVal) {
                     alert('Укажите количество людей');
+                    return;
+                }
+                var pcInt = parseInt(String(peopleCountVal), 10);
+                if (!Number.isFinite(pcInt) || pcInt < 1 || pcInt > 99) {
+                    alert('Количество людей должно быть от 1 до 99');
+                    return;
+                }
+            }
+
+            if (isPeopleCountScenario) {
+                var tariffIdVal = formData.get('tariff_id');
+                if (!tariffIdVal) {
+                    alert('Выберите тариф');
                     return;
                 }
             }

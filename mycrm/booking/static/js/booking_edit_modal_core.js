@@ -446,6 +446,10 @@
         let currentEndTimeMinutes = null;
         let currentSelectedPeriods = null;
 
+        let tariffBaseDurationMinutes = null;
+        let tariffWeeklyIntervals = [];
+        let tariffTimeFrozen = false;
+
         function getCurrentScenarioName() {
             var currentScenarioId = scenarioId || (modalEl ? modalEl.getAttribute('data-scenario-id') : null);
             var scenarioName = '';
@@ -466,6 +470,200 @@
             return Number.isFinite(n) && n > 0 ? n : null;
         }
 
+        function isTariffScenarioName(scenarioName) {
+            return scenarioName === 'Репетиционная точка' || scenarioName === 'Музыкальный класс';
+        }
+
+        function getSelectedTariffDomDataOrNull() {
+            var tariffSelect = document.getElementById('edit-tariff');
+            if (!tariffSelect) return null;
+
+            var optionsCount = tariffSelect.querySelectorAll('ul.options li').length;
+            var selectedLi = tariffSelect.querySelector('ul.options li.selected');
+
+            if (!selectedLi) {
+                if (tariffSelect.classList.contains('disabled') || optionsCount > 0) {
+                    return { cleared: true };
+                }
+                return null;
+            }
+
+            var durRaw = selectedLi.getAttribute('data-base-duration-minutes') || '0';
+            var dur = parseInt(String(durRaw), 10);
+            var dayIntervalsRaw = selectedLi.getAttribute('data-day-intervals') || '[]';
+            var dayIntervals = [];
+            try {
+                dayIntervals = JSON.parse(dayIntervalsRaw);
+            } catch (e) {
+                dayIntervals = [];
+            }
+
+            return {
+                baseDurationMinutes: Number.isFinite(dur) && dur > 0 ? dur : null,
+                dayIntervals: Array.isArray(dayIntervals) ? dayIntervals : []
+            };
+        }
+
+        function getWeekdayFromIso(dateIsoStr) {
+            if (!dateIsoStr) return null;
+            var dt = new Date(String(dateIsoStr) + 'T00:00:00');
+            if (!Number.isFinite(dt.getTime())) return null;
+            var jsDay = dt.getDay();
+            return (jsDay + 6) % 7;
+        }
+
+        function getTariffDayIntervalsMinutesOrNull() {
+            var scenarioName = getCurrentScenarioName();
+            if (!isTariffScenarioName(scenarioName)) return null;
+            if (!Array.isArray(tariffWeeklyIntervals) || tariffWeeklyIntervals.length === 0) return null;
+            var hasWeekday = tariffWeeklyIntervals.some(function (it) {
+                return it && it.weekday !== undefined && it.weekday !== null && String(it.weekday).trim() !== '';
+            });
+
+            var wd = null;
+            if (hasWeekday) {
+                wd = getWeekdayFromIso(dateIso);
+                if (wd === null) return null;
+            }
+
+            var intervals = [];
+            tariffWeeklyIntervals.forEach(function (it) {
+                if (!it) return;
+                if (hasWeekday) {
+                    var itW = parseInt(it.weekday, 10);
+                    if (!Number.isFinite(itW) || itW !== wd) return;
+                }
+                var s = utils.parseTimeToMinutes ? utils.parseTimeToMinutes(it.start_time) : null;
+                var e = utils.parseTimeToMinutes ? utils.parseTimeToMinutes(it.end_time) : null;
+                if (Number.isFinite(s) && Number.isFinite(e) && e > s) {
+                    intervals.push({ startMinutes: s, endMinutes: e });
+                }
+            });
+            return intervals.length ? intervals : null;
+        }
+
+        function filterStartSlotsByTariffDayIntervals(slotsMinutes, requiredPeriods) {
+            var slots = Array.isArray(slotsMinutes) ? slotsMinutes : [];
+            var intervals = getTariffDayIntervalsMinutesOrNull();
+            if (!intervals) return slots;
+            var req = (Number.isFinite(requiredPeriods) ? requiredPeriods : 1) * minMinutes;
+            if (!Number.isFinite(req) || req <= 0) return [];
+            return slots.filter(function (s) {
+                for (var i = 0; i < intervals.length; i++) {
+                    var it = intervals[i];
+                    if (s >= it.startMinutes && (s + req) <= it.endMinutes) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
+
+        function filterEndTimesByTariffForStart(endTimesMinutes, startTimeMinutes) {
+            var endTimes = Array.isArray(endTimesMinutes) ? endTimesMinutes : [];
+            var intervals = getTariffDayIntervalsMinutesOrNull();
+            if (!intervals) return endTimes;
+
+            var matched = null;
+            for (var i = 0; i < intervals.length; i++) {
+                var it = intervals[i];
+                if (startTimeMinutes >= it.startMinutes && startTimeMinutes < it.endMinutes) {
+                    matched = it;
+                    break;
+                }
+            }
+            if (!matched) return [];
+
+            return endTimes.filter(function (e) {
+                return e > startTimeMinutes && e <= matched.endMinutes;
+            });
+        }
+
+        function filterEndTimesByTariffForPeriods(endTimesMinutes, requiredPeriods) {
+            var endTimes = Array.isArray(endTimesMinutes) ? endTimesMinutes : [];
+            var intervals = getTariffDayIntervalsMinutesOrNull();
+            if (!intervals) return endTimes;
+            var req = (Number.isFinite(requiredPeriods) ? requiredPeriods : 1) * minMinutes;
+            if (!Number.isFinite(req) || req <= 0) return [];
+            return endTimes.filter(function (e) {
+                for (var i = 0; i < intervals.length; i++) {
+                    var it = intervals[i];
+                    if (e >= (it.startMinutes + req) && e <= it.endMinutes) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
+
+        function filterStartTimesByTariffForEnd(startTimesMinutes, endTimeMinutes) {
+            var startTimes = Array.isArray(startTimesMinutes) ? startTimesMinutes : [];
+            var intervals = getTariffDayIntervalsMinutesOrNull();
+            if (!intervals) return startTimes;
+
+            var matched = null;
+            for (var i = 0; i < intervals.length; i++) {
+                var it = intervals[i];
+                if (endTimeMinutes > it.startMinutes && endTimeMinutes <= it.endMinutes) {
+                    matched = it;
+                    break;
+                }
+            }
+            if (!matched) return [];
+
+            return startTimes.filter(function (s) {
+                return s >= matched.startMinutes && s < endTimeMinutes;
+            });
+        }
+
+        function limitMaxPeriodsByTariffForStart(startTimeMinutes, baseMaxPeriods) {
+            var intervals = getTariffDayIntervalsMinutesOrNull();
+            if (!intervals) return baseMaxPeriods;
+            if (!Number.isFinite(minMinutes) || minMinutes <= 0) return 0;
+
+            for (var i = 0; i < intervals.length; i++) {
+                var it = intervals[i];
+                if (startTimeMinutes >= it.startMinutes && startTimeMinutes < it.endMinutes) {
+                    var maxByTariff = Math.floor((it.endMinutes - startTimeMinutes) / minMinutes);
+                    if (!Number.isFinite(maxByTariff) || maxByTariff < 0) maxByTariff = 0;
+                    return Math.max(0, Math.min(baseMaxPeriods, maxByTariff));
+                }
+            }
+            return 0;
+        }
+
+        function limitMaxPeriodsByTariffForEnd(endTimeMinutes, baseMaxPeriods) {
+            var intervals = getTariffDayIntervalsMinutesOrNull();
+            if (!intervals) return baseMaxPeriods;
+            if (!Number.isFinite(minMinutes) || minMinutes <= 0) return 0;
+
+            for (var i = 0; i < intervals.length; i++) {
+                var it = intervals[i];
+                if (endTimeMinutes > it.startMinutes && endTimeMinutes <= it.endMinutes) {
+                    var maxByTariff = Math.floor((endTimeMinutes - it.startMinutes) / minMinutes);
+                    if (!Number.isFinite(maxByTariff) || maxByTariff < 0) maxByTariff = 0;
+                    return Math.max(0, Math.min(baseMaxPeriods, maxByTariff));
+                }
+            }
+            return 0;
+        }
+
+        function limitGlobalMaxPeriodsByTariff(baseMaxPeriods) {
+            var intervals = getTariffDayIntervalsMinutesOrNull();
+            if (!intervals) return baseMaxPeriods;
+            if (!Number.isFinite(minMinutes) || minMinutes <= 0) return 0;
+
+            var maxByTariff = 0;
+            for (var i = 0; i < intervals.length; i++) {
+                var it = intervals[i];
+                var mp = Math.floor((it.endMinutes - it.startMinutes) / minMinutes);
+                if (Number.isFinite(mp) && mp > maxByTariff) {
+                    maxByTariff = mp;
+                }
+            }
+            return Math.max(0, Math.min(baseMaxPeriods, maxByTariff));
+        }
+
         function setCustomSelectDisabled(selectEl, disabled) {
             if (!selectEl) return;
             if (disabled) {
@@ -475,6 +673,16 @@
                 selectEl.querySelectorAll('ul.options li.selected').forEach(function(li) {
                     li.classList.remove('selected');
                 });
+            } else {
+                selectEl.classList.remove('disabled');
+            }
+        }
+
+        function setCustomSelectFrozenDisabled(selectEl, disabled) {
+            if (!selectEl) return;
+            if (disabled) {
+                selectEl.classList.add('disabled');
+                selectEl.classList.remove('open');
             } else {
                 selectEl.classList.remove('disabled');
             }
@@ -518,6 +726,49 @@
 
             setCustomSelectDisabled(durationSelect, false);
             setCustomSelectDisabled(endTimeSelect, false);
+
+            if (resetSelectionOnChange !== false && prevMinMinutes !== minMinutes) {
+                currentSelectedPeriods = null;
+                currentEndTimeMinutes = null;
+            }
+        }
+
+        function syncEditBookingTariffTimeFields(resetSelectionOnChange) {
+            var scenarioName = getCurrentScenarioName();
+            if (!isTariffScenarioName(scenarioName)) {
+                return;
+            }
+
+            var domTariff = getSelectedTariffDomDataOrNull();
+            if (domTariff) {
+                if (domTariff.cleared) {
+                    tariffBaseDurationMinutes = null;
+                    tariffWeeklyIntervals = [];
+                } else {
+                    tariffBaseDurationMinutes = domTariff.baseDurationMinutes;
+                    tariffWeeklyIntervals = domTariff.dayIntervals;
+                }
+            }
+
+            var baseScenarioId = scenarioId || (modalEl ? modalEl.getAttribute('data-scenario-id') : null);
+            var baseMinMinutes = utils.getScenarioMinDurationMinutes(baseScenarioId);
+            var tariffMin = tariffBaseDurationMinutes;
+            var hasTariffMin = !!(tariffMin && Number.isFinite(tariffMin) && tariffMin > 0);
+
+            if (!hasTariffMin) {
+                tariffTimeFrozen = true;
+                minMinutes = baseMinMinutes;
+                setCustomSelectFrozenDisabled(durationSelect, true);
+                setCustomSelectFrozenDisabled(endTimeSelect, true);
+                return;
+            }
+
+            tariffTimeFrozen = false;
+            setCustomSelectFrozenDisabled(durationSelect, false);
+            setCustomSelectFrozenDisabled(endTimeSelect, false);
+
+            var prevMinMinutes = minMinutes;
+            minMinutes = hasTariffMin ? tariffMin : baseMinMinutes;
 
             if (resetSelectionOnChange !== false && prevMinMinutes !== minMinutes) {
                 currentSelectedPeriods = null;
@@ -614,12 +865,32 @@
             if (isSimplifiedScenario) {
                 var peopleCountInput = document.getElementById('edit-people-count');
                 var peopleCountVal = peopleCountInput ? String(peopleCountInput.value || '').trim() : '';
+                var pcInt = null;
                 if (!peopleCountVal) {
                     checklist.push('Укажите количество людей');
                 } else {
-                    var pcInt = parseInt(peopleCountVal, 10);
+                    pcInt = parseInt(peopleCountVal, 10);
                     if (!Number.isFinite(pcInt) || pcInt < 1 || pcInt > 99) {
                         checklist.push('Количество людей должно быть от 1 до 99');
+                    }
+                }
+
+                var tariffSelect = document.getElementById('edit-tariff');
+                var tariffSelectedLi = tariffSelect ? tariffSelect.querySelector('ul.options li.selected') : null;
+                if (!tariffSelect || tariffSelect.classList.contains('disabled')) {
+                    var ts = tariffSelect ? tariffSelect.querySelector('span.selected') : null;
+                    var msg = ts ? String(ts.textContent || '').trim() : '';
+                    var text = msg || 'Выберите тариф';
+                    if (text && checklist.indexOf(text) === -1) {
+                        checklist.push(text);
+                    }
+                } else if (!tariffSelectedLi) {
+                    checklist.push('Выберите тариф');
+                } else {
+                    var maxPeopleRaw = tariffSelectedLi.getAttribute('data-max-people') || '0';
+                    var maxPeople = parseInt(String(maxPeopleRaw), 10);
+                    if (Number.isFinite(pcInt) && pcInt > 0 && Number.isFinite(maxPeople) && maxPeople > 0 && pcInt > maxPeople) {
+                        checklist.push('Количество людей превышает максимум для выбранного тарифа');
                     }
                 }
             }
@@ -661,7 +932,8 @@
             let endValid = true;
 
             if (currentStartTimeMinutes !== null) {
-                const mp = utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes);
+                const baseMp = utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes);
+                const mp = limitMaxPeriodsByTariffForStart(currentStartTimeMinutes, baseMp);
                 if (mp < 1) {
                     startValid = false;
                     if (startWarn) startWarn.style.display = 'inline-block';
@@ -673,14 +945,16 @@
                     endValid = false;
                     if (endWarn) endWarn.style.display = 'inline-block';
                 } else if (currentStartTimeMinutes !== null) {
-                    const mpStart = utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes);
+                    const baseMpStart = utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes);
+                    const mpStart = limitMaxPeriodsByTariffForStart(currentStartTimeMinutes, baseMpStart);
                     const maxEndTime = currentStartTimeMinutes + (minMinutes * mpStart);
                     if (currentEndTimeMinutes > maxEndTime) {
                         endValid = false;
                         if (endWarn) endWarn.style.display = 'inline-block';
                     }
                 } else {
-                    const possibleStarts = utils.getStartTimesForEndTime(currentEndTimeMinutes, roomBookings, workStart, workEnd, minMinutes);
+                    const possibleStartsBase = utils.getStartTimesForEndTime(currentEndTimeMinutes, roomBookings, workStart, workEnd, minMinutes);
+                    const possibleStarts = filterStartTimesByTariffForEnd(possibleStartsBase, currentEndTimeMinutes);
                     if (!possibleStarts || possibleStarts.length === 0) {
                         endValid = false;
                         if (endWarn) endWarn.style.display = 'inline-block';
@@ -689,7 +963,8 @@
             }
 
             if (startValid && endValid && currentSelectedPeriods !== null && currentStartTimeMinutes !== null) {
-                const mpStart = utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes);
+                const baseMpStart = utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes);
+                const mpStart = limitMaxPeriodsByTariffForStart(currentStartTimeMinutes, baseMpStart);
                 if (currentSelectedPeriods > mpStart) {
                     if (endWarn) endWarn.style.display = 'inline-block';
                 }
@@ -700,6 +975,7 @@
             if (!utils || !durationSelect || !startTimeSelect || !endTimeSelect) return;
 
             syncEditBookingMusicSchoolTimeFields();
+            syncEditBookingTariffTimeFields();
 
             var scenarioName = getCurrentScenarioName();
             var isMusicSchool = scenarioName === 'Музыкальная школа';
@@ -725,11 +1001,43 @@
                 return;
             }
 
+            if (tariffTimeFrozen) {
+                setCustomSelectFrozenDisabled(durationSelect, true);
+                setCustomSelectFrozenDisabled(endTimeSelect, true);
+
+                const startSlotsFrozen = filterStartSlotsByTariffDayIntervals(
+                    utils.getStartTimeSlotsForPeriods(1, roomBookings, workStart, workEnd, minMinutes),
+                    1
+                );
+
+                utils.rebuildStartTimeSelect(startTimeSelect, startSlotsFrozen, currentStartTimeMinutes, function (minutes) {
+                    hideWarnings();
+                    currentStartTimeMinutes = minutes;
+                    rebuildAll();
+                    calculateAndUpdateEditBookingCost();
+                    if (typeof window.syncEditBookingTariffs === 'function') {
+                        window.syncEditBookingTariffs();
+                    }
+                });
+
+                validateWarnings();
+                updateSubmitButtonState();
+                return;
+            }
+
             const maxPeriods = (currentStartTimeMinutes !== null)
-                ? utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes)
+                ? limitMaxPeriodsByTariffForStart(
+                    currentStartTimeMinutes,
+                    utils.getMaxPeriodsForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes)
+                )
                 : (currentEndTimeMinutes !== null)
-                    ? utils.getMaxPeriodsForEndTime(currentEndTimeMinutes, roomBookings, workStart, workEnd, minMinutes)
-                    : utils.getGlobalMaxPeriods(roomBookings, workStart, workEnd, minMinutes);
+                    ? limitMaxPeriodsByTariffForEnd(
+                        currentEndTimeMinutes,
+                        utils.getMaxPeriodsForEndTime(currentEndTimeMinutes, roomBookings, workStart, workEnd, minMinutes)
+                    )
+                    : limitGlobalMaxPeriodsByTariff(
+                        utils.getGlobalMaxPeriods(roomBookings, workStart, workEnd, minMinutes)
+                    );
 
             utils.rebuildDurationSelect(durationSelect, currentSelectedPeriods, maxPeriods, minMinutes, function (periods) {
                 currentSelectedPeriods = periods;
@@ -756,26 +1064,53 @@
 
                 rebuildAll();
                 calculateAndUpdateEditBookingCost();
+                if (typeof window.syncEditBookingTariffs === 'function') {
+                    window.syncEditBookingTariffs();
+                }
             });
 
             const filteredStartSlots = (currentSelectedPeriods !== null)
-                ? utils.getStartTimeSlotsForPeriods(currentSelectedPeriods, roomBookings, workStart, workEnd, minMinutes)
+                ? filterStartSlotsByTariffDayIntervals(
+                    utils.getStartTimeSlotsForPeriods(currentSelectedPeriods, roomBookings, workStart, workEnd, minMinutes),
+                    currentSelectedPeriods
+                )
                 : (currentEndTimeMinutes !== null)
-                    ? utils.getStartTimesForEndTime(currentEndTimeMinutes, roomBookings, workStart, workEnd, minMinutes)
-                    : utils.getStartTimeSlotsForPeriods(1, roomBookings, workStart, workEnd, minMinutes);
+                    ? filterStartTimesByTariffForEnd(
+                        utils.getStartTimesForEndTime(currentEndTimeMinutes, roomBookings, workStart, workEnd, minMinutes),
+                        currentEndTimeMinutes
+                    )
+                    : filterStartSlotsByTariffDayIntervals(
+                        utils.getStartTimeSlotsForPeriods(1, roomBookings, workStart, workEnd, minMinutes),
+                        1
+                    );
 
             const filteredEndTimes = (currentSelectedPeriods !== null)
-                ? utils.getAllEndTimesForPeriods(currentSelectedPeriods, roomBookings, workStart, workEnd, minMinutes)
+                ? filterEndTimesByTariffForPeriods(
+                    utils.getAllEndTimesForPeriods(currentSelectedPeriods, roomBookings, workStart, workEnd, minMinutes),
+                    currentSelectedPeriods
+                )
                 : (currentStartTimeMinutes !== null)
-                    ? utils.getEndTimesForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes)
-                    : utils.getAllEndTimesForPeriods(1, roomBookings, workStart, workEnd, minMinutes);
+                    ? filterEndTimesByTariffForStart(
+                        utils.getEndTimesForStartTime(currentStartTimeMinutes, roomBookings, workEnd, minMinutes),
+                        currentStartTimeMinutes
+                    )
+                    : filterEndTimesByTariffForPeriods(
+                        utils.getAllEndTimesForPeriods(1, roomBookings, workStart, workEnd, minMinutes),
+                        1
+                    );
+
+            if (currentEndTimeMinutes !== null && filteredEndTimes.indexOf(currentEndTimeMinutes) === -1) {
+                currentEndTimeMinutes = null;
+            }
 
             utils.rebuildStartTimeSelect(startTimeSelect, filteredStartSlots, currentStartTimeMinutes, function (minutes) {
                 hideWarnings();
                 currentStartTimeMinutes = minutes;
 
-                const maxPeriodsForStart = utils.getMaxPeriodsForStartTime(minutes, roomBookings, workEnd, minMinutes);
-                const endTimesForStart = utils.getEndTimesForStartTime(minutes, roomBookings, workEnd, minMinutes);
+                const maxPeriodsForStartBase = utils.getMaxPeriodsForStartTime(minutes, roomBookings, workEnd, minMinutes);
+                const maxPeriodsForStart = limitMaxPeriodsByTariffForStart(minutes, maxPeriodsForStartBase);
+                const endTimesForStartBase = utils.getEndTimesForStartTime(minutes, roomBookings, workEnd, minMinutes);
+                const endTimesForStart = filterEndTimesByTariffForStart(endTimesForStartBase, minutes);
 
                 if (currentSelectedPeriods !== null) {
                     const newEnd = minutes + (minMinutes * currentSelectedPeriods);
@@ -808,14 +1143,19 @@
                 if (typeof applyEditTeacherDirectionFilters === 'function') {
                     applyEditTeacherDirectionFilters();
                 }
+                if (typeof window.syncEditBookingTariffs === 'function') {
+                    window.syncEditBookingTariffs();
+                }
             });
 
             utils.rebuildEndTimeSelect(endTimeSelect, filteredEndTimes, currentEndTimeMinutes, function (minutes) {
                 hideWarnings();
                 currentEndTimeMinutes = minutes;
 
-                const startTimesForEnd = utils.getStartTimesForEndTime(minutes, roomBookings, workStart, workEnd, minMinutes);
-                const maxPeriodsForEnd = utils.getMaxPeriodsForEndTime(minutes, roomBookings, workStart, workEnd, minMinutes);
+                const startTimesForEndBase = utils.getStartTimesForEndTime(minutes, roomBookings, workStart, workEnd, minMinutes);
+                const startTimesForEnd = filterStartTimesByTariffForEnd(startTimesForEndBase, minutes);
+                const maxPeriodsForEndBase = utils.getMaxPeriodsForEndTime(minutes, roomBookings, workStart, workEnd, minMinutes);
+                const maxPeriodsForEnd = limitMaxPeriodsByTariffForEnd(minutes, maxPeriodsForEndBase);
 
                 if (currentSelectedPeriods !== null) {
                     const newStart = minutes - (minMinutes * currentSelectedPeriods);
@@ -848,6 +1188,9 @@
                 if (typeof applyEditTeacherDirectionFilters === 'function') {
                     applyEditTeacherDirectionFilters();
                 }
+                if (typeof window.syncEditBookingTariffs === 'function') {
+                    window.syncEditBookingTariffs();
+                }
             });
 
             validateWarnings();
@@ -858,6 +1201,9 @@
             if (!roomId || !dateIso) {
                 roomBookings = [];
                 rebuildAll();
+                if (typeof window.syncEditBookingTariffs === 'function') {
+                    window.syncEditBookingTariffs();
+                }
                 return;
             }
 
@@ -871,6 +1217,9 @@
                 // Также обновляем фильтры преподавателей
                 if (typeof applyEditTeacherDirectionFilters === 'function') {
                     applyEditTeacherDirectionFilters();
+                }
+                if (typeof window.syncEditBookingTariffs === 'function') {
+                    window.syncEditBookingTariffs();
                 }
             }, true);
         }
@@ -887,6 +1236,9 @@
             }
             rebuildAll();
             calculateAndUpdateEditBookingCost();
+            if (typeof window.syncEditBookingTariffs === 'function') {
+                window.syncEditBookingTariffs();
+            }
         }
 
         function resetEndTime() {
@@ -901,6 +1253,9 @@
             }
             rebuildAll();
             calculateAndUpdateEditBookingCost();
+            if (typeof window.syncEditBookingTariffs === 'function') {
+                window.syncEditBookingTariffs();
+            }
         }
 
         function resetDuration() {
@@ -915,6 +1270,9 @@
 
             rebuildAll();
             calculateAndUpdateEditBookingCost();
+            if (typeof window.syncEditBookingTariffs === 'function') {
+                window.syncEditBookingTariffs();
+            }
         }
 
         function bindClearButtons() {
@@ -966,11 +1324,24 @@
                 syncEditBookingMusicSchoolTimeFields();
                 rebuildAll();
             },
+            syncTariffTimeFields: function (resetSelectionOnChange) {
+                syncEditBookingTariffTimeFields(resetSelectionOnChange);
+                rebuildAll();
+            },
             loadFromBooking: function (booking) {
                 bookingId = booking && booking.id ? booking.id : null;
                 scenarioId = booking && booking.scenario_id ? String(booking.scenario_id) : modalEl.getAttribute('data-scenario-id');
                 roomId = booking && booking.room_id ? String(booking.room_id) : getSelectedValue(document.getElementById('edit-room'));
                 dateIso = booking && booking.date_iso ? String(booking.date_iso) : (dateInput ? dateInput.value : null);
+
+                tariffBaseDurationMinutes = null;
+                if (booking && booking.tariff_base_duration_minutes !== undefined && booking.tariff_base_duration_minutes !== null) {
+                    var tdm = parseInt(String(booking.tariff_base_duration_minutes), 10);
+                    tariffBaseDurationMinutes = Number.isFinite(tdm) && tdm > 0 ? tdm : null;
+                }
+                tariffWeeklyIntervals = Array.isArray(booking && booking.tariff_weekly_intervals)
+                    ? booking.tariff_weekly_intervals
+                    : [];
 
                 minMinutes = utils.getScenarioMinDurationMinutes(scenarioId);
                 workStart = utils.getScenarioWorkTimeStartMinutes(scenarioId);
@@ -980,6 +1351,7 @@
                 currentEndTimeMinutes = booking && booking.end_time_hm ? utils.parseTimeToMinutes(booking.end_time_hm) : null;
 
                 syncEditBookingMusicSchoolTimeFields(false);
+                syncEditBookingTariffTimeFields(false);
 
                 currentSelectedPeriods = null;
                 if (booking && booking.duration_hhmm && !(durationSelect && durationSelect.classList.contains('disabled'))) {

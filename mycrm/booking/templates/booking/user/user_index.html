@@ -35,6 +35,8 @@
         window.SPECIALISTS = JSON.parse('{{ specialists_json|escapejs }}');
         window.PAYMENT_TYPES = JSON.parse('{{ payment_types_json|escapejs }}');
         window.TARIFF_UNITS = JSON.parse('{{ tariff_units_json|escapejs }}');
+        window.TARIFFS = JSON.parse('{{ tariffs_json|escapejs }}');
+        window.TARIFF_WEEKLY_INTERVALS = JSON.parse('{{ tariff_weekly_intervals_json|escapejs }}');
 
         // Диапазон дат, для которого сейчас отрисован календарь
         window.SHOW_DATE_FROM = '{{ show_datefrom }}';
@@ -568,6 +570,141 @@
                 return hours * 60 + minutes;
             }
 
+            function ensureTariffScheduleIndex() {
+                if (window.__tariffScheduleIndex && window.__tariffScheduleIndex.built) {
+                    return window.__tariffScheduleIndex;
+                }
+
+                var tariffs = Array.isArray(window.TARIFFS) ? window.TARIFFS : [];
+                var weekly = Array.isArray(window.TARIFF_WEEKLY_INTERVALS) ? window.TARIFF_WEEKLY_INTERVALS : [];
+
+                var intervalsByTariff = {};
+                weekly.forEach(function (it) {
+                    if (!it || it.pk === undefined || it.pk === null || !it.fields) {
+                        return;
+                    }
+                    var tariffId = it.fields.tariff;
+                    if (tariffId === undefined || tariffId === null) {
+                        return;
+                    }
+                    var weekday = parseInt(it.fields.weekday, 10);
+                    var startMin = parseTimeToMinutes(it.fields.start_time);
+                    var endMin = parseTimeToMinutes(it.fields.end_time);
+                    if (!Number.isFinite(weekday) || startMin === null || endMin === null) {
+                        return;
+                    }
+                    if (!intervalsByTariff[String(tariffId)]) {
+                        intervalsByTariff[String(tariffId)] = [];
+                    }
+                    intervalsByTariff[String(tariffId)].push([weekday, startMin, endMin]);
+                });
+                var intervalsByKeyWeekday = {};
+
+                tariffs.forEach(function (t) {
+                    if (!t || t.pk === undefined || t.pk === null || !t.fields) {
+                        return;
+                    }
+                    if (t.fields.active === false) {
+                        return;
+                    }
+
+                    var scenarioIds = Array.isArray(t.fields.scenarios) ? t.fields.scenarios : [];
+                    var roomIds = Array.isArray(t.fields.rooms) ? t.fields.rooms : [];
+                    if (!scenarioIds.length || !roomIds.length) {
+                        return;
+                    }
+
+                    var tIntervals = intervalsByTariff[String(t.pk)] || [];
+                    if (!tIntervals.length) {
+                        return;
+                    }
+
+                    tIntervals.forEach(function (row) {
+                        var weekday = row[0];
+                        var startMin = row[1];
+                        var endMin = row[2];
+
+                        scenarioIds.forEach(function (sid) {
+                            roomIds.forEach(function (rid) {
+                                var key = String(sid) + '|' + String(rid) + '|' + String(weekday);
+                                if (!intervalsByKeyWeekday[key]) {
+                                    intervalsByKeyWeekday[key] = [];
+                                }
+                                intervalsByKeyWeekday[key].push([startMin, endMin]);
+                            });
+                        });
+                    });
+                });
+
+                Object.keys(intervalsByKeyWeekday).forEach(function (k) {
+                    var arr = intervalsByKeyWeekday[k];
+                    arr.sort(function (a, b) { return a[0] - b[0]; });
+                    var merged = [];
+                    arr.forEach(function (it) {
+                        if (!merged.length) {
+                            merged.push([it[0], it[1]]);
+                            return;
+                        }
+                        var last = merged[merged.length - 1];
+                        if (it[0] <= last[1]) {
+                            last[1] = Math.max(last[1], it[1]);
+                        } else {
+                            merged.push([it[0], it[1]]);
+                        }
+                    });
+                    intervalsByKeyWeekday[k] = merged;
+                });
+
+                window.__tariffScheduleIndex = {
+                    built: true,
+                    intervalsByKeyWeekday: intervalsByKeyWeekday,
+                    weekdayCache: {},
+                };
+
+                return window.__tariffScheduleIndex;
+            }
+
+            function getPythonWeekday(dateIso) {
+                if (!dateIso) {
+                    return null;
+                }
+                var idx = ensureTariffScheduleIndex();
+                if (idx.weekdayCache[dateIso] !== undefined) {
+                    return idx.weekdayCache[dateIso];
+                }
+                var d = new Date(String(dateIso) + 'T00:00:00');
+                if (isNaN(d.getTime())) {
+                    idx.weekdayCache[dateIso] = null;
+                    return null;
+                }
+                var jsDay = d.getDay();
+                var pyDay = (jsDay + 6) % 7;
+                idx.weekdayCache[dateIso] = pyDay;
+                return pyDay;
+            }
+
+            function isCellAllowedByTariffSchedule(scenarioId, roomId, dateIso, cellMinutes) {
+                if (!scenarioId || !roomId || !dateIso || cellMinutes === null || cellMinutes === undefined) {
+                    return false;
+                }
+                var idx = ensureTariffScheduleIndex();
+                var baseKey = String(scenarioId) + '|' + String(roomId);
+                var weekday = getPythonWeekday(dateIso);
+                if (weekday === null) {
+                    return false;
+                }
+                var key = baseKey + '|' + String(weekday);
+                var intervals = idx.intervalsByKeyWeekday[key] || [];
+                for (var i = 0; i < intervals.length; i++) {
+                    var s = intervals[i][0];
+                    var e = intervals[i][1];
+                    if (cellMinutes >= s && cellMinutes < e) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
             function resetScenarioRestrictionsForAllCells() {
                 roomCells.forEach(function (cell) {
                     if (cell.classList.contains('booked')) {
@@ -594,13 +731,16 @@
                 }
 
                 var fields = scenario.fields || {};
+                var scenarioName = (typeof fields.name === 'string') ? fields.name.trim() : '';
+                var isSimpleScenario = isSimpleScenarioName(scenarioName);
                 var startMinutes = parseTimeToMinutes(fields.work_time_start);
                 var endMinutes = parseTimeToMinutes(fields.work_time_end);
 
-                // Если время не задано или не распарсилось — считаем, что ограничений нет
                 if (startMinutes === null || endMinutes === null) {
-                    resetScenarioRestrictionsForAllCells();
-                    return;
+                    if (!isSimpleScenario) {
+                        resetScenarioRestrictionsForAllCells();
+                        return;
+                    }
                 }
 
                 roomCells.forEach(function (cell) {
@@ -619,24 +759,30 @@
                         return;
                     }
 
+                    var dateIso = dtParts[0];
                     var cellMinutes = parseTimeToMinutes(dtParts[1]);
                     if (cellMinutes === null) {
                         return;
                     }
 
-                    var insideInterval;
-                    if (endMinutes > startMinutes) {
-                        // Обычный интервал в пределах суток, например 08:00-22:00
-                        insideInterval = cellMinutes >= startMinutes && cellMinutes < endMinutes;
-                    } else if (endMinutes < startMinutes) {
-                        // Интервал через полночь (например 22:00-02:00)
-                        insideInterval = cellMinutes >= startMinutes || cellMinutes < endMinutes;
-                    } else {
-                        // start == end — трактуем как отсутствие рабочего времени
-                        insideInterval = false;
+                    var insideInterval = true;
+                    if (startMinutes !== null && endMinutes !== null) {
+                        if (endMinutes > startMinutes) {
+                            insideInterval = cellMinutes >= startMinutes && cellMinutes < endMinutes;
+                        } else if (endMinutes < startMinutes) {
+                            insideInterval = cellMinutes >= startMinutes || cellMinutes < endMinutes;
+                        } else {
+                            insideInterval = false;
+                        }
                     }
 
-                    if (!insideInterval) {
+                    var insideTariffInterval = true;
+                    if (isSimpleScenario) {
+                        var roomId = cell.getAttribute('room_id');
+                        insideTariffInterval = isCellAllowedByTariffSchedule(scenario.pk, roomId, dateIso, cellMinutes);
+                    }
+
+                    if (!insideInterval || !insideTariffInterval) {
                         // Вне рабочего интервала сценария — отключаем клик и красим ячейку
                         cell.classList.remove('available');
                         cell.style.backgroundColor = '#EBEBEC';

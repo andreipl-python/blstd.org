@@ -13,6 +13,9 @@ from .create_booking import (
     check_room_availability,
     check_specialist_availability,
     check_specialist_schedule,
+    get_available_tariffs_for_booking,
+    _TARIFF_REQUIRED_SCENARIOS,
+    _quantize_money,
 )
 from ..models import (
     Reservation,
@@ -26,6 +29,7 @@ from ..models import (
     CancellationReason,
     Subscription,
     TariffUnit,
+    Tariff,
     Client,
     Direction,
 )
@@ -186,6 +190,20 @@ def get_booking_details(request, booking_id):
                 }
             )
 
+        tariff_weekly_intervals = []
+        if booking.tariff_id and getattr(booking, "tariff", None):
+            try:
+                for it in booking.tariff.weekly_intervals.all():
+                    tariff_weekly_intervals.append(
+                        {
+                            "weekday": int(it.weekday),
+                            "start_time": it.start_time.strftime("%H:%M"),
+                            "end_time": it.end_time.strftime("%H:%M"),
+                        }
+                    )
+            except Exception:
+                tariff_weekly_intervals = []
+
         booking_data = {
             "id": booking.id,
             "date": date_str,
@@ -197,6 +215,14 @@ def get_booking_details(request, booking_id):
             "duration_hhmm": f"{duration_hours:02d}:{duration_minutes:02d}",
             "room_id": booking.room.id if booking.room else None,
             "room_name": booking.room.name if booking.room else "Не указано",
+            "tariff_id": booking.tariff_id,
+            "tariff_name": booking.tariff.name if booking.tariff else None,
+            "tariff_base_duration_minutes": (
+                booking.tariff.base_duration_minutes
+                if booking.tariff_id and getattr(booking, "tariff", None)
+                else None
+            ),
+            "tariff_weekly_intervals": tariff_weekly_intervals,
             "client_id": booking.client.id if booking.client else None,
             "client_name": str(booking.client) if booking.client else "Не указан",
             "client_phone": (
@@ -318,30 +344,34 @@ def edit_booking_view(request, booking_id):
         specialist_id = data.get("specialist_id")
         direction_id = data.get("direction_id")
         specialist_service_id = data.get("specialist_service_id")
+        tariff_id_raw = data.get("tariff_id")
         comment = data.get("comment", "")
         total_cost_raw = data.get("total_cost")
         service_ids = data.get("service_ids")
-        people_count_raw = data.get("people_count")
-        people_count = None
-        if people_count_raw is not None and str(people_count_raw).strip() != "":
-            try:
-                people_count = int(people_count_raw)
-            except (TypeError, ValueError):
-                return JsonResponse(
-                    {
-                        "success": False,
-                        "error": "Некорректное количество людей",
-                    },
-                    status=400,
-                )
-            if people_count < 1 or people_count > 99:
-                return JsonResponse(
-                    {
-                        "success": False,
-                        "error": "Количество людей должно быть от 1 до 99",
-                    },
-                    status=400,
-                )
+        people_count = booking.people_count
+        if "people_count" in data:
+            people_count_raw = data.get("people_count")
+            if people_count_raw is not None and str(people_count_raw).strip() != "":
+                try:
+                    people_count = int(people_count_raw)
+                except (TypeError, ValueError):
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "error": "Некорректное количество людей",
+                        },
+                        status=400,
+                    )
+                if people_count < 1 or people_count > 99:
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "error": "Количество людей должно быть от 1 до 99",
+                        },
+                        status=400,
+                    )
+            else:
+                people_count = None
 
         if not all([date_iso, start_time_hm, duration_hhmm, room_id]):
             return JsonResponse(
@@ -402,6 +432,7 @@ def edit_booking_view(request, booking_id):
             # Поле `Specialist.scenario` удалено как избыточное.
 
         scenario_name = booking.scenario.name if booking.scenario_id else ""
+        is_tariff_required = scenario_name in _TARIFF_REQUIRED_SCENARIOS
         specialist_service = None
         if scenario_name == "Музыкальная школа":
             if not specialist_service_id:
@@ -442,6 +473,42 @@ def edit_booking_view(request, booking_id):
                 except (TypeError, ValueError):
                     continue
 
+        tariff_id_key_present = "tariff_id" in data
+        desired_tariff_id = booking.tariff_id
+        if tariff_id_key_present:
+            if tariff_id_raw is None or str(tariff_id_raw).strip() == "":
+                desired_tariff_id = None
+            else:
+                try:
+                    desired_tariff_id = int(tariff_id_raw)
+                except (TypeError, ValueError):
+                    return JsonResponse(
+                        {"success": False, "error": "Некорректный tariff_id"},
+                        status=400,
+                    )
+
+        if is_tariff_required:
+            if people_count is None:
+                return JsonResponse(
+                    {"success": False, "error": "Укажите количество людей"},
+                    status=400,
+                )
+            if not desired_tariff_id:
+                return JsonResponse(
+                    {"success": False, "error": "Выберите тариф"},
+                    status=400,
+                )
+        else:
+            if tariff_id_key_present and desired_tariff_id is not None:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Тариф нельзя указывать для выбранного сценария",
+                    },
+                    status=400,
+                )
+            desired_tariff_id = None
+
         try:
             check_room_availability(
                 room,
@@ -469,6 +536,45 @@ def edit_booking_view(request, booking_id):
                 status=400,
             )
 
+        tariff = None
+        if is_tariff_required:
+            tariff = Tariff.objects.filter(id=desired_tariff_id, active=True).first()
+            if not tariff:
+                return JsonResponse(
+                    {"success": False, "error": "Выбранный тариф недоступен"},
+                    status=400,
+                )
+
+            available_tariffs = get_available_tariffs_for_booking(
+                scenario=booking.scenario,
+                room=room,
+                date_iso=start_datetime.date().isoformat(),
+                start_time_hm=start_datetime.strftime("%H:%M"),
+                end_time_hm=end_datetime.strftime("%H:%M"),
+                people_count=people_count,
+            )
+            if str(tariff.id) not in {str(t.id) for t in available_tariffs}:
+                return JsonResponse(
+                    {"success": False, "error": "Выбранный тариф недоступен"},
+                    status=400,
+                )
+
+        services_qs_for_cost = booking.services.all()
+        if service_ids is not None:
+            services_qs_for_cost = Service.objects.filter(id__in=service_ids_list)
+        services_cost = sum((s.cost or Decimal("0")) for s in services_qs_for_cost)
+
+        if is_tariff_required:
+            duration_total_minutes = int(
+                (end_datetime - start_datetime).total_seconds() // 60
+            )
+            rental_cost = (tariff.base_cost or Decimal("0")) * (
+                Decimal(duration_total_minutes)
+                / Decimal(max(1, int(tariff.base_duration_minutes)))
+            )
+            rental_cost = _quantize_money(rental_cost)
+            total_cost = _quantize_money((rental_cost or Decimal("0")) + services_cost)
+
         with transaction.atomic():
             booking.datetimestart = start_datetime
             booking.datetimeend = end_datetime
@@ -479,6 +585,7 @@ def edit_booking_view(request, booking_id):
             booking.people_count = people_count
             booking.comment = comment
             booking.total_cost = total_cost
+            booking.tariff = tariff
             booking.save()
 
             if service_ids is None:
@@ -500,6 +607,7 @@ def edit_booking_view(request, booking_id):
                         booking.specialist.name if booking.specialist else None
                     ),
                     "direction_id": booking.direction_id,
+                    "tariff_id": booking.tariff_id,
                     "date_iso": local_start.date().isoformat(),
                     "start_time_hm": local_start.strftime("%H:%M"),
                     "end_time_hm": local_end.strftime("%H:%M"),

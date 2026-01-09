@@ -306,6 +306,15 @@ class Reservation(models.Model):
         help_text="ID сценария",
         verbose_name="ID сценария",
     )
+    tariff = models.ForeignKey(
+        "Tariff",
+        on_delete=models.SET_NULL,
+        help_text="Тариф (для сценариев Репетиционная точка/Музыкальный класс)",
+        verbose_name="Тариф",
+        null=True,
+        blank=True,
+        related_name="reservations",
+    )
     status = models.ForeignKey(
         "ReservationStatusType",
         on_delete=models.PROTECT,

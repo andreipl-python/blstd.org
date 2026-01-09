@@ -1,5 +1,7 @@
 import re
 from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_HALF_UP
+
 from django.core.exceptions import ValidationError
 from django.db.models import Max
 from django.db import transaction
@@ -19,7 +21,95 @@ from ..models import (
     ClientGroup,
     Scenario,
     Direction,
+    Tariff,
 )
+
+
+_TARIFF_REQUIRED_SCENARIOS = {
+    "Репетиционная точка",
+    "Музыкальный класс",
+}
+
+
+def _quantize_money(value: Decimal) -> Decimal:
+    if value is None:
+        return value
+    return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def _parse_time_hm(value: str):
+    if value is None:
+        return None
+    value = str(value).strip()
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%H:%M").time()
+    except Exception:
+        return None
+
+
+def get_available_tariffs_for_booking(
+    *,
+    scenario: Scenario,
+    room: Room,
+    date_iso: str,
+    start_time_hm: str,
+    end_time_hm: str | None,
+    people_count: int | None,
+):
+    if not scenario or not room:
+        return []
+
+    start_time = _parse_time_hm(start_time_hm)
+    if start_time is None:
+        return []
+
+    end_time = _parse_time_hm(end_time_hm) if end_time_hm else None
+
+    try:
+        target_date = datetime.strptime(str(date_iso), "%Y-%m-%d").date()
+    except Exception:
+        return []
+
+    people_count_val = people_count if people_count is not None else 1
+    weekday = int(target_date.weekday())
+
+    qs = (
+        Tariff.objects.filter(
+            active=True,
+            scenarios=scenario,
+            rooms=room,
+            max_people__gte=people_count_val,
+        )
+        .prefetch_related("weekly_intervals")
+        .distinct()
+    )
+
+    result = []
+    for tariff in qs:
+        intervals_all = list(tariff.weekly_intervals.all())
+        if not intervals_all:
+            continue
+
+        day_intervals = [i for i in intervals_all if int(i.weekday) == weekday]
+        if not day_intervals:
+            continue
+
+        fits = False
+        for interval in day_intervals:
+            if not (interval.start_time <= start_time < interval.end_time):
+                continue
+            if end_time is not None and end_time > interval.end_time:
+                continue
+            fits = True
+            break
+        if not fits:
+            continue
+
+        result.append(tariff)
+
+    return result
 
 
 def _time_to_minutes(t):
@@ -261,6 +351,8 @@ def create_booking_view(request):
         scenario_id = int(scenario_id) if scenario_id else None
         specialist_id = request.POST.get("specialist_id")
         specialist_id = int(specialist_id) if specialist_id else None
+        tariff_id_raw = request.POST.get("tariff_id")
+        tariff_id = int(tariff_id_raw) if tariff_id_raw else None
         specialist_service_id = request.POST.get("specialist_service_id")
         specialist_service_id = (
             int(specialist_service_id) if specialist_service_id else None
@@ -295,8 +387,15 @@ def create_booking_view(request):
         room_id = request.POST.get("room_id")
         room_id = int(room_id) if room_id else None
         full_datetime = request.POST.get("full_datetime")
-        total_cost = request.POST.get("total_cost")
-        total_cost = float(total_cost) if total_cost else None
+        total_cost_raw = request.POST.get("total_cost")
+        total_cost = None
+        if total_cost_raw is not None and str(total_cost_raw).strip() != "":
+            try:
+                total_cost = Decimal(str(total_cost_raw).replace(",", "."))
+            except Exception:
+                return JsonResponse(
+                    {"success": False, "error": "Некорректный формат стоимости"}
+                )
 
         if not full_datetime:
             return JsonResponse(
@@ -386,6 +485,25 @@ def create_booking_view(request):
             hours=duration_hours, minutes=duration_minutes
         )
 
+        scenario_name = scenario.name if scenario else ""
+        is_tariff_required = scenario_name in _TARIFF_REQUIRED_SCENARIOS
+
+        if is_tariff_required:
+            if people_count is None:
+                return JsonResponse(
+                    {"success": False, "error": "Укажите количество людей"}
+                )
+            if not tariff_id:
+                return JsonResponse({"success": False, "error": "Выберите тариф"})
+        else:
+            if tariff_id:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Тариф нельзя указывать для выбранного сценария",
+                    }
+                )
+
         # Проверяем доступность
         try:
             check_room_availability(room, start_datetime, end_datetime)
@@ -398,6 +516,51 @@ def create_booking_view(request):
                     "error": e.messages[0] if getattr(e, "messages", None) else str(e),
                 }
             )
+
+        tariff = None
+        if is_tariff_required:
+            tariff = Tariff.objects.filter(id=tariff_id, active=True).first()
+            if not tariff:
+                return JsonResponse(
+                    {"success": False, "error": "Выбранный тариф недоступен"}
+                )
+
+            available_tariffs = get_available_tariffs_for_booking(
+                scenario=scenario,
+                room=room,
+                date_iso=start_datetime.date().isoformat(),
+                start_time_hm=start_datetime.strftime("%H:%M"),
+                end_time_hm=end_datetime.strftime("%H:%M"),
+                people_count=people_count,
+            )
+            if str(tariff.id) not in {str(t.id) for t in available_tariffs}:
+                return JsonResponse(
+                    {"success": False, "error": "Выбранный тариф недоступен"}
+                )
+
+        service_ids_list = []
+        for v in service_ids:
+            try:
+                service_ids_list.append(int(v))
+            except (TypeError, ValueError):
+                continue
+
+        services_qs_for_cost = Service.objects.filter(id__in=service_ids_list)
+        services_cost = Decimal("0")
+        for s in services_qs_for_cost:
+            if s.cost:
+                services_cost += s.cost
+
+        if is_tariff_required:
+            duration_total_minutes = int(
+                (end_datetime - start_datetime).total_seconds() // 60
+            )
+            rental_cost = (tariff.base_cost or Decimal("0")) * (
+                Decimal(duration_total_minutes)
+                / Decimal(max(1, int(tariff.base_duration_minutes)))
+            )
+            rental_cost = _quantize_money(rental_cost)
+            total_cost = _quantize_money((rental_cost or Decimal("0")) + services_cost)
 
         with transaction.atomic():
             approved_status = ReservationStatusType.objects.get(id=1080)
@@ -414,13 +577,14 @@ def create_booking_view(request):
                 people_count=people_count,
                 room=room,
                 scenario=scenario,
+                tariff=tariff,
                 status=approved_status,
                 comment=comment,
                 total_cost=total_cost,
             )
 
-            if service_ids:
-                services = Service.objects.filter(id__in=service_ids)
+            if service_ids_list:
+                services = Service.objects.filter(id__in=service_ids_list)
                 reservation.services.add(*services)
 
         return JsonResponse({"success": True, "reservation_id": reservation.id})

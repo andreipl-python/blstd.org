@@ -312,8 +312,9 @@
                         <!--Выпадающий список "Тариф" (заглушка для Репетиционной точки, скрыт по умолчанию)-->
                         <div class="col-md-6" id="tariff-field-container" style="display: none;">
                             <label for="tariff" class="form-label">Тариф</label>
-                            <div class="custom-select" id="tariff" name="tariff">
+                            <div class="custom-select custom-select--clearable" id="tariff" name="tariff" data-placeholder="Выберите тариф">
                                 <span class="selected">Выберите тариф</span>
+                                <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
                                 <span class="chevron">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">

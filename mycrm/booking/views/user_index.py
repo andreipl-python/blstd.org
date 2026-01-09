@@ -15,6 +15,8 @@ from booking.models import (
     SpecialistWeeklyInterval,
     SpecialistScheduleOverride,
     Direction,
+    Tariff,
+    TariffWeeklyInterval,
     TariffUnit,
     PaymentType,
     Area,
@@ -269,6 +271,12 @@ def user_index_view(request):
     tariff_units = TariffUnit.objects.all()
     tariff_units_json = serialize("json", tariff_units)
 
+    tariffs = Tariff.objects.filter(active=True).prefetch_related("scenarios", "rooms")
+    tariffs_json = serialize("json", tariffs)
+
+    tariff_weekly_intervals = TariffWeeklyInterval.objects.filter(tariff__active=True)
+    tariff_weekly_intervals_json = serialize("json", tariff_weekly_intervals)
+
     # Группы клиентов для сценария "Репетиционная точка"
     client_groups = ClientGroup.objects.all()
     client_groups_json = json.dumps(
@@ -332,6 +340,8 @@ def user_index_view(request):
         "directions": directions,
         "bookings_in_range": bookings_in_range_json,
         "tariff_units_json": tariff_units_json,
+        "tariffs_json": tariffs_json,
+        "tariff_weekly_intervals_json": tariff_weekly_intervals_json,
         "clients": clients,
         "clients_json": clients_json,
         "client_groups": client_groups,
