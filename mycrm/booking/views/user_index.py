@@ -97,6 +97,54 @@ def generate_time_blocks(
     return time_blocks
 
 
+def build_time_cells_and_blocks(work_time_start, work_time_end):
+    start_minutes = 0
+    end_minutes = 24 * 60
+
+    if work_time_start is not None and work_time_end is not None:
+        start_minutes = int(work_time_start.hour) * 60 + int(work_time_start.minute)
+        end_minutes = int(work_time_end.hour) * 60 + int(work_time_end.minute)
+
+        if end_minutes <= start_minutes:
+            start_minutes = 0
+            end_minutes = 24 * 60
+
+    start_minutes = (start_minutes // 15) * 15
+    end_minutes = ((end_minutes + 14) // 15) * 15
+    if end_minutes > 24 * 60:
+        end_minutes = 24 * 60
+
+    time_cells = []
+    for m in range(start_minutes, end_minutes, 15):
+        time_cells.append(f"{m // 60:02d}:{m % 60:02d}")
+
+    time_blocks = []
+    prev_hour = None
+    block_start = None
+    block_colspan = 0
+    for t in time_cells:
+        hour = t[:2]
+        if prev_hour is None:
+            prev_hour = hour
+            block_start = t
+            block_colspan = 1
+            continue
+
+        if hour == prev_hour:
+            block_colspan += 1
+            continue
+
+        time_blocks.append({"time": block_start, "colspan": block_colspan})
+        prev_hour = hour
+        block_start = t
+        block_colspan = 1
+
+    if prev_hour is not None:
+        time_blocks.append({"time": block_start, "colspan": block_colspan})
+
+    return time_cells, time_blocks
+
+
 def add_blocks_datetime_range_and_room_name(
     reservation_objects: QuerySet, default_block_length_minutes: int
 ) -> list[dict[str, Any]]:
@@ -162,8 +210,6 @@ def user_index_view(request):
 
     days_of_month = generate_days_of_month(request_range, start_date_str, end_date_str)
     menu2_context = menu2_view(request)
-    time_blocks = generate_time_blocks("00:00", 1, 24)
-    time_blocks_json = json.dumps(time_blocks)
 
     start_date = timezone.datetime.combine(
         days_of_month[0]["date"].date(), timezone.datetime.min.time()
@@ -175,11 +221,17 @@ def user_index_view(request):
     end_date = timezone.make_aware(end_date)
 
     # Помещения и сценарии для фильтров
-    areas = Area.objects.prefetch_related("scenario").all()
-    scenarios = Scenario.objects.all()
+    areas = Area.objects.prefetch_related("scenario").order_by("id")
+    scenarios = Scenario.objects.order_by("id")
 
     default_area = areas[0] if areas else None
     default_scenario = scenarios[0] if scenarios else None
+
+    time_cells, time_blocks = build_time_cells_and_blocks(
+        default_scenario.work_time_start if default_scenario else None,
+        default_scenario.work_time_end if default_scenario else None,
+    )
+    time_blocks_json = json.dumps(time_blocks)
 
     # Брони в выбранном диапазоне с учётом дефолтного помещения и сценария
     bookings_in_range_qs = Reservation.objects.filter(
@@ -343,7 +395,7 @@ def user_index_view(request):
         "client_groups": client_groups,
         "client_groups_json": client_groups_json,
         "payment_types_json": payment_types_json,
-        "time_cells": range(96),
+        "time_cells": time_cells,
         "app_version": version_value,
         "specialist_services": specialist_services,  # Услуги преподавателей для "Музыкальная школа"
         "specialist_service_to_specialists_json": specialist_service_to_specialists_json,  # Маппинг услуга→специалисты
@@ -442,6 +494,7 @@ def get_calendar_grid(request):
     date_from_str = request.GET.get("date_from")
     date_to_str = request.GET.get("date_to")
     area_id = request.GET.get("area_id")
+    scenario_id = request.GET.get("scenario_id")
 
     if not date_from_str or not date_to_str:
         return JsonResponse(
@@ -481,7 +534,26 @@ def get_calendar_grid(request):
 
     # Те же вспомогательные структуры, что и на основной странице
     days_of_month = generate_days_of_month("period", date_from_str, date_to_str)
-    time_blocks = generate_time_blocks("00:00", 1, 24)
+
+    scenario_obj = None
+    scenario_id_int = None
+    if scenario_id:
+        try:
+            scenario_id_int = int(scenario_id)
+        except (TypeError, ValueError):
+            scenario_id_int = None
+
+    if scenario_id_int is not None:
+        scenario_obj = (
+            Scenario.objects.filter(pk=scenario_id_int)
+            .only("work_time_start", "work_time_end")
+            .first()
+        )
+
+    time_cells, time_blocks = build_time_cells_and_blocks(
+        scenario_obj.work_time_start if scenario_obj else None,
+        scenario_obj.work_time_end if scenario_obj else None,
+    )
 
     rooms_qs = Room.objects.prefetch_related("scenario").all()
 
@@ -511,7 +583,7 @@ def get_calendar_grid(request):
             "days_of_month": days_of_month,
             "time_blocks": time_blocks,
             "rooms": rooms,
-            "time_cells": range(96),
+            "time_cells": time_cells,
         },
         request=request,
     )
@@ -521,6 +593,8 @@ def get_calendar_grid(request):
             "success": True,
             "html": html,
             "bookings_in_range": bookings_in_range,
+            "time_blocks": time_blocks,
+            "time_cells": time_cells,
             "date_from": date_from_str,
             "date_to": date_to_str,
         }

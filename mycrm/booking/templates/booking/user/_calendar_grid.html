@@ -136,7 +136,7 @@
         <tr>
             <th></th>
             {% for block in time_blocks %}
-            <th colspan="4">
+            <th colspan="{{ block.colspan }}">
                 {{ block.time }}
             </th>
             {% endfor %}
@@ -149,16 +149,14 @@
                 {{ room.name }}
             </td>
 
-            {% for block in time_blocks %}
-            {% for i in "1234" %}
-            {% with block_time=block.time|time_add:forloop.counter0|str_to_time %}
-            {% with full_datetime=day.date|combine_date_time:block_time %}
-
+            {% for cell_time_str in time_cells %}
+            {% with cell_time=cell_time_str|str_to_time %}
+            {% with full_datetime=day.date|combine_date_time:cell_time %}
             <td class="highlight-cell available" full_datetime="{{ full_datetime|date:'Y-m-d H:i:s' }}"
                 room_name="{{ room.name }}" room_id="{{ room.id }}"
-                title="{{ block.time|time_add:forloop.counter0 }}" onclick="openCreateModal(
+                title="{{ cell_time_str }}" onclick="openCreateModal(
                     `{{ day.date|date:'d E Y' }}`,
-                    `{{ block.time|time_add:forloop.counter0 }}`,
+                    `{{ cell_time_str }}`,
                     `{{ room.name }}`,
                     '{{ room.id }}',
                     this
@@ -166,7 +164,6 @@
             </td>
             {% endwith %}
             {% endwith %}
-            {% endfor %}
             {% endfor %}
         </tr>
         {% endfor %}

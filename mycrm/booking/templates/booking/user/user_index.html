@@ -570,6 +570,40 @@
                 return hours * 60 + minutes;
             }
 
+            function ensureRoomHoursIndex() {
+                if (window.__roomHoursIndex && window.__roomHoursIndex.built) {
+                    return window.__roomHoursIndex;
+                }
+
+                var rooms = Array.isArray(window.ROOMS) ? window.ROOMS : [];
+                var byRoomId = {};
+
+                rooms.forEach(function (r) {
+                    if (!r || r.pk === undefined || r.pk === null || !r.fields) {
+                        return;
+                    }
+
+                    var roomIdNum = parseInt(r.pk, 10);
+                    if (!Number.isFinite(roomIdNum)) {
+                        return;
+                    }
+
+                    var startMin = parseTimeToMinutes(r.fields.hourstart);
+                    var endMin = parseTimeToMinutes(r.fields.hourend);
+                    byRoomId[String(roomIdNum)] = {
+                        startMin: startMin,
+                        endMin: endMin,
+                    };
+                });
+
+                window.__roomHoursIndex = {
+                    built: true,
+                    byRoomId: byRoomId,
+                };
+
+                return window.__roomHoursIndex;
+            }
+
             function ensureTariffScheduleIndex() {
                 if (window.__tariffScheduleIndex && window.__tariffScheduleIndex.built) {
                     return window.__tariffScheduleIndex;
@@ -626,7 +660,12 @@
 
                         scenarioIds.forEach(function (sid) {
                             roomIds.forEach(function (rid) {
-                                var key = String(sid) + '|' + String(rid) + '|' + String(weekday);
+                                var sidNum = parseInt(sid, 10);
+                                var ridNum = parseInt(rid, 10);
+                                if (!Number.isFinite(sidNum) || !Number.isFinite(ridNum)) {
+                                    return;
+                                }
+                                var key = String(sidNum) + '|' + String(ridNum) + '|' + String(weekday);
                                 if (!intervalsByKeyWeekday[key]) {
                                     intervalsByKeyWeekday[key] = [];
                                 }
@@ -688,7 +727,12 @@
                     return false;
                 }
                 var idx = ensureTariffScheduleIndex();
-                var baseKey = String(scenarioId) + '|' + String(roomId);
+                var scenarioNum = parseInt(scenarioId, 10);
+                var roomNum = parseInt(roomId, 10);
+                if (!Number.isFinite(scenarioNum) || !Number.isFinite(roomNum)) {
+                    return false;
+                }
+                var baseKey = String(scenarioNum) + '|' + String(roomNum);
                 var weekday = getPythonWeekday(dateIso);
                 if (weekday === null) {
                     return false;
@@ -743,6 +787,8 @@
                     }
                 }
 
+                var roomHoursIdx = ensureRoomHoursIndex();
+
                 roomCells.forEach(function (cell) {
                     // Забронированные ячейки не трогаем, их поведение определяется логикой броней
                     if (cell.classList.contains('booked')) {
@@ -776,13 +822,28 @@
                         }
                     }
 
-                    var insideTariffInterval = true;
-                    if (isSimpleScenario) {
-                        var roomId = cell.getAttribute('room_id');
-                        insideTariffInterval = isCellAllowedByTariffSchedule(scenario.pk, roomId, dateIso, cellMinutes);
+                    var insideRoomInterval = true;
+                    var roomIdRaw = cell.getAttribute('room_id');
+                    var roomIdNum = parseInt(roomIdRaw, 10);
+                    if (Number.isFinite(roomIdNum)) {
+                        var roomHours = roomHoursIdx.byRoomId[String(roomIdNum)] || null;
+                        if (roomHours && roomHours.startMin !== null && roomHours.endMin !== null) {
+                            if (roomHours.endMin > roomHours.startMin) {
+                                insideRoomInterval = cellMinutes >= roomHours.startMin && cellMinutes < roomHours.endMin;
+                            } else if (roomHours.endMin < roomHours.startMin) {
+                                insideRoomInterval = cellMinutes >= roomHours.startMin || cellMinutes < roomHours.endMin;
+                            } else {
+                                insideRoomInterval = false;
+                            }
+                        }
                     }
 
-                    if (!insideInterval || !insideTariffInterval) {
+                    var insideTariffInterval = true;
+                    if (isSimpleScenario) {
+                        insideTariffInterval = isCellAllowedByTariffSchedule(scenario.pk, roomIdNum, dateIso, cellMinutes);
+                    }
+
+                    if (!insideInterval || !insideTariffInterval || !insideRoomInterval) {
                         // Вне рабочего интервала сценария — отключаем клик и красим ячейку
                         cell.classList.remove('available');
                         cell.style.backgroundColor = '#EBEBEC';
@@ -1004,6 +1065,10 @@
                     params.append('area_id', window.currentAreaFilterId);
                 }
 
+                if (window.currentScenarioFilterId) {
+                    params.append('scenario_id', window.currentScenarioFilterId);
+                }
+
                 try {
                     const response = await fetch(`/booking/calendar-grid/?${params.toString()}`);
                     if (!response.ok) {
@@ -1025,12 +1090,19 @@
                     container.innerHTML = data.html;
                     bookingsInRange = data.bookings_in_range;
 
+                    if (Array.isArray(data.time_blocks)) {
+                        window.TIME_BLOCKS = data.time_blocks;
+                    }
+
                     initializeCalendarGridState();
 
                     // После замены HTML ждём окончания рендера и пересчитываем бронь/атрибуты
                     setTimeout(function () {
                         updateBookedCells();
                         assignParentAttributes();
+                        if (typeof window.applyScenarioWorkTimeRestrictions === 'function') {
+                            window.applyScenarioWorkTimeRestrictions();
+                        }
                     }, 50);
                 } catch (error) {
                     console.error('Сетевая ошибка при обновлении календарной сетки:', error);
@@ -1060,10 +1132,20 @@
                 }
             }
 
+            async function reloadCalendarGridForScenarioChange() {
+                showCalendarLoadingOverlay();
+                try {
+                    await reloadCalendarGridForCurrentState();
+                } finally {
+                    hideCalendarLoadingOverlay();
+                }
+            }
+
             // Экспортируем функции в глобальное пространство имён, чтобы вызывать из других скриптов
             window.refreshBookingsGrid = refreshBookingsGrid;
             window.reloadCalendarGridForCurrentState = reloadCalendarGridForCurrentState;
             window.reloadCalendarGridForAreaChange = reloadCalendarGridForAreaChange;
+            window.reloadCalendarGridForScenarioChange = reloadCalendarGridForScenarioChange;
 
             if (typeof window.__suppressBookingsRefreshUntil !== 'number') {
                 window.__suppressBookingsRefreshUntil = 0;
@@ -1635,14 +1717,36 @@
             if (!rootEl) return;
             if (!window.BookingSelectsUtils) return;
 
+            var scenarioFilterInitialized = false;
+
             function handleFilterSelected(filterType, value) {
                 if (filterType === 'scenario') {
+                    var prevScenarioId = window.currentScenarioFilterId || null;
                     window.currentScenarioFilterId = value || null;
+
+                    // При первичной инициализации фильтра сценария не перезагружаем сетку,
+                    // потому что сервер уже отдал HTML по дефолтному сценарию.
+                    if (!scenarioFilterInitialized) {
+                        scenarioFilterInitialized = true;
+                        if (typeof window.applyScenarioWorkTimeRestrictions === 'function') {
+                            window.applyScenarioWorkTimeRestrictions();
+                        }
+                        return;
+                    }
+
+                    if (String(prevScenarioId) !== String(window.currentScenarioFilterId)) {
+                        if (typeof window.reloadCalendarGridForScenarioChange === 'function') {
+                            window.reloadCalendarGridForScenarioChange();
+                        } else if (typeof window.reloadCalendarGridForCurrentState === 'function') {
+                            window.reloadCalendarGridForCurrentState();
+                        } else if (typeof window.refreshBookingsGrid === 'function') {
+                            window.refreshBookingsGrid();
+                        }
+                        return;
+                    }
+
                     if (typeof window.applyScenarioWorkTimeRestrictions === 'function') {
                         window.applyScenarioWorkTimeRestrictions();
-                    }
-                    if (typeof window.refreshBookingsGrid === 'function') {
-                        window.refreshBookingsGrid();
                     }
                 } else if (filterType === 'area') {
                     window.currentAreaFilterId = value || null;
