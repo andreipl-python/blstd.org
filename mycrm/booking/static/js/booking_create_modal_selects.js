@@ -836,7 +836,11 @@
                     },
                     'specialist-service': {
                         onSelected: function () {
+                            teacherDirectionLastChanged = 'specialist-service';
                             applyTeacherDirectionFilters();
+                            if (typeof window.syncCreateBookingMusicSchoolTimeFields === 'function') {
+                                window.syncCreateBookingMusicSchoolTimeFields();
+                            }
                         },
                         beforeClear: function (ctx) {
                             var selectEl = ctx ? ctx.selectEl : null;
@@ -851,6 +855,9 @@
                         onCleared: function (ctx) {
                             teacherDirectionLastChanged = ctx && ctx.selectEl ? ctx.selectEl.id : 'specialist-service';
                             applyTeacherDirectionFilters();
+                            if (typeof window.syncCreateBookingMusicSchoolTimeFields === 'function') {
+                                window.syncCreateBookingMusicSchoolTimeFields();
+                            }
                         }
                     },
                     'tariff': {

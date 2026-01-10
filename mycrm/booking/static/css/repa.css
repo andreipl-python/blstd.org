@@ -622,6 +622,10 @@
     display: block;
   }
 
+  .booking-block--other-scenario {
+    background: #EBEBEC;
+  }
+
   .booking-block--status-1079 {
     background: rgba(226, 178, 46, 0.5);
   }

@@ -881,7 +881,6 @@
                 const block = document.createElement('div');
                 block.className = 'booking-block';
                 block.setAttribute('data-booking-id', booking.id);
-                block.style.cursor = 'pointer';
                 
                 // Учитываем border ячейки: left отсчитывается от padding edge (внутри border)
                 const cellStyle = getComputedStyle(firstCell);
@@ -899,19 +898,31 @@
                     block.classList.add('booking-block--has-comment');
                 }
 
-                block.onclick = function (event) {
-                    event.stopPropagation();
-                    window.currentBookingId = booking.id;
-                    openInfoModal();
-                };
+                var currentScenarioId = window.currentScenarioFilterId ? Number(window.currentScenarioFilterId) : null;
+                var bookingScenarioId = booking && booking.scenario_id !== undefined && booking.scenario_id !== null
+                    ? Number(booking.scenario_id)
+                    : null;
+                var isOtherScenario = currentScenarioId !== null && bookingScenarioId !== null && bookingScenarioId !== currentScenarioId;
 
-                block.addEventListener('mouseenter', function (event) {
-                    event.stopPropagation();
-                    showBookingHoverPopover(booking.id, block);
-                });
-                block.addEventListener('mouseleave', function () {
-                    hideBookingHoverPopover();
-                });
+                if (isOtherScenario) {
+                    block.classList.add('booking-block--other-scenario');
+                    block.style.cursor = 'default';
+                } else {
+                    block.style.cursor = 'pointer';
+                    block.onclick = function (event) {
+                        event.stopPropagation();
+                        window.currentBookingId = booking.id;
+                        openInfoModal();
+                    };
+
+                    block.addEventListener('mouseenter', function (event) {
+                        event.stopPropagation();
+                        showBookingHoverPopover(booking.id, block);
+                    });
+                    block.addEventListener('mouseleave', function () {
+                        hideBookingHoverPopover();
+                    });
+                }
 
                 return block;
             }
@@ -962,9 +973,6 @@
                 if (window.currentAreaFilterId) {
                     params.append('area_id', window.currentAreaFilterId);
                 }
-                if (window.currentScenarioFilterId) {
-                    params.append('scenario_id', window.currentScenarioFilterId);
-                }
 
                 try {
                     const response = await fetch(`/booking/bookings-grid/?${params.toString()}`);
@@ -994,9 +1002,6 @@
 
                 if (window.currentAreaFilterId) {
                     params.append('area_id', window.currentAreaFilterId);
-                }
-                if (window.currentScenarioFilterId) {
-                    params.append('scenario_id', window.currentScenarioFilterId);
                 }
 
                 try {

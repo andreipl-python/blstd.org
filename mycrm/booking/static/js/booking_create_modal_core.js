@@ -766,6 +766,8 @@
 
                     var serviceMinMinutes = getSelectedSpecialistServiceDurationMinutes();
                     if (!serviceMinMinutes) {
+                        minMinutes = getScenarioMinDurationMinutes();
+                        window.currentMinMinutes = minMinutes;
                         currentSelectedPeriods = null;
                         currentEndTimeMinutes = null;
                         window.currentEndTimeMinutes = null;
@@ -797,7 +799,7 @@
                     setCustomSelectDisabled(durationSelect, false);
                     setCustomSelectDisabled(endTimeSelect, false);
 
-                    if (shouldResetByTariffBase || prevMinMinutes !== minMinutes) {
+                    if (prevMinMinutes !== minMinutes) {
                         currentSelectedPeriods = null;
                         currentEndTimeMinutes = null;
                         window.currentEndTimeMinutes = null;

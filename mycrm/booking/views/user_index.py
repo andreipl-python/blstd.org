@@ -120,6 +120,7 @@ def add_blocks_datetime_range_and_room_name(
                 "id": reservation.id,
                 "room_name": reservation.room.name,
                 "idroom": reservation.room_id,
+                "scenario_id": reservation.scenario_id,
                 "blocks_datetime_range": datetime_str_list,
                 "client_id": reservation.client_id,
                 "client_name": reservation.client.name if reservation.client else None,
@@ -188,11 +189,6 @@ def user_index_view(request):
     if default_area is not None:
         bookings_in_range_qs = bookings_in_range_qs.filter(
             room__area_id=default_area.id
-        )
-
-    if default_scenario is not None:
-        bookings_in_range_qs = bookings_in_range_qs.filter(
-            scenario_id=default_scenario.id
         )
 
     bookings_in_range = add_blocks_datetime_range_and_room_name(
@@ -370,7 +366,6 @@ def get_bookings_grid(request):
     date_from_str = request.GET.get("date_from")
     date_to_str = request.GET.get("date_to")
     area_id = request.GET.get("area_id")
-    scenario_id = request.GET.get("scenario_id")
 
     if not date_from_str or not date_to_str:
         return JsonResponse(
@@ -421,15 +416,6 @@ def get_bookings_grid(request):
         if area_id_int is not None:
             bookings_qs = bookings_qs.filter(room__area_id=area_id_int)
 
-    scenario_id_int = None
-    if scenario_id:
-        try:
-            scenario_id_int = int(scenario_id)
-        except (TypeError, ValueError):
-            scenario_id_int = None
-        if scenario_id_int is not None:
-            bookings_qs = bookings_qs.filter(scenario_id=scenario_id_int)
-
     bookings_in_range = add_blocks_datetime_range_and_room_name(bookings_qs, 15)
 
     return JsonResponse(
@@ -456,7 +442,6 @@ def get_calendar_grid(request):
     date_from_str = request.GET.get("date_from")
     date_to_str = request.GET.get("date_to")
     area_id = request.GET.get("area_id")
-    scenario_id = request.GET.get("scenario_id")
 
     if not date_from_str or not date_to_str:
         return JsonResponse(
@@ -517,15 +502,6 @@ def get_calendar_grid(request):
 
     if area_id_int is not None:
         bookings_qs = bookings_qs.filter(room__area_id=area_id_int)
-
-    scenario_id_int = None
-    if scenario_id:
-        try:
-            scenario_id_int = int(scenario_id)
-        except (TypeError, ValueError):
-            scenario_id_int = None
-        if scenario_id_int is not None:
-            bookings_qs = bookings_qs.filter(scenario_id=scenario_id_int)
 
     bookings_in_range = add_blocks_datetime_range_and_room_name(bookings_qs, 15)
 

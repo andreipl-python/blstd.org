@@ -11,6 +11,8 @@ from .models import (
     Reservation,
     Scenario,
     TariffUnit,
+    Tariff,
+    TariffWeeklyInterval,
     ServiceGroup,
     Service,
     SpecialistService,
@@ -64,6 +66,43 @@ class SpecialistWeeklyIntervalInline(admin.TabularInline):
     model = SpecialistWeeklyInterval
     extra = 0
     formset = SpecialistWeeklyIntervalInlineFormSet
+
+
+class TariffWeeklyIntervalInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+
+        intervals_by_weekday = {}
+
+        for form in self.forms:
+            if not hasattr(form, "cleaned_data"):
+                continue
+            if form.cleaned_data.get("DELETE"):
+                continue
+
+            weekday = form.cleaned_data.get("weekday")
+            start = form.cleaned_data.get("start_time")
+            end = form.cleaned_data.get("end_time")
+            if weekday is None or start is None or end is None:
+                continue
+
+            intervals_by_weekday.setdefault(int(weekday), []).append((start, end))
+
+        for weekday, intervals in intervals_by_weekday.items():
+            intervals_sorted = sorted(intervals, key=lambda x: x[0])
+            prev_end = None
+            for start, end in intervals_sorted:
+                if start >= end:
+                    raise ValidationError("Начало интервала должно быть меньше конца")
+                if prev_end is not None and start < prev_end:
+                    raise ValidationError("Интервалы расписания пересекаются")
+                prev_end = end
+
+
+class TariffWeeklyIntervalInline(admin.TabularInline):
+    model = TariffWeeklyInterval
+    extra = 0
+    formset = TariffWeeklyIntervalInlineFormSet
 
 
 class SpecialistOverrideIntervalInlineFormSet(BaseInlineFormSet):
@@ -173,6 +212,28 @@ class TariffUnitAdmin(admin.ModelAdmin):
     list_display = ("scenario", "min_reservation_time", "tariff_unit_cost")
     list_filter = ("scenario",)
     search_fields = ("scenario__name",)
+
+
+@admin.register(Tariff)
+class TariffAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "active",
+        "max_people",
+        "base_duration_minutes",
+        "base_cost",
+    )
+    list_filter = ("active", "scenarios", "rooms")
+    search_fields = ("name",)
+    filter_horizontal = ("scenarios", "rooms")
+    inlines = (TariffWeeklyIntervalInline,)
+
+
+@admin.register(TariffWeeklyInterval)
+class TariffWeeklyIntervalAdmin(admin.ModelAdmin):
+    list_display = ("tariff", "weekday", "start_time", "end_time")
+    list_filter = ("tariff", "weekday")
+    search_fields = ("tariff__name",)
 
 
 @admin.register(ServiceGroup)
