@@ -388,6 +388,8 @@ def user_index_view(request):
         specialist_service_to_specialists
     )
 
+    pending_requests_count = Reservation.objects.filter(status_id=1079).count()
+
     context = {
         **menu2_context,
         "days_of_month": days_of_month,
@@ -418,9 +420,18 @@ def user_index_view(request):
         "app_version": version_value,
         "specialist_services": specialist_services,  # Услуги преподавателей для "Музыкальная школа"
         "specialist_service_to_specialists_json": specialist_service_to_specialists_json,  # Маппинг услуга→специалисты
+        "pending_requests_count": pending_requests_count,
     }
 
     return render(request, "booking/user/user_index.html", context)
+
+
+@login_required(login_url="login")
+def get_pending_requests_count(request):
+    pending_requests_count = Reservation.objects.filter(status_id=1079).count()
+    return JsonResponse(
+        {"success": True, "pending_requests_count": pending_requests_count}
+    )
 
 
 @login_required(login_url="login")

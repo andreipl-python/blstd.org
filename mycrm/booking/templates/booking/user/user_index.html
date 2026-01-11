@@ -300,6 +300,22 @@
     <script src="{% static 'js/booking_selects_utils.js' %}?v={% now 'U' %}"></script>
     <script src="{% static 'js/booking_services_utils.js' %}?v={% now 'U' %}"></script>
 
+    <script>
+        (function () {
+            function refresh() {
+                if (window.BookingModalUtils && typeof window.BookingModalUtils.refreshPendingRequestsCount === 'function') {
+                    window.BookingModalUtils.refreshPendingRequestsCount();
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', refresh);
+            } else {
+                refresh();
+            }
+        })();
+    </script>
+
     {% include "booking/user/modals/booking/modal_create_booking.html" %}
     {% include "booking/user/modals/booking/modal_edit_booking.html" %}
     {% include "booking/user/modals/booking/modal_info_booking.html" %}
@@ -1281,6 +1297,10 @@
                     return;
                 }
                 refreshBookingsGrid({ silent: true });
+
+                if (window.BookingModalUtils && typeof window.BookingModalUtils.refreshPendingRequestsCount === 'function') {
+                    window.BookingModalUtils.refreshPendingRequestsCount();
+                }
             }, 5000);
 
             // Делаем функцию доступной глобально, чтобы можно было вызывать при смене фильтра сценария

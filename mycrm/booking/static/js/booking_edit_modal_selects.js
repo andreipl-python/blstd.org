@@ -933,6 +933,10 @@
                 await window.refreshBookingsGrid({ silent: true });
             }
 
+            if (window.BookingModalUtils && typeof window.BookingModalUtils.refreshPendingRequestsCount === 'function') {
+                window.BookingModalUtils.refreshPendingRequestsCount();
+            }
+
             window._editModalShouldOpenInfo = false;
             const editModalInst = bootstrap.Modal.getInstance(document.getElementById('editBookingModal'));
             if (editModalInst) {

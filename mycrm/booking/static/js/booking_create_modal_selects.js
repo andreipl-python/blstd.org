@@ -1416,6 +1416,10 @@
                         } catch (e) {}
                     }
 
+                    if (window.BookingModalUtils && typeof window.BookingModalUtils.refreshPendingRequestsCount === 'function') {
+                        window.BookingModalUtils.refreshPendingRequestsCount();
+                    }
+
                     // Закрываем модалку (данные обновятся автоматически через AJAX)
                     modalElement.addEventListener('hidden.bs.modal', function () {
                         var successEl = document.getElementById('bookingAddedSuccessModal');

@@ -429,6 +429,58 @@
         updateCounter();
     }
 
+    function setPendingRequestsCount(count) {
+        var el = document.getElementById('alert-count');
+        if (!el) return;
+        var n = parseInt(String(count), 10);
+        if (!Number.isFinite(n) || n < 0) n = 0;
+        el.textContent = String(n);
+    }
+
+    function refreshPendingRequestsCount() {
+        return fetch('/booking/pending-requests-count/', {
+            method: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (resp) { return resp.json(); })
+        .then(function (data) {
+            if (!data || !data.success) return;
+            setPendingRequestsCount(data.pending_requests_count);
+        })
+        .catch(function () {
+        });
+    }
+
+    var pendingRequestsPollingId = null;
+
+    function startPendingRequestsCountPolling(intervalMs) {
+        var ms = parseInt(String(intervalMs), 10);
+        if (!Number.isFinite(ms) || ms < 1000) {
+            ms = 5000;
+        }
+
+        if (pendingRequestsPollingId) {
+            clearInterval(pendingRequestsPollingId);
+            pendingRequestsPollingId = null;
+        }
+
+        pendingRequestsPollingId = setInterval(function () {
+            if (window.__suppressBookingsRefreshUntil && Date.now() < window.__suppressBookingsRefreshUntil) {
+                return;
+            }
+            refreshPendingRequestsCount();
+        }, ms);
+
+        return pendingRequestsPollingId;
+    }
+
+    function stopPendingRequestsCountPolling() {
+        if (pendingRequestsPollingId) {
+            clearInterval(pendingRequestsPollingId);
+            pendingRequestsPollingId = null;
+        }
+    }
+
     /* =========================================================================
      * ЭКСПОРТ ПУБЛИЧНОГО API
      * ========================================================================= */
@@ -458,6 +510,11 @@
         formatMinutesToHm: formatMinutesToHm,
         
         // UI
-        initCommentCounter: initCommentCounter
+        initCommentCounter: initCommentCounter,
+
+        setPendingRequestsCount: setPendingRequestsCount,
+        refreshPendingRequestsCount: refreshPendingRequestsCount,
+        startPendingRequestsCountPolling: startPendingRequestsCountPolling,
+        stopPendingRequestsCountPolling: stopPendingRequestsCountPolling
     };
 })();
