@@ -338,6 +338,125 @@
                     cell.dataset.originalOnclick = initialOnclick;
                 }
             });
+
+            initializeSpecialistsToggles(container);
+        }
+
+        function initializeSpecialistsToggles(container) {
+            if (!container) {
+                return;
+            }
+
+            function setChevronDown(svgEl) {
+                if (!svgEl) {
+                    return;
+                }
+                svgEl.style.transform = 'rotate(180deg)';
+            }
+
+            function setChevronUp(svgEl) {
+                if (!svgEl) {
+                    return;
+                }
+                svgEl.style.transform = 'rotate(0deg)';
+            }
+
+            function isHidden(el) {
+                if (!el) {
+                    return true;
+                }
+                return el.style.display === 'none' || window.getComputedStyle(el).display === 'none';
+            }
+
+            function showEl(el) {
+                if (!el) {
+                    return;
+                }
+                el.style.display = '';
+            }
+
+            function hideEl(el) {
+                if (!el) {
+                    return;
+                }
+                el.style.display = 'none';
+            }
+
+            var dayEls = Array.prototype.slice.call(container.querySelectorAll('[data-role="calendar-day"]'));
+            dayEls.forEach(function (dayEl) {
+                var toggleEl = dayEl.querySelector('[data-role="specialists-toggle"]');
+                var toggleTextEl = toggleEl ? toggleEl.querySelector('[data-role="specialists-toggle-text"]') : null;
+                var toggleChevronEl = toggleEl ? toggleEl.querySelector('[data-role="chevron"]') : null;
+                var blockEl = dayEl.querySelector('[data-role="specialists-block"]');
+
+                if (blockEl) {
+                    hideEl(blockEl);
+                }
+                if (toggleTextEl) {
+                    toggleTextEl.textContent = 'Показать специалистов';
+                }
+                setChevronDown(toggleChevronEl);
+
+                var sectionEls = Array.prototype.slice.call(dayEl.querySelectorAll('[data-role="specialists-section"]'));
+                sectionEls.forEach(function (sectionEl) {
+                    var headerEl = sectionEl.querySelector('[data-role="specialists-section-toggle"]');
+                    var bodyEl = sectionEl.querySelector('[data-role="specialists-section-body"]');
+                    var chevronEl = headerEl ? headerEl.querySelector('[data-role="chevron"]') : null;
+
+                    if (bodyEl) {
+                        hideEl(bodyEl);
+                    }
+                    setChevronDown(chevronEl);
+
+                    if (headerEl && !headerEl.dataset.specialistsToggleBound) {
+                        headerEl.dataset.specialistsToggleBound = '1';
+                        headerEl.addEventListener('click', function () {
+                            if (!bodyEl) {
+                                return;
+                            }
+                            if (isHidden(bodyEl)) {
+                                showEl(bodyEl);
+                                setChevronUp(chevronEl);
+                            } else {
+                                hideEl(bodyEl);
+                                setChevronDown(chevronEl);
+                            }
+                        });
+                    }
+                });
+
+                if (toggleEl && !toggleEl.dataset.specialistsToggleBound) {
+                    toggleEl.dataset.specialistsToggleBound = '1';
+                    toggleEl.addEventListener('click', function () {
+                        if (!blockEl) {
+                            return;
+                        }
+                        if (isHidden(blockEl)) {
+                            sectionEls.forEach(function (sectionEl) {
+                                var headerEl = sectionEl.querySelector('[data-role="specialists-section-toggle"]');
+                                var bodyEl = sectionEl.querySelector('[data-role="specialists-section-body"]');
+                                var chevronEl = headerEl ? headerEl.querySelector('[data-role="chevron"]') : null;
+                                if (bodyEl) {
+                                    hideEl(bodyEl);
+                                }
+                                setChevronDown(chevronEl);
+                            });
+
+                            showEl(blockEl);
+                            if (toggleTextEl) {
+                                toggleTextEl.textContent = 'Скрыть специалистов';
+                            }
+                            setChevronUp(toggleChevronEl);
+                        } else {
+                            hideEl(blockEl);
+                            if (toggleTextEl) {
+                                toggleTextEl.textContent = 'Показать специалистов';
+                            }
+                            setChevronDown(toggleChevronEl);
+                        }
+                    });
+                }
+            });
         }
 
         $(document).ready(function () {

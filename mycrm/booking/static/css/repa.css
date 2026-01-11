@@ -1076,6 +1076,8 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
+    cursor: pointer;
+    user-select: none;
     font-family: 'Manrope';
     font-style: normal;
     font-weight: 600 !important;
@@ -1083,6 +1085,11 @@
     line-height: 128%;
     letter-spacing: -0.008em;
     color: #7A52FF;
+  }
+
+  [data-role="specialists-section-toggle"] {
+    cursor: pointer;
+    user-select: none;
   }
 
   .specialist-time {
