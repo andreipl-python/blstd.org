@@ -186,13 +186,11 @@
                                     <ul class="date-range-picker__presets-list">
                                         <li class="date-range-picker__presets-item" data-preset="today">Сегодня</li>
                                         <li class="date-range-picker__presets-item" data-preset="yesterday">Вчера</li>
-                                        <li class="date-range-picker__presets-item" data-preset="today_yesterday">Сегодня и вчера</li>
-                                        <li class="date-range-picker__presets-item" data-preset="last7">Последние 7 дн.</li>
-                                        <li class="date-range-picker__presets-item" data-preset="current14">Текущие 14 дней</li>
-                                        <li class="date-range-picker__presets-item" data-preset="last14">Последние 14 дн.</li>
-                                        <li class="date-range-picker__presets-item" data-preset="last30">Последние 30 дн.</li>
+                                        <li class="date-range-picker__presets-item" data-preset="tomorrow">Завтра</li>
                                         <li class="date-range-picker__presets-item" data-preset="this_week">Эта неделя</li>
+                                        <li class="date-range-picker__presets-item" data-preset="current14">Текущие 14 дней</li>
                                         <li class="date-range-picker__presets-item" data-preset="last_week">Прошлая неделя</li>
+                                        <li class="date-range-picker__presets-item" data-preset="next_week">Следующая неделя</li>
                                         <li class="date-range-picker__presets-item" data-preset="this_month">Этот месяц</li>
                                         <li class="date-range-picker__presets-item" data-preset="last_month">Прошлый месяц</li>
                                     </ul>
@@ -1490,21 +1488,12 @@
                     } else if (preset === 'yesterday') {
                         start = new Date(today.getTime() - 24 * 60 * 60 * 1000);
                         end = new Date(start.getTime());
-                    } else if (preset === 'today_yesterday') {
-                        end = new Date(today.getTime());
-                        start = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-                    } else if (preset === 'last7') {
-                        start = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
-                        end = new Date(today.getTime());
+                    } else if (preset === 'tomorrow') {
+                        start = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+                        end = new Date(start.getTime());
                     } else if (preset === 'current14') {
                         start = new Date(today.getTime());
                         end = new Date(today.getTime() + 13 * 24 * 60 * 60 * 1000);
-                    } else if (preset === 'last14') {
-                        start = new Date(today.getTime() - 13 * 24 * 60 * 60 * 1000);
-                        end = new Date(today.getTime());
-                    } else if (preset === 'last30') {
-                        start = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
-                        end = new Date(today.getTime());
                     } else if (preset === 'this_week') {
                         // Неделя: Пн-Вс, текущая неделя
                         var dayOfWeek = today.getDay(); // 0 (Вс) - 6 (Сб)
@@ -1517,6 +1506,12 @@
                         var thisMonday = new Date(today.getTime() - mondayOffsetLW * 24 * 60 * 60 * 1000);
                         end = new Date(thisMonday.getTime() - 24 * 60 * 60 * 1000);
                         start = new Date(end.getTime() - 6 * 24 * 60 * 60 * 1000);
+                    } else if (preset === 'next_week') {
+                        var dayOfWeekNW = today.getDay();
+                        var mondayOffsetNW = (dayOfWeekNW + 6) % 7;
+                        var thisMondayNW = new Date(today.getTime() - mondayOffsetNW * 24 * 60 * 60 * 1000);
+                        start = new Date(thisMondayNW.getTime() + 7 * 24 * 60 * 60 * 1000);
+                        end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
                     } else if (preset === 'this_month') {
                         start = new Date(today.getFullYear(), today.getMonth(), 1);
                         end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -1725,21 +1720,12 @@
                     } else if (preset === 'yesterday') {
                         start = new Date(today.getTime() - 24 * 60 * 60 * 1000);
                         end = new Date(start.getTime());
-                    } else if (preset === 'today_yesterday') {
-                        end = new Date(today.getTime());
-                        start = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-                    } else if (preset === 'last7') {
-                        start = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
-                        end = new Date(today.getTime());
+                    } else if (preset === 'tomorrow') {
+                        start = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+                        end = new Date(start.getTime());
                     } else if (preset === 'current14') {
                         start = new Date(today.getTime());
                         end = new Date(today.getTime() + 13 * 24 * 60 * 60 * 1000);
-                    } else if (preset === 'last14') {
-                        start = new Date(today.getTime() - 13 * 24 * 60 * 60 * 1000);
-                        end = new Date(today.getTime());
-                    } else if (preset === 'last30') {
-                        start = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
-                        end = new Date(today.getTime());
                     } else if (preset === 'this_week') {
                         // Неделя: Пн-Вс, текущая неделя
                         var dayOfWeek = today.getDay(); // 0 (Вс) - 6 (Сб)
@@ -1752,6 +1738,12 @@
                         var thisMonday = new Date(today.getTime() - mondayOffsetLW * 24 * 60 * 60 * 1000);
                         end = new Date(thisMonday.getTime() - 24 * 60 * 60 * 1000);
                         start = new Date(end.getTime() - 6 * 24 * 60 * 60 * 1000);
+                    } else if (preset === 'next_week') {
+                        var dayOfWeekNW = today.getDay();
+                        var mondayOffsetNW = (dayOfWeekNW + 6) % 7;
+                        var thisMondayNW = new Date(today.getTime() - mondayOffsetNW * 24 * 60 * 60 * 1000);
+                        start = new Date(thisMondayNW.getTime() + 7 * 24 * 60 * 60 * 1000);
+                        end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
                     } else if (preset === 'this_month') {
                         start = new Date(today.getFullYear(), today.getMonth(), 1);
                         end = new Date(today.getFullYear(), today.getMonth() + 1, 0);

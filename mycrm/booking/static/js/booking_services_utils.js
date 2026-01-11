@@ -63,6 +63,140 @@
         return selectedLis;
     }
 
+    function ensureServicesOriginalOrder(selectEl, optionsContainer) {
+        if (!selectEl || !optionsContainer) return;
+        if (selectEl._servicesOriginalOrderReady) return;
+
+        var idx = 0;
+        Array.from(optionsContainer.querySelectorAll('li')).forEach(function (li) {
+            if (!li || li.classList.contains('search-option')) return;
+            if (!li.hasAttribute('data-original-index')) {
+                li.setAttribute('data-original-index', String(idx));
+            }
+            idx++;
+        });
+
+        selectEl._servicesOriginalOrderReady = true;
+    }
+
+    function getServicesSearchOptionLi(optionsContainer, searchOptionId) {
+        if (!optionsContainer) return null;
+        if (searchOptionId) {
+            var byId = optionsContainer.querySelector('li#' + String(searchOptionId));
+            if (byId) return byId;
+        }
+        return optionsContainer.querySelector('li.search-option');
+    }
+
+    function applyServicesVisibility(selectEl, optionsContainer, searchOptionId) {
+        if (!selectEl || !optionsContainer) return;
+        var searchLi = getServicesSearchOptionLi(optionsContainer, searchOptionId);
+
+        Array.from(optionsContainer.querySelectorAll('li')).forEach(function (li) {
+            if (!li) return;
+            if (li === searchLi || li.classList.contains('search-option')) {
+                li.style.display = '';
+                return;
+            }
+
+            var filterHidden = String(li.getAttribute('data-filter-hidden') || '') === '1';
+            var searchHidden = String(li.getAttribute('data-search-hidden') || '') === '1';
+            var isSelected = li.classList.contains('selected');
+            li.style.display = (filterHidden || (!isSelected && searchHidden)) ? 'none' : '';
+        });
+    }
+
+    function reorderServicesOptions(selectEl, optionsContainer, searchOptionId) {
+        if (!selectEl || !optionsContainer) return;
+        ensureServicesOriginalOrder(selectEl, optionsContainer);
+
+        var searchLi = getServicesSearchOptionLi(optionsContainer, searchOptionId);
+        if (searchLi && optionsContainer.firstChild !== searchLi) {
+            optionsContainer.insertBefore(searchLi, optionsContainer.firstChild);
+        }
+
+        var items = Array.from(optionsContainer.querySelectorAll('li')).filter(function (li) {
+            if (!li) return false;
+            if (li === searchLi) return false;
+            if (li.classList.contains('search-option')) return false;
+            return true;
+        });
+
+        items.sort(function (a, b) {
+            var aSel = a.classList.contains('selected') ? 1 : 0;
+            var bSel = b.classList.contains('selected') ? 1 : 0;
+            if (aSel !== bSel) return bSel - aSel;
+
+            var ai = parseInt(String(a.getAttribute('data-original-index') || '0'), 10);
+            var bi = parseInt(String(b.getAttribute('data-original-index') || '0'), 10);
+            if (!Number.isFinite(ai)) ai = 0;
+            if (!Number.isFinite(bi)) bi = 0;
+            return ai - bi;
+        });
+
+        items.forEach(function (li) {
+            optionsContainer.appendChild(li);
+        });
+    }
+
+    function bindServicesSearch(selectEl, optionsContainer, config) {
+        if (!selectEl || !optionsContainer) return;
+
+        var input = null;
+        if (config && config.searchInputSelector) {
+            input = selectEl.querySelector(config.searchInputSelector);
+        }
+        if (!input) {
+            var searchLi = getServicesSearchOptionLi(optionsContainer, config ? config.searchOptionId : null);
+            input = searchLi ? searchLi.querySelector('input') : null;
+        }
+        if (!input) return;
+        if (input._servicesSearchBound) return;
+        input._servicesSearchBound = true;
+
+        var searchOptionId = config ? config.searchOptionId : null;
+
+        selectEl._applyServicesSearchFilter = function () {
+            var q = String(input.value || '').trim().toLowerCase();
+
+            Array.from(optionsContainer.querySelectorAll('li')).forEach(function (li) {
+                if (!li) return;
+                if (li.classList.contains('search-option') || li === getServicesSearchOptionLi(optionsContainer, searchOptionId)) {
+                    return;
+                }
+
+                var name = String(li.getAttribute('data-name') || li.textContent || '');
+                var ok = !q || name.toLowerCase().indexOf(q) !== -1;
+                if (ok) {
+                    li.removeAttribute('data-search-hidden');
+                } else {
+                    li.setAttribute('data-search-hidden', '1');
+                }
+            });
+
+            applyServicesVisibility(selectEl, optionsContainer, searchOptionId);
+            reorderServicesOptions(selectEl, optionsContainer, searchOptionId);
+        };
+
+        input.addEventListener('input', function () {
+            if (typeof selectEl._applyServicesSearchFilter === 'function') {
+                selectEl._applyServicesSearchFilter();
+            }
+        });
+
+        input.addEventListener('mousedown', function (e) {
+            e.stopPropagation();
+        });
+
+        input.addEventListener('click', function (e) {
+            e.stopPropagation();
+        });
+
+        if (typeof selectEl._applyServicesSearchFilter === 'function') {
+            selectEl._applyServicesSearchFilter();
+        }
+    }
+
     /**
      * Обновляет текст выбранного значения в шапке селекта услуг.
      *
@@ -201,6 +335,13 @@
                     updateServicesSummaryText(servicesSelect, 'Выберите услугу');
                 }
 
+                if (typeof servicesSelect._applyServicesSearchFilter === 'function') {
+                    servicesSelect._applyServicesSearchFilter();
+                }
+                if (typeof servicesSelect._reorderServicesOptions === 'function') {
+                    servicesSelect._reorderServicesOptions();
+                }
+
                 // 3) Перестраиваем бейджи и уведомляем о смене
                 renderServicesBadges(config);
 
@@ -247,6 +388,20 @@
         var optionsContainer = config.optionsContainerEl || selectEl.querySelector('.options');
         if (!selectedSpan || !optionsContainer) return;
 
+        var searchOptionId = config.searchOptionId || null;
+        ensureServicesOriginalOrder(selectEl, optionsContainer);
+        selectEl._applyServicesVisibility = function () {
+            applyServicesVisibility(selectEl, optionsContainer, searchOptionId);
+        };
+        selectEl._reorderServicesOptions = function () {
+            reorderServicesOptions(selectEl, optionsContainer, searchOptionId);
+        };
+
+        bindServicesSearch(selectEl, optionsContainer, {
+            searchInputSelector: config.searchInputSelector,
+            searchOptionId: searchOptionId
+        });
+
         // Храним выбранные опции в Set, чтобы внешний код мог читать/править состояние.
         if (!selectEl._selectedOptions || typeof selectEl._selectedOptions.add !== 'function') {
             selectEl._selectedOptions = new Set();
@@ -265,11 +420,34 @@
             if (typeof config.closeAll === 'function') {
                 var wasOpen = selectEl.classList.contains('open');
                 config.closeAll();
-                if (!wasOpen) selectEl.classList.add('open');
+                if (!wasOpen) {
+                    selectEl.classList.add('open');
+                    if (config.focusSearchOnOpen) {
+                        var inp = config.searchInputSelector
+                            ? selectEl.querySelector(config.searchInputSelector)
+                            : (getServicesSearchOptionLi(optionsContainer, searchOptionId)
+                                ? getServicesSearchOptionLi(optionsContainer, searchOptionId).querySelector('input')
+                                : null);
+                        if (inp) {
+                            setTimeout(function () { inp.focus(); }, 0);
+                        }
+                    }
+                }
                 return;
             }
 
+            var wasOpen2 = selectEl.classList.contains('open');
             selectEl.classList.toggle('open');
+            if (!wasOpen2 && selectEl.classList.contains('open') && config.focusSearchOnOpen) {
+                var inp2 = config.searchInputSelector
+                    ? selectEl.querySelector(config.searchInputSelector)
+                    : (getServicesSearchOptionLi(optionsContainer, searchOptionId)
+                        ? getServicesSearchOptionLi(optionsContainer, searchOptionId).querySelector('input')
+                        : null);
+                if (inp2) {
+                    setTimeout(function () { inp2.focus(); }, 0);
+                }
+            }
         });
 
         // Не даём кликам по опциям закрывать селект (мультивыбор)
@@ -281,6 +459,12 @@
             var li = e.target && e.target.closest ? e.target.closest('li') : null;
             if (!li) return;
             e.stopPropagation();
+
+            if (li.classList.contains('search-option') || (searchOptionId && String(li.id || '') === String(searchOptionId))) {
+                var inp = li.querySelector('input');
+                if (inp) inp.focus();
+                return;
+            }
 
             // Toggle selection
             if (li.classList.contains('selected')) {
@@ -294,6 +478,14 @@
             // Обновляем summary text
             selectEl._updateSelectedText();
 
+            if (typeof selectEl._applyServicesSearchFilter === 'function') {
+                selectEl._applyServicesSearchFilter();
+            } else {
+                if (typeof selectEl._reorderServicesOptions === 'function') {
+                    selectEl._reorderServicesOptions();
+                }
+            }
+
             if (typeof config.onSelectionChanged === 'function') {
                 config.onSelectionChanged();
             }
@@ -306,12 +498,26 @@
             resetBtn.addEventListener('click', function (e) {
                 e.preventDefault();
 
+                var inp = config.searchInputSelector
+                    ? selectEl.querySelector(config.searchInputSelector)
+                    : null;
+                if (inp) {
+                    inp.value = '';
+                }
+
                 selectEl._selectedOptions.clear();
                 Array.from(selectEl.querySelectorAll('ul.options li')).forEach(function (opt) {
                     opt.classList.remove('selected');
                 });
 
                 selectEl._updateSelectedText();
+
+                if (typeof selectEl._applyServicesSearchFilter === 'function') {
+                    selectEl._applyServicesSearchFilter();
+                }
+                if (typeof selectEl._reorderServicesOptions === 'function') {
+                    selectEl._reorderServicesOptions();
+                }
 
                 if (typeof config.onSelectionChanged === 'function') {
                     config.onSelectionChanged();
@@ -321,6 +527,9 @@
 
         // Первичная синхронизация
         selectEl._updateSelectedText();
+        if (typeof selectEl._reorderServicesOptions === 'function') {
+            selectEl._reorderServicesOptions();
+        }
     }
 
     /**
@@ -355,6 +564,10 @@
             selectEl._updateSelectedText();
         } else {
             updateServicesSummaryText(selectEl, config.placeholderText || 'Выберите услугу');
+        }
+
+        if (typeof selectEl._reorderServicesOptions === 'function') {
+            selectEl._reorderServicesOptions();
         }
     }
 

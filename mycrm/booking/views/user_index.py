@@ -27,7 +27,7 @@ from booking.models import (
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.serializers import serialize
-from django.db.models import QuerySet, Q, Case, When, Value, IntegerField, Sum
+from django.db.models import QuerySet, Q, Case, When, Value, IntegerField, Sum, Count
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -314,14 +314,8 @@ def user_index_view(request):
     services = (
         Service.objects.select_related("group")
         .prefetch_related("scenario")
-        .annotate(
-            group_order=Case(
-                When(group__name="Аренда оборудования", then=Value(1)),
-                default=Value(2),
-                output_field=IntegerField(),
-            )
-        )
-        .order_by("group_order", "group__name", "name")
+        .annotate(usage_count=Count("reservations", distinct=True))
+        .order_by("-usage_count", "name")
     )
 
     services_json = serialize("json", services, use_natural_foreign_keys=True)

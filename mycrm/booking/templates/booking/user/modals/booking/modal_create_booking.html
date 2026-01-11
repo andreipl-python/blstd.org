@@ -363,6 +363,22 @@
                                     </svg>
                                 </span>
                                 <ul class="options">
+                                    <li id="services-search-option" class="search-option" style="cursor:text;">
+                                        <span style="display:flex;align-items:center;gap:6px;">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path
+                                                    d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z"
+                                                    stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                                    stroke-linejoin="round" />
+                                                <path d="M21.0002 21L16.7002 16.7" stroke="#818EA2" stroke-width="2"
+                                                    stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
+                                            <input id="services-search-input" type="text" placeholder="Поиск"
+                                                style="border:none;outline:none;background:transparent;width:120px;"
+                                                autocomplete="off" />
+                                        </span>
+                                    </li>
                                     {% for service in services %}
                                         {% if service.active %}
                                             <li data-value="{{ service.id }}" data-cost="{{ service.cost|default_if_none:'0' }}" data-scenario-id="{{ service.scenario_id|default_if_none:'' }}" data-room-id="{{ service.room_id|default_if_none:'' }}" data-name="{{ service.name }}">

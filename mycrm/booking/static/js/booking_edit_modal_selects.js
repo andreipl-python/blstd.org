@@ -13,6 +13,72 @@
         return name === 'Репетиционная точка' || name === 'Музыкальный класс';
     }
 
+    function applyEditServicesFilters() {
+        var modalEl = document.getElementById('editBookingModal');
+        if (!modalEl) return;
+
+        var servicesSelect = modalEl.querySelector('#edit-services');
+        if (!servicesSelect) return;
+
+        var currentRoomId = '';
+        try {
+            if (typeof getSelectedValue === 'function') {
+                currentRoomId = String(getSelectedValue(document.getElementById('edit-room')) || '').trim();
+            }
+        } catch (e) {
+            currentRoomId = '';
+        }
+
+        var currentScenarioId = String(modalEl.getAttribute('data-scenario-id') || '').trim();
+
+        var options = servicesSelect.querySelectorAll('ul.options li');
+        Array.from(options).forEach(function (li) {
+            if (!li) return;
+            if (li.classList.contains('search-option') || String(li.id || '') === 'edit-services-search-option') {
+                return;
+            }
+
+            var liRoomId = String(li.getAttribute('data-room-id') || '').trim();
+            var liScenarioId = String(li.getAttribute('data-scenario-id') || '').trim();
+
+            var roomOk = !liRoomId || !currentRoomId || liRoomId === currentRoomId;
+            var scenarioOk = !currentScenarioId || liScenarioId === currentScenarioId;
+
+            if (roomOk && scenarioOk) {
+                li.removeAttribute('data-filter-hidden');
+            } else {
+                li.setAttribute('data-filter-hidden', '1');
+            }
+        });
+
+        if (servicesSelect._selectedOptions && servicesSelect._selectedOptions.size) {
+            var changed = false;
+            Array.from(servicesSelect._selectedOptions).forEach(function (opt) {
+                if (String(opt.getAttribute('data-filter-hidden') || '') === '1') {
+                    opt.classList.remove('selected');
+                    servicesSelect._selectedOptions.delete(opt);
+                    changed = true;
+                }
+            });
+            if (changed && typeof servicesSelect._updateSelectedText === 'function') {
+                servicesSelect._updateSelectedText();
+            }
+        }
+
+        if (typeof servicesSelect._applyServicesSearchFilter === 'function') {
+            servicesSelect._applyServicesSearchFilter();
+        } else {
+            if (typeof servicesSelect._applyServicesVisibility === 'function') {
+                servicesSelect._applyServicesVisibility();
+            }
+            if (typeof servicesSelect._reorderServicesOptions === 'function') {
+                servicesSelect._reorderServicesOptions();
+            }
+        }
+    }
+
+    window.applyEditServicesFilters = applyEditServicesFilters;
+
     function syncEditClearableSelectState(selectEl) {
         if (!selectEl || !selectEl.classList || !selectEl.classList.contains('custom-select--clearable')) {
             return;
@@ -320,6 +386,9 @@
                         optionsContainerEl: servicesOptionsContainer,
                         placeholderText: 'Выберите услугу',
                         resetBtnId: 'reset-services',
+                        searchInputSelector: '#edit-services-search-input',
+                        searchOptionId: 'edit-services-search-option',
+                        focusSearchOnOpen: true,
                         closeAll: closeAll,
                         onSelectionChanged: function () {
                             updateEditServicesBadges();
@@ -332,6 +401,8 @@
                     });
                     updateEditServicesBadges();
                     calculateAndUpdateEditBookingCost();
+
+                    applyEditServicesFilters();
                 }
             }
         }
@@ -349,6 +420,7 @@
                             if (controller && typeof controller.handleRoomOrDateChange === 'function') {
                                 controller.handleRoomOrDateChange();
                             }
+                            applyEditServicesFilters();
                         }
                     },
                     'edit-direction': {
@@ -651,6 +723,8 @@
         initCommentCounter();
 
         setMultiSelectedValues(modalEl.querySelector('#edit-services'), Array.isArray(booking.service_ids) ? booking.service_ids : []);
+
+        applyEditServicesFilters();
 
         const costEl = modalEl.querySelector('#editBookingCostValue');
         if (costEl && booking.total_cost !== undefined && booking.total_cost !== null) {

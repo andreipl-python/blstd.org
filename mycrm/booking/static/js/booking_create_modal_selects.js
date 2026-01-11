@@ -676,6 +676,10 @@
             var seen = new Map();
 
             Array.from(options).forEach(function (li) {
+                if (!li) return;
+                if (li.classList.contains('search-option') || String(li.id || '') === 'services-search-option') {
+                    return;
+                }
                 var liRoomId = String(li.getAttribute('data-room-id') || '');
                 var liScenarioId = String(li.getAttribute('data-scenario-id') || '');
                 var liValue = String(li.getAttribute('data-value') || '');
@@ -702,15 +706,19 @@
                 seen.set(dedupeKey, li);
 
                 var roomOk = !liRoomId || !currentRoomId || liRoomId === currentRoomId;
-                var scenarioOk = !liScenarioId || !currentScenarioId || liScenarioId === currentScenarioId;
+                var scenarioOk = !currentScenarioId || liScenarioId === currentScenarioId;
 
-                li.style.display = (roomOk && scenarioOk) ? '' : 'none';
+                if (roomOk && scenarioOk) {
+                    li.removeAttribute('data-filter-hidden');
+                } else {
+                    li.setAttribute('data-filter-hidden', '1');
+                }
             });
 
             if (servicesSelect._selectedOptions && servicesSelect._selectedOptions.size) {
                 var changed = false;
                 Array.from(servicesSelect._selectedOptions).forEach(function (opt) {
-                    if (opt.style.display === 'none') {
+                    if (String(opt.getAttribute('data-filter-hidden') || '') === '1') {
                         opt.classList.remove('selected');
                         servicesSelect._selectedOptions.delete(opt);
                         changed = true;
@@ -719,6 +727,17 @@
 
                 if (changed && typeof servicesSelect._updateSelectedText === 'function') {
                     servicesSelect._updateSelectedText();
+                }
+            }
+
+            if (typeof servicesSelect._applyServicesSearchFilter === 'function') {
+                servicesSelect._applyServicesSearchFilter();
+            } else {
+                if (typeof servicesSelect._applyServicesVisibility === 'function') {
+                    servicesSelect._applyServicesVisibility();
+                }
+                if (typeof servicesSelect._reorderServicesOptions === 'function') {
+                    servicesSelect._reorderServicesOptions();
                 }
             }
         }
@@ -776,6 +795,9 @@
                         optionsContainerEl: servicesOptionsContainer,
                         placeholderText: 'Выберите услугу',
                         resetBtnId: 'create-reset-services',
+                        searchInputSelector: '#services-search-input',
+                        searchOptionId: 'services-search-option',
+                        focusSearchOnOpen: true,
                         onSelectionChanged: function () {
                             if (typeof window.updateServicesBadges === 'function') {
                                 window.updateServicesBadges();
@@ -791,6 +813,8 @@
                     if (typeof window.calculateAndUpdateBookingCost === 'function') {
                         window.calculateAndUpdateBookingCost();
                     }
+
+                    applyServicesFilters();
                 }
             }
         }
