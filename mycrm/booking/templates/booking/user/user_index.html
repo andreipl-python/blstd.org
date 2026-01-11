@@ -1074,6 +1074,14 @@
                     block.classList.add('booking-block--status-1079');
                 }
 
+                if (booking && booking.remaining_amount !== undefined && booking.remaining_amount !== null) {
+                    var remainingRaw = String(booking.remaining_amount);
+                    var remainingNum = parseFloat(remainingRaw.replace(',', '.'));
+                    if (!isNaN(remainingNum) && remainingNum > 0) {
+                        block.classList.add('booking-block--unpaid');
+                    }
+                }
+
                 if (booking && typeof booking.comment === 'string' && booking.comment.trim()) {
                     block.classList.add('booking-block--has-comment');
                 }

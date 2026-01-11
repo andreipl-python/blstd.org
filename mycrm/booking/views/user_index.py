@@ -1,5 +1,6 @@
 import json
 from calendar import monthrange
+from decimal import Decimal
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -7,6 +8,7 @@ from typing import Any
 from booking.models import (
     Client,
     ClientGroup,
+    Payment,
     Room,
     Service,
     Reservation,
@@ -25,7 +27,7 @@ from booking.models import (
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.serializers import serialize
-from django.db.models import QuerySet, Q, Case, When, Value, IntegerField
+from django.db.models import QuerySet, Q, Case, When, Value, IntegerField, Sum
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -150,8 +152,28 @@ def add_blocks_datetime_range_and_room_name(
 ) -> list[dict[str, Any]]:
     reservation_objects = reservation_objects.select_related("room", "client", "status")
 
+    reservations = list(reservation_objects)
+    reservation_ids = [r.id for r in reservations]
+    paid_by_reservation_id: dict[int, Decimal] = {}
+
+    if reservation_ids:
+        payments = (
+            Payment.objects.filter(reservation_id__in=reservation_ids, canceled=False)
+            .values("reservation_id")
+            .annotate(total=Sum("amount"))
+        )
+        paid_by_reservation_id = {
+            int(p["reservation_id"]): (p["total"] or Decimal("0")) for p in payments
+        }
+
     result = []
-    for reservation in reservation_objects:
+    for reservation in reservations:
+        total_cost = reservation.total_cost or Decimal("0")
+        paid_amount = paid_by_reservation_id.get(reservation.id, Decimal("0"))
+        remaining_amount = total_cost - paid_amount
+        if remaining_amount < Decimal("0"):
+            remaining_amount = Decimal("0")
+
         local_start = timezone.localtime(reservation.datetimestart)
         local_end = timezone.localtime(reservation.datetimeend)
         datetime_str_list = [
@@ -185,6 +207,9 @@ def add_blocks_datetime_range_and_room_name(
                 "specialist_id": reservation.specialist_id,
                 "status_id": reservation.status.id if reservation.status else 1,
                 "comment": reservation.comment,
+                "total_cost": str(total_cost),
+                "paid_amount": str(paid_amount),
+                "remaining_amount": str(remaining_amount),
             }
         )
 
