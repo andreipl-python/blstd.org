@@ -375,6 +375,81 @@
                 return;
             }
 
+            function clearSlideStyles(el) {
+                if (!el) {
+                    return;
+                }
+                el.style.height = '';
+                el.style.overflow = '';
+                el.style.opacity = '';
+                el.style.transition = '';
+                el.style.willChange = '';
+            }
+
+            function slideDown(el) {
+                if (!el) {
+                    return;
+                }
+                if (el.dataset.sliding === '1') {
+                    return;
+                }
+                el.dataset.sliding = '1';
+                el.style.display = '';
+                el.style.overflow = 'hidden';
+                el.style.height = '0px';
+                el.style.opacity = '0';
+                el.style.transition = 'height 220ms ease, opacity 220ms ease';
+                el.style.willChange = 'height, opacity';
+
+                var targetHeight = el.scrollHeight;
+                requestAnimationFrame(function () {
+                    el.style.height = targetHeight + 'px';
+                    el.style.opacity = '1';
+                });
+
+                var onEnd = function (event) {
+                    if (event && event.propertyName && event.propertyName !== 'height') {
+                        return;
+                    }
+                    el.removeEventListener('transitionend', onEnd);
+                    el.dataset.sliding = '0';
+                    clearSlideStyles(el);
+                };
+                el.addEventListener('transitionend', onEnd);
+            }
+
+            function slideUp(el) {
+                if (!el) {
+                    return;
+                }
+                if (el.dataset.sliding === '1') {
+                    return;
+                }
+                el.dataset.sliding = '1';
+
+                el.style.overflow = 'hidden';
+                el.style.height = el.scrollHeight + 'px';
+                el.style.opacity = '1';
+                el.style.transition = 'height 200ms ease, opacity 200ms ease';
+                el.style.willChange = 'height, opacity';
+
+                requestAnimationFrame(function () {
+                    el.style.height = '0px';
+                    el.style.opacity = '0';
+                });
+
+                var onEnd = function (event) {
+                    if (event && event.propertyName && event.propertyName !== 'height') {
+                        return;
+                    }
+                    el.removeEventListener('transitionend', onEnd);
+                    el.dataset.sliding = '0';
+                    el.style.display = 'none';
+                    clearSlideStyles(el);
+                };
+                el.addEventListener('transitionend', onEnd);
+            }
+
             function setChevronDown(svgEl) {
                 if (!svgEl) {
                     return;
@@ -443,10 +518,10 @@
                                 return;
                             }
                             if (isHidden(bodyEl)) {
-                                showEl(bodyEl);
+                                slideDown(bodyEl);
                                 setChevronUp(chevronEl);
                             } else {
-                                hideEl(bodyEl);
+                                slideUp(bodyEl);
                                 setChevronDown(chevronEl);
                             }
                         });
@@ -470,13 +545,13 @@
                                 setChevronDown(chevronEl);
                             });
 
-                            showEl(blockEl);
+                            slideDown(blockEl);
                             if (toggleTextEl) {
                                 toggleTextEl.textContent = 'Скрыть специалистов';
                             }
                             setChevronUp(toggleChevronEl);
                         } else {
-                            hideEl(blockEl);
+                            slideUp(blockEl);
                             if (toggleTextEl) {
                                 toggleTextEl.textContent = 'Показать специалистов';
                             }
@@ -2484,7 +2559,75 @@
                 }
             });
         });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var btn = document.getElementById('scrollToTopBtn');
+            if (!btn) {
+                return;
+            }
+
+            function easeInOutCubic(t) {
+                return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            }
+
+            function smoothScrollToTop() {
+                var startY = window.scrollY || document.documentElement.scrollTop || 0;
+                if (startY <= 0) {
+                    return;
+                }
+
+                var duration = Math.min(1400, Math.max(650, Math.round(startY * 0.9)));
+                var startTime = null;
+
+                function step(ts) {
+                    if (!startTime) {
+                        startTime = ts;
+                    }
+                    var elapsed = ts - startTime;
+                    var p = Math.min(elapsed / duration, 1);
+                    var eased = easeInOutCubic(p);
+                    var y = Math.round(startY * (1 - eased));
+                    window.scrollTo(0, y);
+
+                    if (p < 1) {
+                        window.requestAnimationFrame(step);
+                    }
+                }
+
+                window.requestAnimationFrame(step);
+            }
+
+            function setVisible(isVisible) {
+                if (isVisible) {
+                    btn.classList.add('is-visible');
+                } else {
+                    btn.classList.remove('is-visible');
+                }
+            }
+
+            function refreshVisibility() {
+                var y = window.scrollY || document.documentElement.scrollTop || 0;
+                var hasOpenModal = !!document.querySelector('.modal.show');
+                var threshold = Math.max(200, Math.round(window.innerHeight * 0.25));
+                setVisible(!hasOpenModal && y > threshold);
+            }
+
+            btn.addEventListener('click', function () {
+                smoothScrollToTop();
+            });
+
+            window.addEventListener('scroll', refreshVisibility, { passive: true });
+            window.addEventListener('resize', refreshVisibility, { passive: true });
+            refreshVisibility();
+        });
     </script>
+
+    <button type="button" id="scrollToTopBtn" class="scroll-to-top-btn" aria-label="Наверх">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 19V5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M6 11L12 5L18 11" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+    </button>
 
 </body>
 
