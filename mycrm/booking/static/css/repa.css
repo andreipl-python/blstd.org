@@ -666,6 +666,11 @@
     pointer-events: none;
   }
 
+  .booking-hover-popover--cell-time {
+    width: auto;
+    padding: 12px 16px;
+  }
+
   .booking-hover-popover__row {
     display: flex;
     flex-direction: row;

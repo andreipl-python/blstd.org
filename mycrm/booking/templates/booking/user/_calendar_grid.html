@@ -162,7 +162,7 @@
             {% with full_datetime=day.date|combine_date_time:cell_time %}
             <td class="highlight-cell available" full_datetime="{{ full_datetime|date:'Y-m-d H:i:s' }}"
                 room_name="{{ room.name }}" room_id="{{ room.id }}"
-                title="{{ cell_time_str }}" onclick="openCreateModal(
+                onclick="openCreateModal(
                     `{{ day.date|date:'d E Y' }}`,
                     `{{ cell_time_str }}`,
                     `{{ room.name }}`,

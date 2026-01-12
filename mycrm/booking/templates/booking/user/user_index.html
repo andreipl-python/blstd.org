@@ -295,6 +295,20 @@
         </div>
     </div>
 
+    <div id="cellTimeHoverPopover" class="booking-hover-popover booking-hover-popover--cell-time">
+        <div class="booking-hover-popover__row">
+            <div class="booking-hover-popover__icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M12 6V12L16 14" stroke="#818EA2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </div>
+            <div class="booking-hover-popover__text">
+                <span id="cellTimeHoverPopoverTime"></span>
+            </div>
+        </div>
+    </div>
+
     <script src="{% static 'js/booking_time_utils.js' %}?v={% now 'U' %}"></script>
     <script src="{% static 'js/booking_modal_utils.js' %}?v={% now 'U' %}"></script>
     <script src="{% static 'js/booking_selects_utils.js' %}?v={% now 'U' %}"></script>
@@ -483,6 +497,9 @@
             var bookingHoverPopoverActiveId = null;
             var bookingHoverPopoverAnchorRect = null;
 
+            var cellTimeHoverPopoverEl = document.getElementById('cellTimeHoverPopover');
+            var cellTimeHoverPopoverAnchorRect = null;
+
             window.invalidateBookingHoverPopoverCache = function (bookingId) {
                 if (bookingId !== undefined && bookingId !== null && String(bookingId).trim() !== '') {
                     delete bookingHoverPopoverCache[String(bookingId)];
@@ -505,6 +522,14 @@
                     return;
                 }
                 bookingHoverPopoverEl.style.display = 'none';
+            }
+
+            function hideCellTimeHoverPopover() {
+                cellTimeHoverPopoverAnchorRect = null;
+                if (!cellTimeHoverPopoverEl) {
+                    return;
+                }
+                cellTimeHoverPopoverEl.style.display = 'none';
             }
 
             function positionBookingHoverPopover() {
@@ -542,6 +567,43 @@
 
                 bookingHoverPopoverEl.style.left = left + 'px';
                 bookingHoverPopoverEl.style.top = top + 'px';
+            }
+
+            function positionCellTimeHoverPopover() {
+                if (!cellTimeHoverPopoverEl || cellTimeHoverPopoverEl.style.display === 'none') {
+                    return;
+                }
+
+                if (!cellTimeHoverPopoverAnchorRect) {
+                    return;
+                }
+
+                var offset = 0;
+                var overlap = 8;
+                var padding = 8;
+
+                var popoverWidth = cellTimeHoverPopoverEl.offsetWidth;
+                var popoverHeight = cellTimeHoverPopoverEl.offsetHeight;
+
+                var left = cellTimeHoverPopoverAnchorRect.right - overlap + offset;
+                var top = cellTimeHoverPopoverAnchorRect.top + (cellTimeHoverPopoverAnchorRect.height / 2) - (popoverHeight / 2);
+
+                if (left + popoverWidth + padding > window.innerWidth) {
+                    left = cellTimeHoverPopoverAnchorRect.left - popoverWidth + overlap - offset;
+                }
+
+                if (left < padding) {
+                    left = padding;
+                }
+
+                if (top < padding) {
+                    top = padding;
+                } else if (top + popoverHeight + padding > window.innerHeight) {
+                    top = Math.max(padding, window.innerHeight - popoverHeight - padding);
+                }
+
+                cellTimeHoverPopoverEl.style.left = left + 'px';
+                cellTimeHoverPopoverEl.style.top = top + 'px';
             }
 
             function formatDurationCompactFromHhmm(durationHhmm) {
@@ -668,8 +730,78 @@
                 }
             }
 
+            function getCellTimeLabel(cell) {
+                if (!cell) {
+                    return '';
+                }
+                var dtStr = cell.getAttribute('full_datetime');
+                if (!dtStr) {
+                    return '';
+                }
+                var parts = String(dtStr).split(' ');
+                if (parts.length < 2) {
+                    return '';
+                }
+                var timePart = parts[1] || '';
+                return String(timePart).slice(0, 5);
+            }
+
+            function isCellClickable(cell) {
+                if (!cell) {
+                    return false;
+                }
+                if (cell.classList.contains('booked')) {
+                    return false;
+                }
+                if (!cell.classList.contains('available')) {
+                    return false;
+                }
+                var onclick = cell.getAttribute('onclick');
+                return !!(onclick && String(onclick).trim());
+            }
+
+            function showCellTimeHoverPopover(cell) {
+                if (!cellTimeHoverPopoverEl) {
+                    return;
+                }
+                if (!isCellClickable(cell)) {
+                    hideCellTimeHoverPopover();
+                    return;
+                }
+
+                var timeEl = document.getElementById('cellTimeHoverPopoverTime');
+                if (timeEl) {
+                    timeEl.textContent = getCellTimeLabel(cell);
+                }
+
+                cellTimeHoverPopoverEl.style.display = 'block';
+                cellTimeHoverPopoverAnchorRect = cell.getBoundingClientRect();
+                positionCellTimeHoverPopover();
+            }
+
+            function bindCellTimeHoverPopoverHandlers() {
+                roomCells.forEach(function (cell) {
+                    if (!cell || cell.dataset.cellTimePopoverBound) {
+                        return;
+                    }
+                    cell.dataset.cellTimePopoverBound = '1';
+                    cell.addEventListener('mouseenter', function (event) {
+                        if (event && event.target && event.target.closest && event.target.closest('.booking-block')) {
+                            return;
+                        }
+                        showCellTimeHoverPopover(cell);
+                    });
+                    cell.addEventListener('mouseleave', function () {
+                        hideCellTimeHoverPopover();
+                    });
+                });
+            }
+
             window.addEventListener('scroll', hideBookingHoverPopover, { passive: true });
             window.addEventListener('resize', hideBookingHoverPopover, { passive: true });
+
+            window.addEventListener('scroll', hideCellTimeHoverPopover, { passive: true });
+            window.addEventListener('resize', hideCellTimeHoverPopover, { passive: true });
 
             function getCurrentScenarioFromGlobals() {
                 if (!window.currentScenarioFilterId || !Array.isArray(window.SCENARIOS)) {
@@ -1153,6 +1285,8 @@
                 assignParentAttributes();
             }, 50);
 
+            bindCellTimeHoverPopoverHandlers();
+
             let resizeTimeout = null;
             window.addEventListener('resize', function () {
                 if (resizeTimeout) {
@@ -1236,6 +1370,7 @@
                     }
 
                     initializeCalendarGridState();
+                    bindCellTimeHoverPopoverHandlers();
 
                     // После замены HTML ждём окончания рендера и пересчитываем бронь/атрибуты
                     setTimeout(function () {
