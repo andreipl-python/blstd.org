@@ -48,9 +48,16 @@
                         <input type="hidden" id="roomIdField" name="room_id">
                     </div>
 
+                    <div id="bookingBlocksContainer">
+                        <div class="booking-create-block" data-booking-block-index="1">
+                            <div class="booking-create-block-header">
+                                <span class="mb-0" data-booking-block-title>Бронь 1</span>
+                                <button type="button" class="booking-create-block-action-btn" data-booking-block-action data-action="add" aria-label="Добавить бронь">+</button>
+                            </div>
+
                     <div class="row mb-3">
                         <!--Выпадающий список "Клиент" / "Клиент / группа"-->
-                        <div class="col-md-6" id="client-field-container">
+                        <div class="col-md-6" id="client-field-container" data-bulk-scope="shared">
                             <label for="client" class="form-label" id="client-label">Клиент</label>
                             <div class="custom-select" id="client" name="client">
                                 <span class="selected">Выберите клиента</span>
@@ -87,7 +94,7 @@
                             </div>
                         </div>
 
-                        <div class="col-md-3" id="contact-person-field-container" style="display: none;">
+                        <div class="col-md-3" id="contact-person-field-container" style="display: none;" data-bulk-scope="block">
                             <label for="contact-person" class="form-label">Контактное лицо</label>
                             <div class="custom-select disabled" id="contact-person" name="contact-person">
                                 <span class="selected">Контактное лицо</span>
@@ -101,7 +108,7 @@
                             </div>
                         </div>
 
-                        <div class="col-md-3" id="people-count-field-container" style="display: none;">
+                        <div class="col-md-3" id="people-count-field-container" style="display: none;" data-bulk-scope="block">
                             <label for="people-count" class="form-label">Количество людей</label>
                             <input
                                 class="payment-value-input"
@@ -115,7 +122,7 @@
                         </div>
 
                         <!-- Выпадающий список "Направление" (скрывается для Репетиционной точки) -->
-                        <div class="col-md-6" id="direction-field-container">
+                        <div class="col-md-6" id="direction-field-container" data-bulk-scope="shared">
                             <label for="field-direction" class="form-label">Направление</label>
                             <div class="custom-select custom-select--clearable" id="field-direction" name="field-direction" data-placeholder="Выберите направление">
                                 <span class="selected">Выберите направление</span>
@@ -135,7 +142,7 @@
                         </div>
                     </div>
 
-                    <div class="row mb-3" id="abonement-row-container">
+                    <div class="row mb-3" id="abonement-row-container" data-bulk-scope="shared">
                         <!--Строка информации об абонементе-->
                         <span id="abonementRow">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -156,7 +163,7 @@
                         </span>
                     </div>
 
-                    <div class="row mb-3">
+                    <div class="row mb-3" data-bulk-scope="block">
                         <!--Календарь дата-->
                         <div class="col-md-3">
                             <label for="modal-create-date" class="form-label">Дата</label>
@@ -284,7 +291,7 @@
 
                     <div class="row mb-3" id="teacher-row-container">
                         <!--Выпадающий список Преподаватель (скрывается для Репетиционной точки)-->
-                        <div class="col-md-6" id="teacher-field-container">
+                        <div class="col-md-6" id="teacher-field-container" data-bulk-scope="shared">
                             <label for="teacher" class="form-label">Преподаватель</label>
                             <div class="custom-select custom-select--clearable" id="teacher" name="teacher" data-placeholder="Выберите преподавателя">
                                 <span class="selected">Выберите преподавателя</span>
@@ -310,7 +317,7 @@
                         </div>
 
                         <!--Выпадающий список "Тариф" (заглушка для Репетиционной точки, скрыт по умолчанию)-->
-                        <div class="col-md-6" id="tariff-field-container" style="display: none;">
+                        <div class="col-md-6" id="tariff-field-container" style="display: none;" data-bulk-scope="block">
                             <label for="tariff" class="form-label">Тариф</label>
                             <div class="custom-select custom-select--clearable" id="tariff" name="tariff" data-placeholder="Выберите тариф">
                                 <span class="selected">Выберите тариф</span>
@@ -328,7 +335,7 @@
                         </div>
 
                         <!--Задача 1: Услуги преподавателей (только для сценария "Музыкальная школа", скрыт по умолчанию)-->
-                        <div class="col-md-6" id="specialist-service-container" style="display: none;">
+                        <div class="col-md-6" id="specialist-service-container" style="display: none;" data-bulk-scope="shared">
                             <label for="specialist-service" class="form-label">Услуги преподавателей</label>
                             <div class="custom-select custom-select--clearable" id="specialist-service" name="specialist-service" data-placeholder="Выберите услугу преподавателя">
                                 <span class="selected">Выберите услугу преподавателя</span>
@@ -352,7 +359,7 @@
 
                         <!--Задача 2: Переименовано из "Услуги (необязательно)" в "Дополнительные услуги"-->
                         <!--Выпадающий список со множественным выбором Дополнительные услуги (справа от Преподавателя/Тарифа)-->
-                        <div class="col-md-6" id="services-container">
+                        <div class="col-md-6" id="services-container" data-bulk-scope="block">
                             <label for="services" class="form-label">Дополнительные услуги</label>
                             <div class="custom-select" id="services" name="services">
                                 <span class="selected">Выберите услугу</span>
@@ -394,14 +401,14 @@
 
                     <!--Задача 3: Отдельный ряд для "Дополнительные услуги" для сценария "Музыкальная школа" (скрыт по умолчанию)-->
                     <!--Исправление 2: используем offset-md-6 вместо пустого col-md-6 для корректной ширины-->
-                    <div class="row mb-3" id="additional-services-row" style="display: none;">
+                    <div class="row mb-3" id="additional-services-row" style="display: none;" data-bulk-scope="block">
                         <div class="col-md-6 offset-md-6" id="additional-services-col">
                             <!--Сюда будет перемещён контейнер services-container для Музыкальной школы-->
                         </div>
                     </div>
 
                     <!--Выбранные услуги и сброс-->
-                    <div class="row mb-3">
+                    <div class="row mb-3" data-bulk-scope="block">
                         <div class="col-md-12 d-flex align-items-center gap-3 flex-wrap">
                             <div class="selected-services d-flex gap-2 flex-wrap" id="create-selected-services"></div>
                             <a href="#" id="create-reset-services" style="display: none;">Сбросить всё</a>
@@ -409,7 +416,7 @@
                     </div>
 
                     <!--Комментарий-->
-                    <div class="row mb-3">
+                    <div class="row mb-3" data-bulk-scope="block">
                         <div class="col-md-12">
                             <label for="bookingComment" class="form-label">Комментарий</label>
                             <textarea class="form-control" id="bookingComment" name="bookingComment" rows="3"
@@ -419,7 +426,7 @@
                     </div>
 
                     <!--Чекбокс пробное занятие (только для Музыкальной школы)-->
-                    <div class="row mb-5" id="trial-lesson-container">
+                    <div class="row mb-5" id="trial-lesson-container" data-bulk-scope="block">
                         <div class="col-md-12 trial-checkbox-row">
                             <input class="form-check-input" type="checkbox" id="trialLessonCheckbox" name="trialLesson">
                             <label class="form-check-label" for="trialLessonCheckbox" id="trialLessonLabel">
@@ -429,7 +436,7 @@
                     </div>
 
                     <!--Расчетная стоимость-->
-                    <div class="row mb-4">
+                    <div class="row mb-4" data-bulk-scope="block">
                         <div class="col-md-3">
                             <div class="d-flex align-items-end" style="height: 100%;">
                                 <label for="bookingCostValue" class="form-label mb-0">Расчётная стоимость:</label>
@@ -439,6 +446,9 @@
                             <div class="d-flex align-items-end justify-content-end" style="height: 100%;">
                                 <span id="bookingCostValue">0 BYN</span>
                             </div>
+                        </div>
+                    </div>
+
                         </div>
                     </div>
 

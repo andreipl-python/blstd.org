@@ -1,5 +1,141 @@
 // JS модалки создания брони
 
+    function initializeBulkCreateBlocks() {
+        var container = document.getElementById('bookingBlocksContainer');
+        if (!container) return;
+        if (container._bulkBlocksBound) return;
+        container._bulkBlocksBound = true;
+
+        var MAX_BLOCKS = 4;
+
+        function getBlocks() {
+            return Array.from(container.querySelectorAll('.booking-create-block'));
+        }
+
+        function normalizeIdForBlock(id, blockIndex) {
+            if (!id) return id;
+            var base = String(id).replace(/-b\d+$/, '');
+            if (blockIndex === 1) return base;
+            return base + '-b' + String(blockIndex);
+        }
+
+        function uniquifyIdsInBlock(blockEl, blockIndex) {
+            if (!blockEl) return;
+
+            blockEl.querySelectorAll('[id]').forEach(function (el) {
+                el.id = normalizeIdForBlock(el.id, blockIndex);
+            });
+
+            blockEl.querySelectorAll('label[for]').forEach(function (labelEl) {
+                var f = labelEl.getAttribute('for');
+                if (!f) return;
+                labelEl.setAttribute('for', normalizeIdForBlock(f, blockIndex));
+            });
+        }
+
+        function refreshBlocksUi() {
+            var blocks = getBlocks();
+            blocks.forEach(function (b, i) {
+                var index = i + 1;
+                b.setAttribute('data-booking-block-index', String(index));
+                var titleEl = b.querySelector('[data-booking-block-title]');
+                if (titleEl) titleEl.textContent = 'Бронь ' + String(index);
+
+                var btn = b.querySelector('[data-booking-block-action]');
+                if (btn) {
+                    var isLast = index === blocks.length;
+                    if (index === 1 && blocks.length > 1) {
+                        btn.style.display = 'none';
+                        btn.removeAttribute('data-action');
+                        btn.disabled = true;
+                    } else if (isLast) {
+                        btn.style.display = '';
+                        btn.textContent = '+';
+                        btn.setAttribute('data-action', 'add');
+                        btn.disabled = blocks.length >= MAX_BLOCKS;
+                        btn.setAttribute('aria-label', 'Добавить бронь');
+                    } else {
+                        btn.style.display = '';
+                        btn.textContent = '−';
+                        btn.setAttribute('data-action', 'remove');
+                        btn.disabled = false;
+                        btn.setAttribute('aria-label', 'Удалить следующие брони');
+                    }
+                }
+            });
+        }
+
+        function reindexBlocks() {
+            var blocks = getBlocks();
+            blocks.forEach(function (b, i) {
+                var index = i + 1;
+                b.setAttribute('data-booking-block-index', String(index));
+                uniquifyIdsInBlock(b, index);
+            });
+        }
+
+        function removeBlockAt(blockIndex) {
+            if (blockIndex <= 1) return;
+            var blocks = getBlocks();
+            var target = blocks[blockIndex - 1];
+            if (target) target.remove();
+
+            reindexBlocks();
+            refreshBlocksUi();
+        }
+
+        function addBlock() {
+            var blocks = getBlocks();
+            if (blocks.length >= MAX_BLOCKS) {
+                refreshBlocksUi();
+                return;
+            }
+
+            var source = blocks[blocks.length - 1];
+            if (!source) return;
+
+            var newIndex = blocks.length + 1;
+            var clone = source.cloneNode(true);
+            uniquifyIdsInBlock(clone, newIndex);
+            container.appendChild(clone);
+
+            reindexBlocks();
+            refreshBlocksUi();
+        }
+
+        function resetToSingleBlock() {
+            var blocks = getBlocks();
+            blocks.forEach(function (b, i) {
+                if ((i + 1) > 1) b.remove();
+            });
+
+            reindexBlocks();
+            refreshBlocksUi();
+        }
+
+        container.addEventListener('click', function (e) {
+            var btn = e.target && (e.target.closest ? e.target.closest('[data-booking-block-action]') : null);
+            if (!btn) return;
+
+            var blockEl = btn.closest('.booking-create-block');
+            if (!blockEl) return;
+
+            var idx = parseInt(blockEl.getAttribute('data-booking-block-index') || '1', 10);
+            var action = btn.getAttribute('data-action') || 'add';
+
+            if (action === 'add') {
+                addBlock();
+            } else {
+                if (Number.isFinite(idx) && idx >= 1) {
+                    removeBlockAt(idx);
+                }
+            }
+        });
+
+        window.__resetCreateBookingBlocksToSingle = resetToSingleBlock;
+        refreshBlocksUi();
+    }
+
     /**
      * Адаптация UI модалки под разные сценарии.
      * - "Репетиционная точка": скрываются Направление и Преподаватель, 
@@ -136,6 +272,11 @@
     function openModal(date, time, roomName, roomId, cell) {
         if (typeof window.resetCreateBookingModalSelects === 'function') {
             window.resetCreateBookingModalSelects();
+        }
+
+        initializeBulkCreateBlocks();
+        if (typeof window.__resetCreateBookingBlocksToSingle === 'function') {
+            window.__resetCreateBookingBlocksToSingle();
         }
         // Сбрасываем комментарий при каждом открытии
         var commentField = document.getElementById('bookingComment');

@@ -34,14 +34,106 @@
             {% if app_version %}
             <span class="app-version-label">v{{ app_version }}</span>
             {% endif %}
-        
-            <!-- Фото пользователя -->
-            <img src="{% static 'image/image.png' %}" alt="Описание картинки" width="32" height="32" style="margin-right: 20px;">
-        
-            <!-- Имя пользователя -->
-            <a href="{% url 'logout' %}" id="main-menu-name">Алия Петрова</a>
+
+            <div class="user-menu-container">
+                <button type="button" id="main-menu-name" class="user-menu-trigger" aria-haspopup="dialog" aria-controls="userProfilePopup" aria-expanded="false">
+                    <img class="user-menu-trigger__avatar" src="{% static 'image/image.png' %}" alt="Профиль" width="32" height="32">
+                    <span class="user-menu-trigger__name">{{ user.get_full_name|default:user.username }}</span>
+                </button>
+
+                <div class="user-profile-popup" id="userProfilePopup" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="userProfilePopupName">
+                    <div class="user-profile-popup__dialog" data-user-profile-popup-dialog>
+                        <img class="user-profile-popup__avatar" src="{% static 'image/image.png' %}" alt="Профиль" width="160" height="160">
+                        <div class="user-profile-popup__name" id="userProfilePopupName">{{ user.get_full_name|default:user.username }}</div>
+                        <div class="user-profile-popup__role">
+                            {% with user.groups.all|first as grp %}
+                            {% if grp %}
+                            {{ grp.name }}
+                            {% elif user.is_superuser %}
+                            Администратор
+                            {% elif user.is_staff %}
+                            Сотрудник
+                            {% else %}
+                            Пользователь
+                            {% endif %}
+                            {% endwith %}
+                        </div>
+                        <a class="user-profile-popup__logout" href="{% url 'logout' %}">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M16 17L21 12L16 7" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M21 12H9" stroke="#7A52FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <span>Выйти</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <div class="row mt-3" style="border-bottom: 1px solid #EBEBEC;"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var trigger = document.getElementById('main-menu-name');
+            var popup = document.getElementById('userProfilePopup');
+            if (!trigger || !popup) {
+                return;
+            }
+
+            var dialog = popup.querySelector('[data-user-profile-popup-dialog]');
+            var isOpen = false;
+
+            function onDocumentClick(e) {
+                if (trigger.contains(e.target)) {
+                    return;
+                }
+                if (popup.contains(e.target)) {
+                    return;
+                }
+                closePopup();
+            }
+
+            function openPopup() {
+                popup.classList.add('is-open');
+                popup.setAttribute('aria-hidden', 'false');
+                trigger.setAttribute('aria-expanded', 'true');
+                if (!isOpen) {
+                    document.addEventListener('click', onDocumentClick);
+                    isOpen = true;
+                }
+            }
+
+            function closePopup() {
+                popup.classList.remove('is-open');
+                popup.setAttribute('aria-hidden', 'true');
+                trigger.setAttribute('aria-expanded', 'false');
+                if (isOpen) {
+                    document.removeEventListener('click', onDocumentClick);
+                    isOpen = false;
+                }
+            }
+
+            trigger.addEventListener('click', function (e) {
+                if (e && e.stopPropagation) {
+                    e.stopPropagation();
+                }
+                if (popup.classList.contains('is-open')) {
+                    closePopup();
+                } else {
+                    openPopup();
+                }
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (!popup.classList.contains('is-open')) {
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    closePopup();
+                }
+            });
+        });
+    </script>
 </div>
 {% endif %}

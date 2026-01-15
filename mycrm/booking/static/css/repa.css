@@ -122,6 +122,150 @@
     color: #4F4F57;
   }
 
+  .user-menu-trigger {
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .user-menu-trigger__avatar {
+    border-radius: 50%;
+    display: block;
+  }
+
+  .user-menu-trigger__name {
+    text-decoration: none;
+    color: inherit;
+    white-space: nowrap;
+  }
+
+  .user-menu-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .user-menu-trigger:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(122, 82, 255, 0.25);
+    border-radius: 12px;
+  }
+
+  .user-profile-popup {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: 260px;
+    max-width: calc(100vw - 24px);
+    display: none;
+    z-index: 2000;
+  }
+
+  .user-profile-popup.is-open {
+    display: block;
+  }
+
+  .user-profile-popup__dialog {
+    width: 100%;
+    max-height: 200px;
+    background: #FFFFFF;
+    border-radius: 18px;
+    padding: 16px 16px 14px;
+    box-shadow: 0 16px 40px rgba(61, 51, 86, 0.18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    overflow: auto;
+  }
+
+  .user-profile-popup__avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 999px;
+    object-fit: cover;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .user-profile-popup__name {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 110%;
+    letter-spacing: -0.02em;
+    color: #181B22;
+    margin-bottom: 4px;
+  }
+
+  .user-profile-popup__role {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 140%;
+    letter-spacing: -0.008em;
+    color: #4F4F57;
+    margin-bottom: 12px;
+  }
+
+  .user-profile-popup__logout {
+    width: 100%;
+    max-width: 100%;
+    height: 40px;
+    border-radius: 16px;
+    border: 2px solid #7A52FF;
+    background: #FFFFFF;
+    color: #7A52FF;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+  }
+
+  .user-profile-popup__logout svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .user-profile-popup__logout svg path {
+    stroke-width: 2;
+  }
+
+  .user-profile-popup__logout:visited {
+    color: #7A52FF;
+  }
+
+  .user-profile-popup__logout:hover {
+    color: #7A52FF;
+  }
+
+  .user-profile-popup__logout:hover svg path {
+    stroke: #7A52FF;
+  }
+
+  .user-profile-popup__logout:hover {
+    background: rgba(122, 82, 255, 0.06);
+  }
+
+  .user-profile-popup__logout:active {
+    background: rgba(122, 82, 255, 0.10);
+  }
+
+  .user-profile-popup__logout:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(122, 82, 255, 0.25);
+  }
+
   #alert-count {
     width: 36px;
     height: 25px;
@@ -1104,6 +1248,50 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .booking-create-block {
+    position: relative;
+    border: 1px solid #EBEBEC;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .booking-create-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 20px;
+    color: #181B22;
+  }
+
+  .booking-create-block-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid #EBEBEC;
+    background: #FFFFFF;
+    color: #7A52FF;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .booking-create-block-action-btn:hover {
+    border-color: #7A52FF;
   }
 
   /*Сетка броней*/
