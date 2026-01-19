@@ -48,13 +48,6 @@
                         <input type="hidden" id="roomIdField" name="room_id">
                     </div>
 
-                    <div id="bookingBlocksContainer">
-                        <div class="booking-create-block" data-booking-block-index="1">
-                            <div class="booking-create-block-header">
-                                <span class="mb-0" data-booking-block-title>Бронь 1</span>
-                                <button type="button" class="booking-create-block-action-btn" data-booking-block-action data-action="add" aria-label="Добавить бронь">+</button>
-                            </div>
-
                     <div class="row mb-3">
                         <!--Выпадающий список "Клиент" / "Клиент / группа"-->
                         <div class="col-md-6" id="client-field-container" data-bulk-scope="shared">
@@ -94,7 +87,7 @@
                             </div>
                         </div>
 
-                        <div class="col-md-3" id="contact-person-field-container" style="display: none;" data-bulk-scope="block">
+                        <div class="col-md-3" id="contact-person-field-container" style="display: none;" data-bulk-scope="shared">
                             <label for="contact-person" class="form-label">Контактное лицо</label>
                             <div class="custom-select disabled" id="contact-person" name="contact-person">
                                 <span class="selected">Контактное лицо</span>
@@ -108,7 +101,7 @@
                             </div>
                         </div>
 
-                        <div class="col-md-3" id="people-count-field-container" style="display: none;" data-bulk-scope="block">
+                        <div class="col-md-3" id="people-count-field-container" style="display: none;" data-bulk-scope="shared">
                             <label for="people-count" class="form-label">Количество людей</label>
                             <input
                                 class="payment-value-input"
@@ -163,132 +156,6 @@
                         </span>
                     </div>
 
-                    <div class="row mb-3" data-bulk-scope="block">
-                        <!--Календарь дата-->
-                        <div class="col-md-3">
-                            <label for="modal-create-date" class="form-label">Дата</label>
-                            <div class="modal-datepicker" id="modal-datepicker">
-                                <input type="hidden" id="modal-create-date" name="modal-create-date" />
-                                <div class="modal-datepicker__trigger" id="datepicker-trigger">
-                                    <span id="datepicker-display">Выберите дату</span>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <rect x="3" y="4" width="18" height="18" rx="2" stroke="#818EA2" stroke-width="2"/>
-                                        <path d="M16 2V6" stroke="#818EA2" stroke-width="2" stroke-linecap="round"/>
-                                        <path d="M8 2V6" stroke="#818EA2" stroke-width="2" stroke-linecap="round"/>
-                                        <path d="M3 10H21" stroke="#818EA2" stroke-width="2"/>
-                                    </svg>
-                                </div>
-                                <div class="modal-datepicker__popup" id="datepicker-popup">
-                                    <div class="modal-datepicker__header">
-                                        <button type="button" class="modal-datepicker__nav-btn" id="datepicker-prev">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                            </svg>
-                                        </button>
-                                        <div class="modal-datepicker__selects">
-                                            <select class="modal-datepicker__select" id="datepicker-month"></select>
-                                            <select class="modal-datepicker__select" id="datepicker-year"></select>
-                                        </div>
-                                        <button type="button" class="modal-datepicker__nav-btn" id="datepicker-next">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    <div class="modal-datepicker__weekdays">
-                                        <div class="modal-datepicker__weekday">Пн</div>
-                                        <div class="modal-datepicker__weekday">Вт</div>
-                                        <div class="modal-datepicker__weekday">Ср</div>
-                                        <div class="modal-datepicker__weekday">Чт</div>
-                                        <div class="modal-datepicker__weekday">Пт</div>
-                                        <div class="modal-datepicker__weekday">Сб</div>
-                                        <div class="modal-datepicker__weekday">Вс</div>
-                                    </div>
-                                    <div class="modal-datepicker__grid" id="datepicker-grid"></div>
-                                    <div class="modal-datepicker__footer">
-                                        <button type="button" class="modal-datepicker__today-btn" id="datepicker-today">Сегодня</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!--Выпадающий список Время начала-->
-                        <div class="col-md-3">
-                            <label for="start-time" class="form-label">Время начала</label>
-                            <div class="custom-select custom-select--clearable" id="start-time" name="start-time" data-placeholder="Выберите время">
-                                <span class="selected">Выберите время</span>
-                                <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
-                                <!-- Значок предупреждения о недоступном слоте -->
-                                <span id="start-time-warning-icon" class="start-time-warning-icon" style="display: none;">
-                                    <span class="warning-tooltip">Это время начала недоступно для выбранной даты.</span>
-                                    ⚠
-                                </span>
-                                <span class="chevron">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                        xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
-                                    </svg>
-                                </span>
-                                <ul class="options">
-                                    <li data-value="1">10:00</li>
-                                    <li data-value="2">11:00</li>
-                                    <li data-value="3">12:00</li>
-                                    <li data-value="4">13:00</li>
-                                    <li data-value="5">14:00</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <!--Выпадающий список Время окончания-->
-                        <div class="col-md-3">
-                            <label for="end-time" class="form-label">Время окончания</label>
-                            <div class="custom-select custom-select--clearable" id="end-time" name="end-time" data-placeholder="Выберите время">
-                                <span class="selected">Выберите время</span>
-                                <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
-                                <!-- Значок предупреждения о недоступном времени окончания -->
-                                <span id="end-time-warning-icon" class="start-time-warning-icon" style="display: none;">
-                                    <span class="warning-tooltip">Это время окончания недоступно для выбранной даты.</span>
-                                    ⚠
-                                </span>
-                                <span class="chevron">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                        xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
-                                    </svg>
-                                </span>
-                                <ul class="options">
-                                    <li data-value="1">11:00</li>
-                                    <li data-value="2">12:00</li>
-                                    <li data-value="3">13:00</li>
-                                    <li data-value="4">14:00</li>
-                                    <li data-value="5">15:00</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <!--Выпадающий список Длительность-->
-                        <div class="col-md-3">
-                            <label for="duration" class="form-label">Длительность</label>
-                            <div class="custom-select custom-select--clearable" id="duration" name="duration" data-placeholder="Выберите длительность">
-                                <span class="selected">Выберите длительность</span>
-                                <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
-                                <span class="chevron">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                        xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
-                                    </svg>
-                                </span>
-                                <ul class="options">
-                                    <li data-value="1">2 часа</li>
-                                    <li data-value="2">3 часа</li>
-                                    <li data-value="3">4 часа</li>
-                                    <li data-value="4">5 часов</li>
-                                    <li data-value="5">6 часов</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="row mb-3" id="teacher-row-container">
                         <!--Выпадающий список Преподаватель (скрывается для Репетиционной точки)-->
                         <div class="col-md-6" id="teacher-field-container" data-bulk-scope="shared">
@@ -316,24 +183,6 @@
                             </div>
                         </div>
 
-                        <!--Выпадающий список "Тариф" (заглушка для Репетиционной точки, скрыт по умолчанию)-->
-                        <div class="col-md-6" id="tariff-field-container" style="display: none;" data-bulk-scope="block">
-                            <label for="tariff" class="form-label">Тариф</label>
-                            <div class="custom-select custom-select--clearable" id="tariff" name="tariff" data-placeholder="Выберите тариф">
-                                <span class="selected">Выберите тариф</span>
-                                <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
-                                <span class="chevron">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                        xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
-                                    </svg>
-                                </span>
-                                <ul class="options">
-                                    <!-- Заглушка: опции будут добавлены позже -->
-                                </ul>
-                            </div>
-                        </div>
-
                         <!--Задача 1: Услуги преподавателей (только для сценария "Музыкальная школа", скрыт по умолчанию)-->
                         <div class="col-md-6" id="specialist-service-container" style="display: none;" data-bulk-scope="shared">
                             <label for="specialist-service" class="form-label">Услуги преподавателей</label>
@@ -356,99 +205,254 @@
                                 </ul>
                             </div>
                         </div>
+                    </div>
 
-                        <!--Задача 2: Переименовано из "Услуги (необязательно)" в "Дополнительные услуги"-->
-                        <!--Выпадающий список со множественным выбором Дополнительные услуги (справа от Преподавателя/Тарифа)-->
-                        <div class="col-md-6" id="services-container" data-bulk-scope="block">
-                            <label for="services" class="form-label">Дополнительные услуги</label>
-                            <div class="custom-select" id="services" name="services">
-                                <span class="selected">Выберите услугу</span>
-                                <span class="chevron">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                        xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
-                                    </svg>
-                                </span>
-                                <ul class="options">
-                                    <li id="services-search-option" class="search-option" style="cursor:text;">
-                                        <span style="display:flex;align-items:center;gap:6px;">
+                    <div id="bookingBlocksContainer">
+                        <div class="booking-create-block" data-booking-block-index="1">
+                            <div class="booking-create-block-header">
+                                <span class="mb-0"></span>
+                                <div class="booking-create-block-actions">
+                                    <button type="button" class="booking-create-block-action-btn" data-booking-block-action="remove" aria-label="Удалить бронь">−</button>
+                                    <button type="button" class="booking-create-block-action-btn" data-booking-block-action="add" aria-label="Добавить бронь">+</button>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3" data-bulk-scope="block">
+                                <!--Календарь дата-->
+                                <div class="col-md-3">
+                                    <label for="modal-create-date" class="form-label">Дата</label>
+                                    <div class="modal-datepicker" id="modal-datepicker">
+                                        <input type="hidden" id="modal-create-date" name="modal-create-date" />
+                                        <div class="modal-datepicker__trigger" id="datepicker-trigger">
+                                            <span id="datepicker-display">Выберите дату</span>
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <rect x="3" y="4" width="18" height="18" rx="2" stroke="#818EA2" stroke-width="2"/>
+                                                <path d="M16 2V6" stroke="#818EA2" stroke-width="2" stroke-linecap="round"/>
+                                                <path d="M8 2V6" stroke="#818EA2" stroke-width="2" stroke-linecap="round"/>
+                                                <path d="M3 10H21" stroke="#818EA2" stroke-width="2"/>
+                                            </svg>
+                                        </div>
+                                        <div class="modal-datepicker__popup" id="datepicker-popup">
+                                            <div class="modal-datepicker__header">
+                                                <button type="button" class="modal-datepicker__nav-btn" id="datepicker-prev">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    </svg>
+                                                </button>
+                                                <div class="modal-datepicker__selects">
+                                                    <select class="modal-datepicker__select" id="datepicker-month"></select>
+                                                    <select class="modal-datepicker__select" id="datepicker-year"></select>
+                                                </div>
+                                                <button type="button" class="modal-datepicker__nav-btn" id="datepicker-next">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <div class="modal-datepicker__weekdays">
+                                                <div class="modal-datepicker__weekday">Пн</div>
+                                                <div class="modal-datepicker__weekday">Вт</div>
+                                                <div class="modal-datepicker__weekday">Ср</div>
+                                                <div class="modal-datepicker__weekday">Чт</div>
+                                                <div class="modal-datepicker__weekday">Пт</div>
+                                                <div class="modal-datepicker__weekday">Сб</div>
+                                                <div class="modal-datepicker__weekday">Вс</div>
+                                            </div>
+                                            <div class="modal-datepicker__grid" id="datepicker-grid"></div>
+                                            <div class="modal-datepicker__footer">
+                                                <button type="button" class="modal-datepicker__today-btn" id="datepicker-today">Сегодня</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!--Выпадающий список Время начала-->
+                                <div class="col-md-3">
+                                    <label for="start-time" class="form-label">Время начала</label>
+                                    <div class="custom-select custom-select--clearable" id="start-time" name="start-time" data-placeholder="Выберите время">
+                                        <span class="selected">Выберите время</span>
+                                        <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
+                                        <!-- Значок предупреждения о недоступном слоте -->
+                                        <span id="start-time-warning-icon" class="start-time-warning-icon" style="display: none;">
+                                            <span class="warning-tooltip">Это время начала недоступно для выбранной даты.</span>
+                                            ⚠
+                                        </span>
+                                        <span class="chevron">
                                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                                 xmlns="http://www.w3.org/2000/svg">
-                                                <path
-                                                    d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z"
-                                                    stroke="#818EA2" stroke-width="2" stroke-linecap="round"
-                                                    stroke-linejoin="round" />
-                                                <path d="M21.0002 21L16.7002 16.7" stroke="#818EA2" stroke-width="2"
-                                                    stroke-linecap="round" stroke-linejoin="round" />
+                                                <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
                                             </svg>
-                                            <input id="services-search-input" type="text" placeholder="Поиск"
-                                                style="border:none;outline:none;background:transparent;width:120px;"
-                                                autocomplete="off" />
                                         </span>
-                                    </li>
-                                    {% for service in services %}
-                                        {% if service.active %}
-                                            <li data-value="{{ service.id }}" data-cost="{{ service.cost|default_if_none:'0' }}" data-scenario-id="{{ service.scenario_id|default_if_none:'' }}" data-room-id="{{ service.room_id|default_if_none:'' }}" data-name="{{ service.name }}">
-                                                <span class="service-name">{{ service.name }}</span>
-                                                <span class="service-cost">{{ service.cost|default_if_none:'0' }} BYN</span>
+                                        <ul class="options">
+                                            <li data-value="1">10:00</li>
+                                            <li data-value="2">11:00</li>
+                                            <li data-value="3">12:00</li>
+                                            <li data-value="4">13:00</li>
+                                            <li data-value="5">14:00</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <!--Выпадающий список Время окончания-->
+                                <div class="col-md-3">
+                                    <label for="end-time" class="form-label">Время окончания</label>
+                                    <div class="custom-select custom-select--clearable" id="end-time" name="end-time" data-placeholder="Выберите время">
+                                        <span class="selected">Выберите время</span>
+                                        <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
+                                        <!-- Значок предупреждения о недоступном времени окончания -->
+                                        <span id="end-time-warning-icon" class="start-time-warning-icon" style="display: none;">
+                                            <span class="warning-tooltip">Это время окончания недоступно для выбранной даты.</span>
+                                            ⚠
+                                        </span>
+                                        <span class="chevron">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                            </svg>
+                                        </span>
+                                        <ul class="options">
+                                            <li data-value="1">11:00</li>
+                                            <li data-value="2">12:00</li>
+                                            <li data-value="3">13:00</li>
+                                            <li data-value="4">14:00</li>
+                                            <li data-value="5">15:00</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <!--Выпадающий список Длительность-->
+                                <div class="col-md-3">
+                                    <label for="duration" class="form-label">Длительность</label>
+                                    <div class="custom-select custom-select--clearable" id="duration" name="duration" data-placeholder="Выберите длительность">
+                                        <span class="selected">Выберите длительность</span>
+                                        <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
+                                        <span class="chevron">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                            </svg>
+                                        </span>
+                                        <ul class="options">
+                                            <li data-value="1">2 часа</li>
+                                            <li data-value="2">3 часа</li>
+                                            <li data-value="3">4 часа</li>
+                                            <li data-value="4">5 часов</li>
+                                            <li data-value="5">6 часов</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!--Комментарий-->
+                            <div class="row mb-3" data-bulk-scope="block">
+                                <div class="col-md-12">
+                                    <label for="bookingComment" class="form-label">Комментарий</label>
+                                    <textarea class="form-control" id="bookingComment" name="bookingComment" rows="3"
+                                        placeholder="Добавьте комментарий" maxlength="1000"></textarea>
+                                    <div class="char-counter" id="bookingCommentCounter">0/1000</div>
+                                </div>
+                            </div>
+
+                            <!--Задача 2: Переименовано из "Услуги (необязательно)" в "Дополнительные услуги"-->
+                            <!--Выпадающий список со множественным выбором Дополнительные услуги (справа от Преподавателя/Тарифа)-->
+                            <div class="row mb-3" data-bulk-scope="block">
+                                <!--Выпадающий список "Тариф" (заглушка для Репетиционной точки, скрыт по умолчанию)-->
+                                <div class="col-md-6" id="tariff-field-container" style="display: none;" data-bulk-scope="block">
+                                    <label for="tariff" class="form-label">Тариф</label>
+                                    <div class="custom-select custom-select--clearable" id="tariff" name="tariff" data-placeholder="Выберите тариф">
+                                        <span class="selected">Выберите тариф</span>
+                                        <button type="button" class="custom-select-clear" aria-label="Сбросить выбор">×</button>
+                                        <span class="chevron">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                            </svg>
+                                        </span>
+                                        <ul class="options">
+                                            <!-- Заглушка: опции будут добавлены позже -->
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6" id="services-container" data-bulk-scope="block">
+                                    <label for="services" class="form-label">Дополнительные услуги</label>
+                                    <div class="custom-select" id="services" name="services">
+                                        <span class="selected">Выберите услугу</span>
+                                        <span class="chevron">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M6 9L12 15L18 9" stroke="#818EA2" stroke-width="2" />
+                                            </svg>
+                                        </span>
+                                        <ul class="options">
+                                            <li id="services-search-option" class="search-option" style="cursor:text;">
+                                                <span style="display:flex;align-items:center;gap:6px;">
+                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                                        xmlns="http://www.w3.org/2000/svg">
+                                                        <path
+                                                            d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z"
+                                                            stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                                                            stroke-linejoin="round" />
+                                                        <path d="M21.0002 21L16.7002 16.7" stroke="#818EA2" stroke-width="2"
+                                                            stroke-linecap="round" stroke-linejoin="round" />
+                                                    </svg>
+                                                    <input id="services-search-input" type="text" placeholder="Поиск"
+                                                        style="border:none;outline:none;background:transparent;width:120px;"
+                                                        autocomplete="off" />
+                                                </span>
                                             </li>
-                                        {% endif %}
-                                    {% endfor %}
-                                </ul>
+                                            {% for service in services %}
+                                                {% if service.active %}
+                                                    <li data-value="{{ service.id }}" data-cost="{{ service.cost|default_if_none:'0' }}" data-scenario-id="{{ service.scenario_id|default_if_none:'' }}" data-room-id="{{ service.room_id|default_if_none:'' }}" data-name="{{ service.name }}">
+                                                        <span class="service-name">{{ service.name }}</span>
+                                                        <span class="service-cost">{{ service.cost|default_if_none:'0' }} BYN</span>
+                                                    </li>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!--Задача 3: Отдельный ряд для "Дополнительные услуги" для сценария "Музыкальная школа" (скрыт по умолчанию)-->
-                    <!--Исправление 2: используем offset-md-6 вместо пустого col-md-6 для корректной ширины-->
-                    <div class="row mb-3" id="additional-services-row" style="display: none;" data-bulk-scope="block">
-                        <div class="col-md-6 offset-md-6" id="additional-services-col">
-                            <!--Сюда будет перемещён контейнер services-container для Музыкальной школы-->
-                        </div>
-                    </div>
-
-                    <!--Выбранные услуги и сброс-->
-                    <div class="row mb-3" data-bulk-scope="block">
-                        <div class="col-md-12 d-flex align-items-center gap-3 flex-wrap">
-                            <div class="selected-services d-flex gap-2 flex-wrap" id="create-selected-services"></div>
-                            <a href="#" id="create-reset-services" style="display: none;">Сбросить всё</a>
-                        </div>
-                    </div>
-
-                    <!--Комментарий-->
-                    <div class="row mb-3" data-bulk-scope="block">
-                        <div class="col-md-12">
-                            <label for="bookingComment" class="form-label">Комментарий</label>
-                            <textarea class="form-control" id="bookingComment" name="bookingComment" rows="3"
-                                placeholder="Добавьте комментарий" maxlength="1000"></textarea>
-                            <div class="char-counter" id="bookingCommentCounter">0/1000</div>
-                        </div>
-                    </div>
-
-                    <!--Чекбокс пробное занятие (только для Музыкальной школы)-->
-                    <div class="row mb-5" id="trial-lesson-container" data-bulk-scope="block">
-                        <div class="col-md-12 trial-checkbox-row">
-                            <input class="form-check-input" type="checkbox" id="trialLessonCheckbox" name="trialLesson">
-                            <label class="form-check-label" for="trialLessonCheckbox" id="trialLessonLabel">
-                                Пробное занятие
-                            </label>
-                        </div>
-                    </div>
-
-                    <!--Расчетная стоимость-->
-                    <div class="row mb-4" data-bulk-scope="block">
-                        <div class="col-md-3">
-                            <div class="d-flex align-items-end" style="height: 100%;">
-                                <label for="bookingCostValue" class="form-label mb-0">Расчётная стоимость:</label>
+                            <!--Задача 3: Отдельный ряд для "Дополнительные услуги" для сценария "Музыкальная школа" (скрыт по умолчанию)-->
+                            <!--Исправление 2: используем offset-md-6 вместо пустого col-md-6 для корректной ширины-->
+                            <div class="row mb-3" id="additional-services-row" style="display: none;" data-bulk-scope="block">
+                                <div class="col-md-6 offset-md-6" id="additional-services-col">
+                                    <!--Сюда будет перемещён контейнер services-container для Музыкальной школы-->
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="d-flex align-items-end justify-content-end" style="height: 100%;">
-                                <span id="bookingCostValue">0 BYN</span>
-                            </div>
-                        </div>
-                    </div>
 
+                            <!--Выбранные услуги и сброс-->
+                            <div class="row mb-3" data-bulk-scope="block">
+                                <div class="col-md-12 d-flex align-items-center gap-3 flex-wrap">
+                                    <div class="selected-services d-flex gap-2 flex-wrap" id="create-selected-services"></div>
+                                    <a href="#" id="create-reset-services" style="display: none;">Сбросить всё</a>
+                                </div>
+                            </div>
+
+                            <!--Чекбокс пробное занятие (только для Музыкальной школы)-->
+                            <div class="row mb-5" id="trial-lesson-container" data-bulk-scope="block">
+                                <div class="col-md-12 trial-checkbox-row">
+                                    <input class="form-check-input" type="checkbox" id="trialLessonCheckbox" name="trialLesson">
+                                    <label class="form-check-label" for="trialLessonCheckbox" id="trialLessonLabel">
+                                        Пробное занятие
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!--Расчетная стоимость-->
+                            <div class="row mb-4" data-bulk-scope="block">
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-end" style="height: 100%;">
+                                        <label for="bookingCostValue" class="form-label mb-0">Расчётная стоимость:</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-end justify-content-end" style="height: 100%;">
+                                        <span id="bookingCostValue">0 BYN</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

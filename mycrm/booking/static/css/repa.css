@@ -1258,6 +1258,11 @@
     margin-bottom: 16px;
   }
 
+  .booking-create-block.booking-create-block--has-errors {
+    border-color: #FF4D4F;
+    box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.12);
+  }
+
   .booking-create-block-header {
     display: flex;
     align-items: center;
@@ -1269,6 +1274,12 @@
     font-size: 14px;
     line-height: 20px;
     color: #181B22;
+  }
+
+  .booking-create-block-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .booking-create-block-action-btn {
@@ -1288,6 +1299,10 @@
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
+  }
+
+  .booking-create-block-action-btn.booking-create-block-action-btn--hidden {
+    display: none !important;
   }
 
   .booking-create-block-action-btn:hover {
@@ -1651,7 +1666,7 @@
     gap: 12px !important;
   }
 
-  #bookingCostValue, #editBookingCostValue {
+  [id^="bookingCostValue"], #editBookingCostValue {
     font-family: 'Manrope' !important;
     font-style: normal !important;
     font-weight: 700 !important;
@@ -1762,7 +1777,7 @@
   }
 
   #reset-services,
-  #create-reset-services {
+  [id^="create-reset-services"] {
     font-family: 'Manrope';
     font-style: normal;
     font-weight: 600 !important;

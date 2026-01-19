@@ -6,7 +6,11 @@
         if (container._bulkBlocksBound) return;
         container._bulkBlocksBound = true;
 
-        var MAX_BLOCKS = 4;
+        if (!Number.isFinite(container._bulkNextIdIndex)) {
+            container._bulkNextIdIndex = 2;
+        }
+
+        var MAX_BLOCKS = 3;
 
         function getBlocks() {
             return Array.from(container.querySelectorAll('.booking-create-block'));
@@ -33,34 +37,1031 @@
             });
         }
 
+        function resetClonedBlockUiState(blockEl) {
+            if (!blockEl) return;
+
+            blockEl.classList.remove('booking-create-block--has-errors');
+
+            blockEl.querySelectorAll('.custom-select.open').forEach(function (el) {
+                el.classList.remove('open');
+            });
+
+            blockEl.querySelectorAll('.custom-select.has-warning').forEach(function (el) {
+                el.classList.remove('has-warning');
+            });
+
+            blockEl.querySelectorAll('[id^="start-time-warning-icon"], [id^="end-time-warning-icon"]').forEach(function (el) {
+                el.style.display = 'none';
+            });
+
+            blockEl.querySelectorAll('[id^="datepicker-popup"].open').forEach(function (el) {
+                el.classList.remove('open');
+            });
+
+            var servicesSearchInput = blockEl.querySelector('input[id^="services-search-input"]');
+            if (servicesSearchInput) {
+                servicesSearchInput.value = '';
+            }
+        }
+
+        function initDatepickerInBlock(blockEl) {
+            if (!blockEl) return;
+            if (blockEl._bulkDatepickerBound) return;
+
+            var trigger = blockEl.querySelector('[id^="datepicker-trigger"]');
+            var popup = blockEl.querySelector('[id^="datepicker-popup"]');
+            var display = blockEl.querySelector('[id^="datepicker-display"]');
+            var grid = blockEl.querySelector('[id^="datepicker-grid"]');
+            var monthSelect = blockEl.querySelector('[id^="datepicker-month"]');
+            var yearSelect = blockEl.querySelector('[id^="datepicker-year"]');
+            var prevBtn = blockEl.querySelector('[id^="datepicker-prev"]');
+            var nextBtn = blockEl.querySelector('[id^="datepicker-next"]');
+            var todayBtn = blockEl.querySelector('[id^="datepicker-today"]');
+            var input = blockEl.querySelector('input[id^="modal-create-date"]');
+
+            if (!trigger || !popup || !display || !grid || !monthSelect || !yearSelect || !prevBtn || !nextBtn || !todayBtn || !input) {
+                return;
+            }
+
+            blockEl._bulkDatepickerBound = true;
+
+            var monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                              'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+            var monthNamesGenitive = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+                                      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+            function formatDateIso(date) {
+                var y = date.getFullYear();
+                var m = String(date.getMonth() + 1).padStart(2, '0');
+                var d = String(date.getDate()).padStart(2, '0');
+                return y + '-' + m + '-' + d;
+            }
+
+            function formatDateDisplay(date) {
+                var day = date.getDate();
+                var monthIdx = date.getMonth();
+                var year = date.getFullYear();
+                return day + ' ' + monthNamesGenitive[monthIdx] + ' ' + year;
+            }
+
+            function parseIsoDate(iso) {
+                if (!iso) return null;
+                var parts = String(iso).split('-');
+                if (parts.length < 3) return null;
+                var y = parseInt(parts[0], 10);
+                var m = parseInt(parts[1], 10);
+                var d = parseInt(parts[2], 10);
+                if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+                var dt = new Date(y, m - 1, d);
+                dt.setHours(0, 0, 0, 0);
+                return dt;
+            }
+
+            var selectedDate = parseIsoDate(input.value) || null;
+            var currentMonth = selectedDate ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) : new Date();
+            currentMonth.setDate(1);
+            currentMonth.setHours(0, 0, 0, 0);
+
+            if (selectedDate) {
+                display.textContent = formatDateDisplay(selectedDate);
+            }
+
+            function populateMonthSelect() {
+                monthSelect.innerHTML = '';
+                for (var i = 0; i < 12; i++) {
+                    var opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = monthNames[i];
+                    if (i === currentMonth.getMonth()) {
+                        opt.selected = true;
+                    }
+                    monthSelect.appendChild(opt);
+                }
+            }
+
+            function populateYearSelect() {
+                yearSelect.innerHTML = '';
+                var baseYear = (selectedDate ? selectedDate.getFullYear() : new Date().getFullYear());
+                for (var y = baseYear - 2; y <= baseYear + 3; y++) {
+                    var opt = document.createElement('option');
+                    opt.value = y;
+                    opt.textContent = y;
+                    if (y === currentMonth.getFullYear()) {
+                        opt.selected = true;
+                    }
+                    yearSelect.appendChild(opt);
+                }
+            }
+
+            function buildGrid() {
+                grid.innerHTML = '';
+
+                var year = currentMonth.getFullYear();
+                var month = currentMonth.getMonth();
+
+                var firstDay = new Date(year, month, 1);
+                var startDayOfWeek = (firstDay.getDay() + 6) % 7;
+                var lastDay = new Date(year, month + 1, 0);
+                var daysInMonth = lastDay.getDate();
+                var prevMonthLastDay = new Date(year, month, 0).getDate();
+
+                var today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                for (var i = startDayOfWeek - 1; i >= 0; i--) {
+                    var prevNum = prevMonthLastDay - i;
+                    var outside = document.createElement('div');
+                    outside.className = 'modal-datepicker__day modal-datepicker__day--outside';
+                    outside.textContent = prevNum;
+                    grid.appendChild(outside);
+                }
+
+                for (var d = 1; d <= daysInMonth; d++) {
+                    var cell = document.createElement('div');
+                    cell.className = 'modal-datepicker__day';
+                    cell.textContent = d;
+
+                    var cellDate = new Date(year, month, d);
+                    cellDate.setHours(0, 0, 0, 0);
+
+                    if (cellDate.getTime() === today.getTime()) {
+                        cell.classList.add('modal-datepicker__day--today');
+                    }
+
+                    if (selectedDate &&
+                        cellDate.getFullYear() === selectedDate.getFullYear() &&
+                        cellDate.getMonth() === selectedDate.getMonth() &&
+                        cellDate.getDate() === selectedDate.getDate()) {
+                        cell.classList.add('modal-datepicker__day--selected');
+                    }
+
+                    (function (dt) {
+                        cell.addEventListener('click', function () {
+                            selectedDate = dt;
+                            input.value = formatDateIso(dt);
+                            display.textContent = formatDateDisplay(dt);
+                            popup.classList.remove('open');
+                            if (typeof blockEl._bulkOnDateChanged === 'function') {
+                                blockEl._bulkOnDateChanged(input.value);
+                            }
+                            if (typeof window.updateSubmitButtonState === 'function') {
+                                window.updateSubmitButtonState();
+                            }
+                        });
+                    })(cellDate);
+
+                    grid.appendChild(cell);
+                }
+
+                var totalCells = grid.children.length;
+                var remainingCells = (7 - (totalCells % 7)) % 7;
+                for (var n = 1; n <= remainingCells; n++) {
+                    var nextOutside = document.createElement('div');
+                    nextOutside.className = 'modal-datepicker__day modal-datepicker__day--outside';
+                    nextOutside.textContent = n;
+                    grid.appendChild(nextOutside);
+                }
+            }
+
+            function render() {
+                populateMonthSelect();
+                populateYearSelect();
+                buildGrid();
+            }
+
+            trigger.addEventListener('click', function (e) {
+                e.stopPropagation();
+
+                var modal = document.getElementById('createBookingModal');
+                if (modal) {
+                    modal.querySelectorAll('.custom-select.open').forEach(function (s) {
+                        s.classList.remove('open');
+                    });
+                }
+
+                popup.classList.toggle('open');
+                if (popup.classList.contains('open')) {
+                    var base = selectedDate || new Date();
+                    currentMonth = new Date(base.getFullYear(), base.getMonth(), 1);
+                    currentMonth.setHours(0, 0, 0, 0);
+                    render();
+                }
+            });
+
+            prevBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                currentMonth.setMonth(currentMonth.getMonth() - 1);
+                render();
+            });
+
+            nextBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                currentMonth.setMonth(currentMonth.getMonth() + 1);
+                render();
+            });
+
+            monthSelect.addEventListener('change', function () {
+                currentMonth.setMonth(parseInt(this.value, 10));
+                render();
+            });
+
+            yearSelect.addEventListener('change', function () {
+                currentMonth.setFullYear(parseInt(this.value, 10));
+                render();
+            });
+
+            todayBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var t = new Date();
+                t.setHours(0, 0, 0, 0);
+                selectedDate = t;
+                input.value = formatDateIso(t);
+                display.textContent = formatDateDisplay(t);
+                currentMonth = new Date(t.getFullYear(), t.getMonth(), 1);
+                currentMonth.setHours(0, 0, 0, 0);
+                render();
+                popup.classList.remove('open');
+                if (typeof blockEl._bulkOnDateChanged === 'function') {
+                    blockEl._bulkOnDateChanged(input.value);
+                }
+                if (typeof window.updateSubmitButtonState === 'function') {
+                    window.updateSubmitButtonState();
+                }
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!document.body.contains(blockEl)) return;
+                if (popup.classList.contains('open') && !popup.contains(e.target) && !trigger.contains(e.target)) {
+                    popup.classList.remove('open');
+                }
+            });
+        }
+
+        function initServicesMultiSelectInBlock(blockEl) {
+            if (!blockEl) return;
+
+            var servicesSelect = blockEl.querySelector('.custom-select[id^="services"]');
+            if (!servicesSelect) return;
+
+            var optionsContainer = servicesSelect.querySelector('.options');
+            if (!optionsContainer) return;
+
+            var resetBtn = blockEl.querySelector('[id^="create-reset-services"]');
+            var badgesContainer = blockEl.querySelector('[id^="create-selected-services"]');
+            var searchInput = servicesSelect.querySelector('input');
+            var searchLi = optionsContainer.querySelector('li.search-option') || optionsContainer.querySelector('li[id^="services-search-option"]');
+
+            if (!window.BookingServicesUtils || typeof window.BookingServicesUtils.bindServicesMultiSelect !== 'function') {
+                return;
+            }
+
+            window.BookingServicesUtils.bindServicesMultiSelect({
+                selectEl: servicesSelect,
+                optionsContainerEl: optionsContainer,
+                placeholderText: 'Выберите услугу',
+                resetBtnId: resetBtn ? resetBtn.id : '',
+                searchInputSelector: searchInput ? ('#' + searchInput.id) : null,
+                searchOptionId: searchLi ? searchLi.id : null,
+                focusSearchOnOpen: true,
+                onSelectionChanged: function () {
+                    updateServicesBadgesInBlock(blockEl);
+                    calculateAndUpdateBookingCostInBlock(blockEl);
+                    if (typeof window.updateSubmitButtonState === 'function') {
+                        window.updateSubmitButtonState();
+                    }
+                }
+            });
+
+            if (typeof servicesSelect._updateSelectedText === 'function') {
+                servicesSelect._updateSelectedText();
+            }
+
+            if (window.BookingServicesUtils && typeof window.BookingServicesUtils.renderServicesBadges === 'function') {
+                if (badgesContainer && resetBtn) {
+                    updateServicesBadgesInBlock(blockEl);
+                }
+            }
+
+            calculateAndUpdateBookingCostInBlock(blockEl);
+        }
+
+        function _isTariffScenarioGlobal() {
+            return window.currentScenarioName === 'Репетиционная точка' || window.currentScenarioName === 'Музыкальный класс';
+        }
+
+        function _getScenarioTariffUnitCostGlobal() {
+            if (!window.currentScenarioFilterId) return 0;
+            if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getScenarioTariffUnitCost !== 'function') return 0;
+            return window.BookingTimeUtils.getScenarioTariffUnitCost(window.currentScenarioFilterId) || 0;
+        }
+
+        function _getScenarioMinMinutesGlobal() {
+            var fallback = 60;
+            if (!window.currentScenarioFilterId) return fallback;
+            if (!window.BookingTimeUtils || typeof window.BookingTimeUtils.getScenarioMinDurationMinutes !== 'function') return fallback;
+            return window.BookingTimeUtils.getScenarioMinDurationMinutes(window.currentScenarioFilterId) || fallback;
+        }
+
+        function getSelectedTariffDataInBlock(blockEl) {
+            if (!blockEl) return null;
+
+            var tariffSelect = blockEl.querySelector('.custom-select[id^="tariff"]');
+            if (!tariffSelect) return null;
+
+            var selectedLi = tariffSelect.querySelector('ul.options li.selected');
+            if (!selectedLi) return null;
+
+            var baseCostRaw = String(selectedLi.getAttribute('data-base-cost') || '0').replace(',', '.');
+            var baseCost = parseFloat(baseCostRaw);
+            var baseDurationMinutes = parseInt(selectedLi.getAttribute('data-base-duration-minutes') || '0', 10);
+
+            return {
+                baseCost: Number.isFinite(baseCost) ? baseCost : 0,
+                baseDurationMinutes: Number.isFinite(baseDurationMinutes) ? baseDurationMinutes : 0
+            };
+        }
+
+        function calculateAndUpdateBookingCostInBlock(blockEl) {
+            if (!blockEl) return;
+
+            var costElement = blockEl.querySelector('[id^="bookingCostValue"]');
+            if (!costElement) return;
+
+            var servicesSelect = blockEl.querySelector('.custom-select[id^="services"]');
+            if (!servicesSelect) return;
+
+            var state = blockEl._bulkTimeState || {};
+            var selectedPeriods = (state.selectedPeriods !== undefined) ? state.selectedPeriods : null;
+            var startMinutes = (state.startMinutes !== undefined) ? state.startMinutes : null;
+            var endMinutes = (state.endMinutes !== undefined) ? state.endMinutes : null;
+
+            var servicesCost = 0;
+            if (window.BookingServicesUtils && typeof window.BookingServicesUtils.getSelectedServicesCost === 'function') {
+                servicesCost = window.BookingServicesUtils.getSelectedServicesCost(servicesSelect);
+            }
+
+            if (_isTariffScenarioGlobal()) {
+                var tariffData = getSelectedTariffDataInBlock(blockEl);
+
+                var durationMinutes = null;
+                if (startMinutes !== null && endMinutes !== null && Number.isFinite(startMinutes) && Number.isFinite(endMinutes) && endMinutes > startMinutes) {
+                    durationMinutes = endMinutes - startMinutes;
+                } else if (selectedPeriods !== null && selectedPeriods !== undefined) {
+                    var minMinutes = state._lastMinMinutes || _getScenarioMinMinutesGlobal();
+                    durationMinutes = minMinutes * selectedPeriods;
+                }
+
+                var rentalCost = 0;
+                if (tariffData && durationMinutes !== null && tariffData.baseDurationMinutes > 0) {
+                    rentalCost = tariffData.baseCost * (durationMinutes / tariffData.baseDurationMinutes);
+                }
+
+                var totalTariffCost = rentalCost + servicesCost;
+                var formattedTariff = Number(totalTariffCost || 0).toFixed(2).replace(/\.00$/, '');
+                costElement.textContent = formattedTariff + ' BYN';
+                return;
+            }
+
+            if (window.BookingServicesUtils && typeof window.BookingServicesUtils.calculateAndUpdateTotalCost === 'function') {
+                window.BookingServicesUtils.calculateAndUpdateTotalCost({
+                    costElementId: costElement.id,
+                    servicesSelectId: servicesSelect.id,
+                    selectedPeriods: selectedPeriods,
+                    periodCost: _getScenarioTariffUnitCostGlobal()
+                });
+                return;
+            }
+
+            var periodsTotalCost = 0;
+            if (selectedPeriods !== null && selectedPeriods !== undefined) {
+                periodsTotalCost = selectedPeriods * _getScenarioTariffUnitCostGlobal();
+            }
+            var totalCost = periodsTotalCost + servicesCost;
+            var formatted = totalCost.toFixed(2).replace(/\.00$/, '');
+            costElement.textContent = formatted + ' BYN';
+        }
+
+        function updateServicesBadgesInBlock(blockEl) {
+            if (!blockEl) return;
+            if (!window.BookingServicesUtils || typeof window.BookingServicesUtils.renderServicesBadges !== 'function') return;
+
+            var badgesContainer = blockEl.querySelector('[id^="create-selected-services"]');
+            var resetBtn = blockEl.querySelector('[id^="create-reset-services"]');
+            var servicesSelect = blockEl.querySelector('.custom-select[id^="services"]');
+            if (!badgesContainer || !resetBtn || !servicesSelect) return;
+
+            window.BookingServicesUtils.renderServicesBadges({
+                containerId: badgesContainer.id,
+                selectId: servicesSelect.id,
+                resetBtnId: resetBtn.id,
+                showResetWhenCountGreaterThan: 1,
+                onSelectionChanged: function () {
+                    calculateAndUpdateBookingCostInBlock(blockEl);
+                    if (typeof window.updateSubmitButtonState === 'function') {
+                        window.updateSubmitButtonState();
+                    }
+                }
+            });
+        }
+
+        function initCommentCounterInBlock(blockEl) {
+            if (!blockEl) return;
+            var textarea = blockEl.querySelector('textarea[id^="bookingComment"]');
+            var counter = blockEl.querySelector('[id^="bookingCommentCounter"]');
+            if (!textarea || !counter) return;
+
+            if (window.BookingModalUtils && typeof window.BookingModalUtils.initCommentCounter === 'function') {
+                window.BookingModalUtils.initCommentCounter(textarea.id, counter.id, 1000);
+                return;
+            }
+
+            if (textarea._bulkCommentCounterBound) return;
+            textarea._bulkCommentCounterBound = true;
+            textarea.addEventListener('input', function () {
+                counter.textContent = String(textarea.value.length) + '/1000';
+            });
+            counter.textContent = String(textarea.value.length) + '/1000';
+        }
+
+        function initSingleSelectsInBlock(blockEl) {
+            if (!blockEl) return;
+            if (!window.BookingSelectsUtils || typeof window.BookingSelectsUtils.bindSingleSelect !== 'function') {
+                return;
+            }
+
+            var modalElement = document.getElementById('createBookingModal');
+            var closeAll = function () {
+                if (!modalElement) return;
+                modalElement.querySelectorAll('.custom-select.open').forEach(function (s) {
+                    s.classList.remove('open');
+                });
+            };
+
+            blockEl.querySelectorAll('.custom-select').forEach(function (selectEl) {
+                var id = String(selectEl.id || '');
+                if (id.indexOf('services') === 0) {
+                    return;
+                }
+                if (id.indexOf('start-time') === 0 || id.indexOf('end-time') === 0 || id.indexOf('duration') === 0) {
+                    return;
+                }
+
+                var isTariff = id.indexOf('tariff') === 0;
+                window.BookingSelectsUtils.bindSingleSelect({
+                    selectEl: selectEl,
+                    closeAll: closeAll,
+                    closeOthersOnOpen: false,
+                    onSelected: function () {
+                        if (isTariff && blockEl && typeof blockEl._bulkOnTariffChanged === 'function') {
+                            blockEl._bulkOnTariffChanged();
+                        }
+                        if (typeof window.updateSubmitButtonState === 'function') {
+                            window.updateSubmitButtonState();
+                        }
+                    },
+                    onCleared: function () {
+                        if (isTariff && blockEl && typeof blockEl._bulkOnTariffChanged === 'function') {
+                            blockEl._bulkOnTariffChanged();
+                        }
+                        if (typeof window.updateSubmitButtonState === 'function') {
+                            window.updateSubmitButtonState();
+                        }
+                    }
+                });
+            });
+        }
+
+        function initTimeControllerInBlock(blockEl) {
+            if (!blockEl) return;
+            if (blockEl._bulkTimeControllerBound) return;
+
+            var utils = window.BookingTimeUtils;
+            if (!utils || typeof utils.loadRoomBookingsForDate !== 'function') {
+                return;
+            }
+
+            var startSelect = blockEl.querySelector('.custom-select[id^="start-time"]');
+            var endSelect = blockEl.querySelector('.custom-select[id^="end-time"]');
+            var durationSelect = blockEl.querySelector('.custom-select[id^="duration"]');
+            var dateInput = blockEl.querySelector('input[id^="modal-create-date"]');
+            if (!startSelect || !endSelect || !durationSelect || !dateInput) {
+                return;
+            }
+
+            var roomIdField = document.getElementById('roomIdField');
+            var roomId = roomIdField ? String(roomIdField.value || '').trim() : '';
+            if (!roomId) return;
+
+            function parseTimeToMinutes(hm) {
+                var s = String(hm || '').trim();
+                var parts = s.split(':');
+                if (parts.length < 2) return null;
+                var h = parseInt(parts[0], 10);
+                var m = parseInt(parts[1], 10);
+                if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+                return (h * 60) + m;
+            }
+
+            function getScenarioId() {
+                return (window.currentScenarioFilterId !== undefined && window.currentScenarioFilterId !== null)
+                    ? String(window.currentScenarioFilterId)
+                    : '';
+            }
+
+            function isTariffScenario() {
+                return window.currentScenarioName === 'Репетиционная точка' || window.currentScenarioName === 'Музыкальный класс';
+            }
+
+            function parseTariffDayIntervalsMinutesOrNull() {
+                var tariffSelect = blockEl.querySelector('.custom-select[id^="tariff"]');
+                if (!tariffSelect) return null;
+                var selectedLi = tariffSelect.querySelector('ul.options li.selected');
+                if (!selectedLi) return null;
+
+                var dayIntervalsRaw = selectedLi.getAttribute('data-day-intervals') || '[]';
+                var dayIntervals;
+                try {
+                    dayIntervals = JSON.parse(dayIntervalsRaw);
+                } catch (e) {
+                    dayIntervals = [];
+                }
+                if (!Array.isArray(dayIntervals) || dayIntervals.length === 0) return null;
+
+                var res = [];
+                dayIntervals.forEach(function (it) {
+                    if (!it) return;
+                    var s = parseTimeToMinutes(it.start_time);
+                    var e = parseTimeToMinutes(it.end_time);
+                    if (Number.isFinite(s) && Number.isFinite(e) && e > s) {
+                        res.push({ startMinutes: s, endMinutes: e });
+                    }
+                });
+                return res.length ? res : null;
+            }
+
+            function getTariffBaseDurationMinutesOrNull() {
+                var tariffSelect = blockEl.querySelector('.custom-select[id^="tariff"]');
+                if (!tariffSelect) return null;
+                var selectedLi = tariffSelect.querySelector('ul.options li.selected');
+                if (!selectedLi) return null;
+                var v = parseInt(selectedLi.getAttribute('data-base-duration-minutes') || '0', 10);
+                return Number.isFinite(v) && v > 0 ? v : null;
+            }
+
+            function getMinMinutes() {
+                if (isTariffScenario()) {
+                    var tariffMin = getTariffBaseDurationMinutesOrNull();
+                    if (tariffMin) return tariffMin;
+                }
+                var sid = getScenarioId();
+                if (sid && utils.getScenarioMinDurationMinutes) {
+                    return utils.getScenarioMinDurationMinutes(sid) || 60;
+                }
+                return 60;
+            }
+
+            function getWorkStart() {
+                var sid = getScenarioId();
+                if (sid && utils.getScenarioWorkTimeStartMinutes) {
+                    return utils.getScenarioWorkTimeStartMinutes(sid) || 0;
+                }
+                return 0;
+            }
+
+            function getWorkEnd() {
+                var sid = getScenarioId();
+                if (sid && utils.getScenarioWorkTimeEndMinutes) {
+                    return utils.getScenarioWorkTimeEndMinutes(sid) || (24 * 60);
+                }
+                return 24 * 60;
+            }
+
+            function closeAll() {
+                var modalElement = document.getElementById('createBookingModal');
+                if (!modalElement) return;
+                modalElement.querySelectorAll('.custom-select.open').forEach(function (s) {
+                    s.classList.remove('open');
+                });
+                modalElement.querySelectorAll('[id^="datepicker-popup"].open').forEach(function (p) {
+                    p.classList.remove('open');
+                });
+            }
+
+            function bindTimeSelectOpen(selectEl) {
+                if (!selectEl) return;
+                if (selectEl._bookingTimeOpenBound) return;
+                selectEl._bookingTimeOpenBound = true;
+                selectEl.addEventListener('click', function (e) {
+                    if (selectEl.classList.contains('disabled')) return;
+                    var clearBtn = e.target && (e.target.closest ? e.target.closest('.custom-select-clear') : null);
+                    if (clearBtn) return;
+                    if (e.target && e.target.tagName === 'LI') return;
+                    var wasOpen = selectEl.classList.contains('open');
+                    closeAll();
+                    if (!wasOpen) {
+                        selectEl.classList.add('open');
+                    }
+                });
+            }
+
+            function bindTimeSelectClear(selectEl, clearKind) {
+                if (!selectEl) return;
+                var clearBtn = selectEl.querySelector('.custom-select-clear');
+                if (!clearBtn) return;
+                if (clearBtn._bookingTimeClearBound) return;
+                clearBtn._bookingTimeClearBound = true;
+                clearBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    if (clearKind === 'start') {
+                        state.startMinutes = null;
+                    } else if (clearKind === 'end') {
+                        state.endMinutes = null;
+                    } else if (clearKind === 'duration') {
+                        state.selectedPeriods = null;
+                    }
+                    closeAll();
+                    rebuildAll();
+                    if (typeof window.updateSubmitButtonState === 'function') {
+                        window.updateSubmitButtonState();
+                    }
+                    calculateAndUpdateBookingCostInBlock(blockEl);
+                });
+            }
+
+            bindTimeSelectOpen(startSelect);
+            bindTimeSelectOpen(endSelect);
+            bindTimeSelectOpen(durationSelect);
+
+            bindTimeSelectClear(startSelect, 'start');
+            bindTimeSelectClear(endSelect, 'end');
+            bindTimeSelectClear(durationSelect, 'duration');
+
+            function readStateFromDom(state) {
+                var startLi = startSelect.querySelector('ul.options li.selected');
+                var endLi = endSelect.querySelector('ul.options li.selected');
+                var durLi = durationSelect.querySelector('ul.options li.selected');
+
+                if (startLi) {
+                    var sm = parseInt(startLi.getAttribute('data-minutes') || '', 10);
+                    state.startMinutes = Number.isFinite(sm) ? sm : parseTimeToMinutes(startLi.getAttribute('data-value') || startLi.textContent);
+                }
+                if (endLi) {
+                    var em = parseInt(endLi.getAttribute('data-minutes') || '', 10);
+                    state.endMinutes = Number.isFinite(em) ? em : parseTimeToMinutes(endLi.getAttribute('data-value') || endLi.textContent);
+                }
+                if (durLi) {
+                    var p = parseInt(durLi.getAttribute('data-periods') || '', 10);
+                    state.selectedPeriods = Number.isFinite(p) && p >= 1 ? p : null;
+                }
+            }
+
+            var state = {
+                roomBookings: [],
+                startMinutes: null,
+                endMinutes: null,
+                selectedPeriods: null
+            };
+            readStateFromDom(state);
+            blockEl._bulkTimeState = state;
+
+            function rebuildAll() {
+                var minMinutes = getMinMinutes();
+                var workStart = getWorkStart();
+                var workEnd = getWorkEnd();
+                var roomBookings = Array.isArray(state.roomBookings) ? state.roomBookings : [];
+
+                var tariffIntervals = isTariffScenario() ? parseTariffDayIntervalsMinutesOrNull() : null;
+
+                if (state._lastMinMinutes !== undefined && state._lastMinMinutes !== null && state._lastMinMinutes !== minMinutes) {
+                    state.selectedPeriods = null;
+                    state.endMinutes = null;
+                }
+                state._lastMinMinutes = minMinutes;
+
+                function filterStartSlotsByTariffDayIntervals(slots, requiredPeriods) {
+                    if (!tariffIntervals) return slots;
+                    var minutesNeed = requiredPeriods * minMinutes;
+                    return (Array.isArray(slots) ? slots : []).filter(function (s) {
+                        for (var i = 0; i < tariffIntervals.length; i++) {
+                            var it = tariffIntervals[i];
+                            if (s >= it.startMinutes && (s + minutesNeed) <= it.endMinutes) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+                }
+
+                function filterEndTimesByTariffForPeriods(endTimes, requiredPeriods) {
+                    if (!tariffIntervals) return endTimes;
+                    var minutesNeed = requiredPeriods * minMinutes;
+                    return (Array.isArray(endTimes) ? endTimes : []).filter(function (e) {
+                        var s = e - minutesNeed;
+                        for (var i = 0; i < tariffIntervals.length; i++) {
+                            var it = tariffIntervals[i];
+                            if (s >= it.startMinutes && e <= it.endMinutes) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+                }
+
+                function filterEndTimesByTariffForStart(endTimes, startMinutes) {
+                    if (!tariffIntervals) return endTimes;
+                    var matched = null;
+                    for (var i = 0; i < tariffIntervals.length; i++) {
+                        var it = tariffIntervals[i];
+                        if (startMinutes >= it.startMinutes && startMinutes < it.endMinutes) {
+                            matched = it;
+                            break;
+                        }
+                    }
+                    if (!matched) return [];
+                    return (Array.isArray(endTimes) ? endTimes : []).filter(function (e) {
+                        return e > startMinutes && e <= matched.endMinutes;
+                    });
+                }
+
+                function filterStartTimesByTariffForEnd(startTimes, endMinutes) {
+                    if (!tariffIntervals) return startTimes;
+                    var matched = null;
+                    for (var i = 0; i < tariffIntervals.length; i++) {
+                        var it = tariffIntervals[i];
+                        if (endMinutes > it.startMinutes && endMinutes <= it.endMinutes) {
+                            matched = it;
+                            break;
+                        }
+                    }
+                    if (!matched) return [];
+                    return (Array.isArray(startTimes) ? startTimes : []).filter(function (s) {
+                        return s >= matched.startMinutes && s < endMinutes;
+                    });
+                }
+
+                function limitMaxPeriodsByTariffForStart(startMinutes, baseMax) {
+                    if (!tariffIntervals) return baseMax;
+                    for (var i = 0; i < tariffIntervals.length; i++) {
+                        var it = tariffIntervals[i];
+                        if (startMinutes >= it.startMinutes && startMinutes < it.endMinutes) {
+                            var maxByTariff = Math.floor((it.endMinutes - startMinutes) / minMinutes);
+                            return Math.max(0, Math.min(baseMax, maxByTariff));
+                        }
+                    }
+                    return 0;
+                }
+
+                function limitMaxPeriodsByTariffForEnd(endMinutes, baseMax) {
+                    if (!tariffIntervals) return baseMax;
+                    for (var i = 0; i < tariffIntervals.length; i++) {
+                        var it = tariffIntervals[i];
+                        if (endMinutes > it.startMinutes && endMinutes <= it.endMinutes) {
+                            var maxByTariff = Math.floor((endMinutes - it.startMinutes) / minMinutes);
+                            return Math.max(0, Math.min(baseMax, maxByTariff));
+                        }
+                    }
+                    return 0;
+                }
+
+                function limitGlobalMaxPeriodsByTariff(baseMax) {
+                    if (!tariffIntervals) return baseMax;
+                    var maxByTariff = 0;
+                    for (var i = 0; i < tariffIntervals.length; i++) {
+                        var it = tariffIntervals[i];
+                        var n = Math.floor((it.endMinutes - it.startMinutes) / minMinutes);
+                        if (n > maxByTariff) maxByTariff = n;
+                    }
+                    return Math.max(0, Math.min(baseMax, maxByTariff));
+                }
+
+                var tariffMinChosen = isTariffScenario() ? getTariffBaseDurationMinutesOrNull() : null;
+
+                var tariffTimeFrozen = isTariffScenario() && !tariffMinChosen;
+                if (tariffTimeFrozen) {
+                    state.selectedPeriods = null;
+                    state.endMinutes = null;
+
+                    var startSlotsNoTariff = utils.getStartTimeSlotsForPeriods(1, roomBookings, workStart, workEnd, minMinutes);
+                    utils.rebuildStartTimeSelect(startSelect, startSlotsNoTariff, state.startMinutes, function (minutes) {
+                        state.startMinutes = minutes;
+                        if (typeof window.updateSubmitButtonState === 'function') {
+                            window.updateSubmitButtonState();
+                        }
+                        calculateAndUpdateBookingCostInBlock(blockEl);
+                    });
+
+                    utils.rebuildDurationSelect(durationSelect, null, 0, minMinutes);
+                    utils.rebuildEndTimeSelect(endSelect, [], null);
+                    durationSelect.classList.add('disabled');
+                    endSelect.classList.add('disabled');
+                    calculateAndUpdateBookingCostInBlock(blockEl);
+                    return;
+                }
+
+                durationSelect.classList.remove('disabled');
+                endSelect.classList.remove('disabled');
+
+                var maxPeriods = 0;
+                if (state.startMinutes !== null) {
+                    var baseMaxStart = utils.getMaxPeriodsForStartTime(state.startMinutes, roomBookings, workEnd, minMinutes);
+                    maxPeriods = limitMaxPeriodsByTariffForStart(state.startMinutes, baseMaxStart);
+                } else if (state.endMinutes !== null) {
+                    var baseMaxEnd = utils.getMaxPeriodsForEndTime(state.endMinutes, roomBookings, workStart, workEnd, minMinutes);
+                    maxPeriods = limitMaxPeriodsByTariffForEnd(state.endMinutes, baseMaxEnd);
+                } else {
+                    var baseGlobalMax = utils.getGlobalMaxPeriods(roomBookings, workStart, workEnd, minMinutes);
+                    maxPeriods = limitGlobalMaxPeriodsByTariff(baseGlobalMax);
+                }
+
+                utils.rebuildDurationSelect(durationSelect, state.selectedPeriods, maxPeriods, minMinutes, function (periods) {
+                    state.selectedPeriods = periods;
+
+                    if (state.startMinutes !== null) {
+                        var endTimesForStart = utils.getEndTimesForStartTime(state.startMinutes, roomBookings, workEnd, minMinutes);
+                        endTimesForStart = filterEndTimesByTariffForStart(endTimesForStart, state.startMinutes);
+                        var newEnd = state.startMinutes + (minMinutes * state.selectedPeriods);
+                        state.endMinutes = endTimesForStart.indexOf(newEnd) !== -1 ? newEnd : null;
+                    } else if (state.endMinutes !== null) {
+                        var startSlotsForPeriods = utils.getStartTimeSlotsForPeriods(state.selectedPeriods, roomBookings, workStart, workEnd, minMinutes);
+                        startSlotsForPeriods = filterStartSlotsByTariffDayIntervals(startSlotsForPeriods, state.selectedPeriods);
+                        var newStart = state.endMinutes - (minMinutes * state.selectedPeriods);
+                        state.startMinutes = startSlotsForPeriods.indexOf(newStart) !== -1 ? newStart : null;
+                    }
+
+                    rebuildAll();
+                    if (typeof window.updateSubmitButtonState === 'function') {
+                        window.updateSubmitButtonState();
+                    }
+                });
+
+                var startSlots;
+                if (state.selectedPeriods !== null) {
+                    startSlots = utils.getStartTimeSlotsForPeriods(state.selectedPeriods, roomBookings, workStart, workEnd, minMinutes);
+                    startSlots = filterStartSlotsByTariffDayIntervals(startSlots, state.selectedPeriods);
+                } else if (state.endMinutes !== null) {
+                    startSlots = utils.getStartTimesForEndTime(state.endMinutes, roomBookings, workStart, workEnd, minMinutes);
+                    startSlots = filterStartTimesByTariffForEnd(startSlots, state.endMinutes);
+                } else {
+                    startSlots = utils.getStartTimeSlotsForPeriods(1, roomBookings, workStart, workEnd, minMinutes);
+                    startSlots = filterStartSlotsByTariffDayIntervals(startSlots, 1);
+                }
+                if (state.startMinutes !== null && startSlots.indexOf(state.startMinutes) === -1) {
+                    state.startMinutes = null;
+                }
+
+                utils.rebuildStartTimeSelect(startSelect, startSlots, state.startMinutes, function (minutes) {
+                    state.startMinutes = minutes;
+
+                    var baseMaxPeriodsForStart = utils.getMaxPeriodsForStartTime(minutes, roomBookings, workEnd, minMinutes);
+                    var maxPeriodsForStart = limitMaxPeriodsByTariffForStart(minutes, baseMaxPeriodsForStart);
+                    var endTimesForStart = utils.getEndTimesForStartTime(minutes, roomBookings, workEnd, minMinutes);
+                    endTimesForStart = filterEndTimesByTariffForStart(endTimesForStart, minutes);
+
+                    if (state.selectedPeriods !== null) {
+                        var newEnd = minutes + (minMinutes * state.selectedPeriods);
+                        state.endMinutes = (state.selectedPeriods <= maxPeriodsForStart && endTimesForStart.indexOf(newEnd) !== -1) ? newEnd : null;
+                    } else if (state.endMinutes !== null) {
+                        var periodsBetween = Math.round((state.endMinutes - minutes) / minMinutes);
+                        if (periodsBetween >= 1 && periodsBetween <= maxPeriodsForStart && endTimesForStart.indexOf(state.endMinutes) !== -1) {
+                            state.selectedPeriods = periodsBetween;
+                        } else if (maxPeriodsForStart === 1) {
+                            state.selectedPeriods = 1;
+                            state.endMinutes = minutes + minMinutes;
+                        } else {
+                            state.endMinutes = null;
+                            state.selectedPeriods = null;
+                        }
+                    } else {
+                        if (maxPeriodsForStart === 1) {
+                            state.selectedPeriods = 1;
+                            state.endMinutes = minutes + minMinutes;
+                        }
+                    }
+
+                    rebuildAll();
+                    if (typeof window.updateSubmitButtonState === 'function') {
+                        window.updateSubmitButtonState();
+                    }
+                });
+
+                var endTimes;
+                if (state.selectedPeriods !== null) {
+                    endTimes = utils.getAllEndTimesForPeriods(state.selectedPeriods, roomBookings, workStart, workEnd, minMinutes);
+                    endTimes = filterEndTimesByTariffForPeriods(endTimes, state.selectedPeriods);
+                } else if (state.startMinutes !== null) {
+                    endTimes = utils.getEndTimesForStartTime(state.startMinutes, roomBookings, workEnd, minMinutes);
+                    endTimes = filterEndTimesByTariffForStart(endTimes, state.startMinutes);
+                } else {
+                    endTimes = utils.getAllEndTimesForPeriods(1, roomBookings, workStart, workEnd, minMinutes);
+                    endTimes = filterEndTimesByTariffForPeriods(endTimes, 1);
+                }
+
+                if (state.endMinutes !== null && endTimes.indexOf(state.endMinutes) === -1) {
+                    state.endMinutes = null;
+                }
+
+                utils.rebuildEndTimeSelect(endSelect, endTimes, state.endMinutes, function (minutes) {
+                    state.endMinutes = minutes;
+
+                    var startTimesForEnd = utils.getStartTimesForEndTime(minutes, roomBookings, workStart, workEnd, minMinutes);
+                    startTimesForEnd = filterStartTimesByTariffForEnd(startTimesForEnd, minutes);
+                    var baseMaxPeriodsForEnd = utils.getMaxPeriodsForEndTime(minutes, roomBookings, workStart, workEnd, minMinutes);
+                    var maxPeriodsForEnd = limitMaxPeriodsByTariffForEnd(minutes, baseMaxPeriodsForEnd);
+
+                    if (state.selectedPeriods !== null) {
+                        var newStart = minutes - (minMinutes * state.selectedPeriods);
+                        state.startMinutes = startTimesForEnd.indexOf(newStart) !== -1 ? newStart : null;
+                    } else if (state.startMinutes !== null) {
+                        var periodsBetween = Math.round((minutes - state.startMinutes) / minMinutes);
+                        if (periodsBetween >= 1 && periodsBetween <= maxPeriodsForEnd && startTimesForEnd.indexOf(state.startMinutes) !== -1) {
+                            state.selectedPeriods = periodsBetween;
+                        } else if (maxPeriodsForEnd === 1) {
+                            state.selectedPeriods = 1;
+                            state.startMinutes = minutes - minMinutes;
+                        } else {
+                            state.startMinutes = null;
+                            state.selectedPeriods = null;
+                        }
+                    } else {
+                        if (maxPeriodsForEnd === 1) {
+                            state.selectedPeriods = 1;
+                            state.startMinutes = minutes - minMinutes;
+                        }
+                    }
+
+                    rebuildAll();
+                    if (typeof window.updateSubmitButtonState === 'function') {
+                        window.updateSubmitButtonState();
+                    }
+                });
+            }
+
+            function reloadByDate(dateIso, forceReload) {
+                var iso = String(dateIso || '').trim();
+                if (!iso) {
+                    return;
+                }
+                utils.loadRoomBookingsForDate(roomId, iso, null, function (intervals) {
+                    state.roomBookings = Array.isArray(intervals) ? intervals : [];
+                    rebuildAll();
+                    if (typeof window.updateSubmitButtonState === 'function') {
+                        window.updateSubmitButtonState();
+                    }
+                    calculateAndUpdateBookingCostInBlock(blockEl);
+                }, forceReload === true);
+            }
+
+            blockEl._bulkOnDateChanged = function (iso) {
+                state.startMinutes = null;
+                state.endMinutes = null;
+                state.selectedPeriods = null;
+                closeAll();
+                reloadByDate(iso, true);
+            };
+
+            blockEl._bulkOnTariffChanged = function () {
+                closeAll();
+                rebuildAll();
+                calculateAndUpdateBookingCostInBlock(blockEl);
+            };
+
+            blockEl._bulkTimeControllerBound = true;
+            reloadByDate(dateInput.value, false);
+        }
+
+        function initClonedBlockInteractiveUi(blockEl) {
+            if (!blockEl) return;
+            if (blockEl._bulkInteractiveBound) return;
+            blockEl._bulkInteractiveBound = true;
+
+            initSingleSelectsInBlock(blockEl);
+            initServicesMultiSelectInBlock(blockEl);
+            initCommentCounterInBlock(blockEl);
+            initDatepickerInBlock(blockEl);
+            initTimeControllerInBlock(blockEl);
+        }
+
         function refreshBlocksUi() {
             var blocks = getBlocks();
             blocks.forEach(function (b, i) {
                 var index = i + 1;
                 b.setAttribute('data-booking-block-index', String(index));
-                var titleEl = b.querySelector('[data-booking-block-title]');
-                if (titleEl) titleEl.textContent = 'Бронь ' + String(index);
 
-                var btn = b.querySelector('[data-booking-block-action]');
-                if (btn) {
-                    var isLast = index === blocks.length;
-                    if (index === 1 && blocks.length > 1) {
-                        btn.style.display = 'none';
-                        btn.removeAttribute('data-action');
-                        btn.disabled = true;
-                    } else if (isLast) {
-                        btn.style.display = '';
-                        btn.textContent = '+';
-                        btn.setAttribute('data-action', 'add');
-                        btn.disabled = blocks.length >= MAX_BLOCKS;
-                        btn.setAttribute('aria-label', 'Добавить бронь');
-                    } else {
-                        btn.style.display = '';
-                        btn.textContent = '−';
-                        btn.setAttribute('data-action', 'remove');
-                        btn.disabled = false;
-                        btn.setAttribute('aria-label', 'Удалить следующие брони');
-                    }
+                var isLast = index === blocks.length;
+                var canAddMore = blocks.length < MAX_BLOCKS;
+
+                var addBtn = b.querySelector('[data-booking-block-action="add"]');
+                if (addBtn) {
+                    addBtn.style.display = '';
+                    addBtn.classList.toggle('booking-create-block-action-btn--hidden', !(isLast && canAddMore));
+                    addBtn.disabled = !canAddMore;
+                }
+
+                var removeBtn = b.querySelector('[data-booking-block-action="remove"]');
+                if (removeBtn) {
+                    removeBtn.style.display = '';
+                    removeBtn.classList.toggle('booking-create-block-action-btn--hidden', index === 1);
+                    removeBtn.disabled = false;
                 }
             });
         }
@@ -79,9 +1080,14 @@
             var blocks = getBlocks();
             var target = blocks[blockIndex - 1];
             if (target) target.remove();
-
-            reindexBlocks();
             refreshBlocksUi();
+
+            if (typeof adaptModalForScenario === 'function') {
+                adaptModalForScenario(window.currentScenarioName || '');
+            }
+            if (typeof window.updateSubmitButtonState === 'function') {
+                window.updateSubmitButtonState();
+            }
         }
 
         function addBlock() {
@@ -94,13 +1100,22 @@
             var source = blocks[blocks.length - 1];
             if (!source) return;
 
-            var newIndex = blocks.length + 1;
+            var newIndex = Number.isFinite(container._bulkNextIdIndex) ? container._bulkNextIdIndex : (blocks.length + 1);
+            container._bulkNextIdIndex = newIndex + 1;
             var clone = source.cloneNode(true);
             uniquifyIdsInBlock(clone, newIndex);
+            resetClonedBlockUiState(clone);
             container.appendChild(clone);
-
-            reindexBlocks();
             refreshBlocksUi();
+
+            initClonedBlockInteractiveUi(clone);
+
+            if (typeof adaptModalForScenario === 'function') {
+                adaptModalForScenario(window.currentScenarioName || '');
+            }
+            if (typeof window.updateSubmitButtonState === 'function') {
+                window.updateSubmitButtonState();
+            }
         }
 
         function resetToSingleBlock() {
@@ -108,9 +1123,13 @@
             blocks.forEach(function (b, i) {
                 if ((i + 1) > 1) b.remove();
             });
-
-            reindexBlocks();
             refreshBlocksUi();
+
+            container._bulkNextIdIndex = 2;
+
+            if (typeof window.updateSubmitButtonState === 'function') {
+                window.updateSubmitButtonState();
+            }
         }
 
         container.addEventListener('click', function (e) {
@@ -121,7 +1140,7 @@
             if (!blockEl) return;
 
             var idx = parseInt(blockEl.getAttribute('data-booking-block-index') || '1', 10);
-            var action = btn.getAttribute('data-action') || 'add';
+            var action = btn.getAttribute('data-booking-block-action') || 'add';
 
             if (action === 'add') {
                 addBlock();
@@ -134,6 +1153,9 @@
 
         window.__resetCreateBookingBlocksToSingle = resetToSingleBlock;
         refreshBlocksUi();
+        getBlocks().forEach(function (b) {
+            initClonedBlockInteractiveUi(b);
+        });
     }
 
     /**
@@ -158,10 +1180,9 @@
         var directionContainer = document.getElementById('direction-field-container');
         var contactPersonContainer = document.getElementById('contact-person-field-container');
         var peopleCountFieldContainer = document.getElementById('people-count-field-container');
+        var teacherRowContainer = document.getElementById('teacher-row-container');
         var teacherFieldContainer = document.getElementById('teacher-field-container');
-        var tariffFieldContainer = document.getElementById('tariff-field-container');
         var abonementContainer = document.getElementById('abonement-row-container');
-        var trialLessonContainer = document.getElementById('trial-lesson-container');
         var clientLabel = document.getElementById('client-label');
         var clientSelect = document.getElementById('client');
         
@@ -172,7 +1193,13 @@
 
         if (clientFieldContainer) {
             clientFieldContainer.classList.remove('col-md-6', 'col-md-5');
-            clientFieldContainer.classList.add(isRepPoint ? 'col-md-5' : 'col-md-6');
+            if (isRepPoint) {
+                clientFieldContainer.classList.add('col-md-5');
+            } else if (isMusicClass) {
+                clientFieldContainer.classList.add('col-md-9');
+            } else {
+                clientFieldContainer.classList.add('col-md-6');
+            }
         }
 
         if (contactPersonContainer) {
@@ -192,17 +1219,12 @@
             abonementContainer.style.display = isSimplifiedScenario ? 'none' : '';
         }
         
-        // Показать/скрыть Пробное занятие (только для Музыкальной школы)
-        if (trialLessonContainer) {
-            trialLessonContainer.style.display = isSimplifiedScenario ? 'none' : '';
+        // Показать/скрыть Преподаватель (и сам ряд, чтобы не оставлять пустую строку)
+        if (teacherRowContainer) {
+            teacherRowContainer.style.display = isSimplifiedScenario ? 'none' : '';
         }
-        
-        // Показать/скрыть Преподаватель vs Тариф
         if (teacherFieldContainer) {
             teacherFieldContainer.style.display = isSimplifiedScenario ? 'none' : '';
-        }
-        if (tariffFieldContainer) {
-            tariffFieldContainer.style.display = isSimplifiedScenario ? '' : 'none';
         }
         
         // Задача 1: Показать/скрыть "Услуги преподавателей" (только для Музыкальной школы)
@@ -211,45 +1233,71 @@
             specialistServiceContainer.style.display = isMusicSchool ? '' : 'none';
         }
         
-        // Задача 3: Перемещение "Дополнительные услуги" для Музыкальной школы
-        // Исправление 2: При перемещении убираем/добавляем col-md-6 чтобы ширина была корректной
-        var servicesContainer = document.getElementById('services-container');
-        var additionalServicesRow = document.getElementById('additional-services-row');
-        var additionalServicesCol = document.getElementById('additional-services-col');
-        var teacherRowContainer = document.getElementById('teacher-row-container');
-        
-        if (servicesContainer && additionalServicesRow && additionalServicesCol && teacherRowContainer) {
-            if (isMusicSchool) {
-                // Для Музыкальной школы: перемещаем "Дополнительные услуги" в отдельный ряд под "Услуги преподавателей"
-                additionalServicesRow.style.display = '';
-                // Убираем col-md-6 чтобы занять всю ширину родительского контейнера (который уже col-md-6)
-                servicesContainer.classList.remove('col-md-6');
-                additionalServicesCol.appendChild(servicesContainer);
-            } else {
-                // Для остальных сценариев: "Дополнительные услуги" остаётся в ряду с Преподавателем/Тарифом
-                additionalServicesRow.style.display = 'none';
-                // Возвращаем col-md-6 для корректной сетки в ряду
-                servicesContainer.classList.add('col-md-6');
-                teacherRowContainer.appendChild(servicesContainer);
+        // Тариф (для Репетиционной точки и Музыкального класса) и позиционирование "Дополнительных услуг" (для Музыкальной школы)
+        var blocksContainer = document.getElementById('bookingBlocksContainer');
+        var blocks = blocksContainer ? blocksContainer.querySelectorAll('.booking-create-block') : [];
+        blocks.forEach(function (blockEl) {
+            var tariffFieldContainer = blockEl.querySelector('[id^="tariff-field-container"]');
+            if (tariffFieldContainer) {
+                tariffFieldContainer.style.display = isSimplifiedScenario ? '' : 'none';
             }
-        }
+
+            var trialLessonContainer = blockEl.querySelector('[id^="trial-lesson-container"]');
+            if (trialLessonContainer) {
+                trialLessonContainer.style.display = isSimplifiedScenario ? 'none' : '';
+            }
+
+            // Перемещение "Дополнительные услуги" для Музыкальной школы внутри каждого блока
+            var servicesContainer = blockEl.querySelector('[id^="services-container"]');
+            var additionalServicesRow = blockEl.querySelector('[id^="additional-services-row"]');
+            var additionalServicesCol = blockEl.querySelector('[id^="additional-services-col"]');
+
+            // Ряд, где лежат Тариф + Доп. услуги
+            var tariffServicesRow = tariffFieldContainer ? tariffFieldContainer.closest('.row') : null;
+
+            if (!servicesContainer || !additionalServicesRow || !additionalServicesCol || !tariffServicesRow) {
+                return;
+            }
+
+            if (isMusicSchool) {
+                additionalServicesRow.style.display = '';
+                tariffServicesRow.style.display = 'none';
+
+                servicesContainer.classList.remove('col-md-6');
+                if (servicesContainer.parentElement !== additionalServicesCol) {
+                    additionalServicesCol.appendChild(servicesContainer);
+                }
+            } else {
+                additionalServicesRow.style.display = 'none';
+                tariffServicesRow.style.display = '';
+
+                servicesContainer.classList.add('col-md-6');
+                if (servicesContainer.parentElement !== tariffServicesRow) {
+                    if (tariffFieldContainer && tariffFieldContainer.parentElement === tariffServicesRow) {
+                        tariffFieldContainer.insertAdjacentElement('afterend', servicesContainer);
+                    } else {
+                        tariffServicesRow.appendChild(servicesContainer);
+                    }
+                }
+            }
+        });
         
-        // Изменить лейбл клиента (только для Репточки - с группами)
+        // Изменить лейбл клиента (Репточка и Музыкальный класс - с группами)
         if (clientLabel) {
-            clientLabel.textContent = isRepPoint ? 'Клиент / группа' : 'Клиент';
+            clientLabel.textContent = isSimplifiedScenario ? 'Клиент / группа' : 'Клиент';
         }
         
-        // Показать/скрыть группы в списке клиентов (только для Репточки)
+        // Показать/скрыть группы в списке клиентов (Репточка и Музыкальный класс)
         if (clientSelect) {
             var groupOptions = clientSelect.querySelectorAll('.client-group-option');
             groupOptions.forEach(function(opt) {
-                opt.style.display = isRepPoint ? '' : 'none';
+                opt.style.display = isSimplifiedScenario ? '' : 'none';
             });
             
             // Сбросить выбор клиента при смене сценария
             var selectedSpan = clientSelect.querySelector('.selected');
             if (selectedSpan) {
-                selectedSpan.textContent = isRepPoint ? 'Выберите клиента или группу' : 'Выберите клиента';
+                selectedSpan.textContent = isSimplifiedScenario ? 'Выберите клиента или группу' : 'Выберите клиента';
             }
             var selectedLi = clientSelect.querySelector('ul.options li.selected');
             if (selectedLi) {
@@ -1270,68 +2318,111 @@
                     if (!submitBtn) return;
                     
                     var checklist = [];
-                    var hasStartTime = currentStartTimeMinutes !== null;
-                    var hasEndTime = currentEndTimeMinutes !== null;
                     
                     // Определяем текущий сценарий для условной валидации
                     var isRepPoint = (window.currentScenarioName === 'Репетиционная точка');
                     var isMusicClass = (window.currentScenarioName === 'Музыкальный класс');
                     var isSimplifiedScenario = isRepPoint || isMusicClass;
                     
-                    // Проверяем наличие предупреждений
-                    var startTimeWarning = document.getElementById('start-time-warning-icon');
-                    var endTimeWarning = document.getElementById('end-time-warning-icon');
-                    var teacherWarning = document.getElementById('teacher-warning-icon');
-                    var hasStartWarning = startTimeWarning && startTimeWarning.style.display !== 'none';
-                    var hasEndWarning = endTimeWarning && endTimeWarning.style.display !== 'none';
-                    var hasTeacherWarning = teacherWarning && teacherWarning.style.display !== 'none';
-
-                    var startTimeSelectForWarning = document.getElementById('start-time');
-                    if (startTimeSelectForWarning) {
-                        startTimeSelectForWarning.classList.toggle('has-warning', !!hasStartWarning);
-                    }
-
-                    var endTimeSelectForWarning = document.getElementById('end-time');
-                    if (endTimeSelectForWarning) {
-                        endTimeSelectForWarning.classList.toggle('has-warning', !!hasEndWarning);
-                    }
-
+                    // Shared: преподаватель/направление/услуга преподавателя + клиент/группа + контакт/люди
                     var teacherSelectForWarning = document.getElementById('teacher');
+                    var teacherWarning = document.getElementById('teacher-warning-icon');
+                    var hasTeacherWarning = teacherWarning && teacherWarning.style.display !== 'none';
                     if (teacherSelectForWarning) {
                         teacherSelectForWarning.classList.toggle('has-warning', !isSimplifiedScenario && !!hasTeacherWarning);
                     }
-                    
-                    // Проверяем преподавателя, направление и клиента/группу
+
                     var teacherSelect = document.getElementById('teacher');
                     var directionSelect = document.getElementById('field-direction');
                     var clientSelect = document.getElementById('client');
+                    var contactPersonSelect = document.getElementById('contact-person');
+
                     var teacherSelectedLi = teacherSelect ? teacherSelect.querySelector('ul.options li.selected') : null;
                     var directionSelectedLi = directionSelect ? directionSelect.querySelector('ul.options li.selected') : null;
                     var clientSelectedLi = clientSelect ? clientSelect.querySelector('ul.options li.selected:not(#search-option)') : null;
+
                     var hasTeacher = teacherSelectedLi !== null;
                     var hasDirection = directionSelectedLi !== null;
-                    // Для "Репетиционная точка" клиент или группа, для других - только клиент
+
                     var hasClient = clientSelectedLi !== null && clientSelectedLi.getAttribute('data-value');
-                    // Группа тоже считается валидным выбором
                     var isGroupSelected = clientSelectedLi && clientSelectedLi.getAttribute('data-type') === 'group';
                     var hasClientOrGroup = hasClient || isGroupSelected;
+
+                    var contactSelectedLi = contactPersonSelect ? contactPersonSelect.querySelector('ul.options li.selected') : null;
+                    var hasContactPerson = !!(contactSelectedLi && contactSelectedLi.getAttribute('data-value'));
                     
                     // Формируем чек-лист
-                    if (!hasStartTime) {
-                        checklist.push('Выберите время начала');
-                    } else if (hasStartWarning) {
-                        checklist.push('Выберите доступное время начала');
-                    }
-                    
-                    if (!hasEndTime) {
-                        checklist.push('Выберите время окончания');
-                    } else if (hasEndWarning) {
-                        checklist.push('Выберите доступное время окончания');
+                    var blocksContainer = document.getElementById('bookingBlocksContainer');
+                    var blocks = blocksContainer ? Array.from(blocksContainer.querySelectorAll('.booking-create-block')) : [];
+                    if (!blocks.length) {
+                        var rootEl = document.getElementById('createBookingModal') || document;
+                        blocks = [rootEl];
                     }
 
-                    if (currentSelectedPeriods === null) {
-                        checklist.push('Выберите длительность');
-                    }
+                    blocks.forEach(function (blockEl, idx) {
+                        var blockPrefix = '№' + String(idx + 1) + ': ';
+
+                        var blockErrors = [];
+
+                        var dateInput = blockEl.querySelector('input[id^="modal-create-date"]');
+                        var dateIso = dateInput ? String(dateInput.value || '').trim() : '';
+                        if (!dateIso) {
+                            blockErrors.push('Выберите дату');
+                        }
+
+                        var startTimeSelectEl = blockEl.querySelector('.custom-select[id^="start-time"]');
+                        var endTimeSelectEl = blockEl.querySelector('.custom-select[id^="end-time"]');
+                        var durationSelectEl = blockEl.querySelector('.custom-select[id^="duration"]');
+
+                        var startSelected = startTimeSelectEl ? startTimeSelectEl.querySelector('ul.options li.selected') : null;
+                        var endSelected = endTimeSelectEl ? endTimeSelectEl.querySelector('ul.options li.selected') : null;
+                        var durationSelected = durationSelectEl ? durationSelectEl.querySelector('ul.options li.selected') : null;
+
+                        var startWarning = blockEl.querySelector('[id^="start-time-warning-icon"]');
+                        var endWarning = blockEl.querySelector('[id^="end-time-warning-icon"]');
+                        var hasStartWarning = startWarning && startWarning.style.display !== 'none';
+                        var hasEndWarning = endWarning && endWarning.style.display !== 'none';
+
+                        if (startTimeSelectEl) {
+                            startTimeSelectEl.classList.toggle('has-warning', !!hasStartWarning);
+                        }
+                        if (endTimeSelectEl) {
+                            endTimeSelectEl.classList.toggle('has-warning', !!hasEndWarning);
+                        }
+
+                        if (!startSelected) {
+                            blockErrors.push('Выберите время начала');
+                        } else if (hasStartWarning) {
+                            blockErrors.push('Выберите доступное время начала');
+                        }
+
+                        if (!endSelected) {
+                            blockErrors.push('Выберите время окончания');
+                        } else if (hasEndWarning) {
+                            blockErrors.push('Выберите доступное время окончания');
+                        }
+
+                        if (!durationSelected) {
+                            blockErrors.push('Выберите длительность');
+                        }
+
+                        if (isSimplifiedScenario) {
+                            var tariffSelectEl = blockEl.querySelector('.custom-select[id^="tariff"]');
+                            var tariffSelected = tariffSelectEl ? tariffSelectEl.querySelector('ul.options li.selected') : null;
+                            if (!tariffSelected) {
+                                blockErrors.push('Выберите тариф');
+                            }
+                        }
+
+                        if (blockErrors.length > 0) {
+                            checklist = checklist.concat(blockErrors.map(function (msg) {
+                                return blockPrefix + msg;
+                            }));
+                            blockEl.classList.add('booking-create-block--has-errors');
+                        } else {
+                            blockEl.classList.remove('booking-create-block--has-errors');
+                        }
+                    });
                     
                     // Преподаватель, направление и услуга преподавателя требуются только для Музыкальной школы
                     if (!isSimplifiedScenario) {
@@ -1359,6 +2450,12 @@
                         checklist.push(isRepPoint ? 'Выберите клиента или группу' : 'Выберите клиента');
                     }
 
+                    if (isRepPoint) {
+                        if (!hasContactPerson) {
+                            checklist.push('Выберите контактное лицо');
+                        }
+                    }
+
                     var peopleCountInput = document.getElementById('people-count');
                     var peopleCountVal = peopleCountInput ? String(peopleCountInput.value || '').trim() : '';
                     if (isSimplifiedScenario) {
@@ -1371,11 +2468,7 @@
                             }
                         }
 
-                        var tariffSelect = document.getElementById('tariff');
-                        var tariffSelectedLi = tariffSelect ? tariffSelect.querySelector('ul.options li.selected') : null;
-                        if (!tariffSelectedLi) {
-                            checklist.push('Выберите тариф');
-                        }
+                        // Тариф проверяется per-block выше
                     }
                     
                     // Обновляем чек-лист в тултипе

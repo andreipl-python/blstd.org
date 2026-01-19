@@ -1232,14 +1232,6 @@
                 }
             }
 
-            var tariffSelect = document.getElementById('tariff');
-            if (tariffSelect) {
-                var selectedTariff = tariffSelect.querySelector('ul.options li.selected');
-                if (selectedTariff) {
-                    formData.append('tariff_id', selectedTariff.getAttribute('data-value'));
-                }
-            }
-
             // Direction ID (направление)
             var directionSelect = document.getElementById('field-direction');
             if (directionSelect) {
@@ -1257,86 +1249,6 @@
                 }
             }
 
-            // Full datetime (дата + время начала)
-            var modalDateInput = document.getElementById('modal-create-date');
-            var startTime = window.currentStartTimeMinutes;
-            if (modalDateInput && modalDateInput.value && startTime !== null && startTime !== undefined) {
-                var timeHm = null;
-                if (window.BookingTimeUtils && typeof window.BookingTimeUtils.formatTimeHHMM === 'function') {
-                    timeHm = window.BookingTimeUtils.formatTimeHHMM(startTime);
-                } else {
-                    var hours = Math.floor(startTime / 60);
-                    var mins = startTime % 60;
-                    timeHm = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
-                }
-                formData.append('full_datetime', modalDateInput.value + ' ' + timeHm + ':00');
-            }
-
-            // Duration (длительность в формате HH:MM)
-            var durationSelect = document.getElementById('duration');
-            var startMinutesForDuration = window.currentStartTimeMinutes;
-            var endMinutesForDuration = window.currentEndTimeMinutes;
-            if (
-                startMinutesForDuration !== null && startMinutesForDuration !== undefined &&
-                endMinutesForDuration !== null && endMinutesForDuration !== undefined &&
-                endMinutesForDuration > startMinutesForDuration
-            ) {
-                var durationMinutes = endMinutesForDuration - startMinutesForDuration;
-                var durationStr = null;
-                if (window.BookingTimeUtils && typeof window.BookingTimeUtils.formatDurationHHMM === 'function') {
-                    durationStr = window.BookingTimeUtils.formatDurationHHMM(durationMinutes);
-                } else {
-                    var durationHours = Math.floor(durationMinutes / 60);
-                    var durationMins = durationMinutes % 60;
-                    durationStr = String(durationHours).padStart(2, '0') + ':' + String(durationMins).padStart(2, '0');
-                }
-                formData.append('duration', durationStr);
-            } else if (durationSelect) {
-                var selectedDuration = durationSelect.querySelector('ul.options li.selected');
-                if (selectedDuration) {
-                    var durationStr = selectedDuration.getAttribute('data-value');
-                    if (!durationStr) {
-                        var periods = parseInt(selectedDuration.getAttribute('data-periods'), 10);
-                        var minMinutes = window.getScenarioMinDurationMinutes ? window.getScenarioMinDurationMinutes() : 60;
-                        var totalMinutes = periods * minMinutes;
-                        if (window.BookingTimeUtils && typeof window.BookingTimeUtils.formatDurationHHMM === 'function') {
-                            durationStr = window.BookingTimeUtils.formatDurationHHMM(totalMinutes);
-                        } else {
-                            var durationHours = Math.floor(totalMinutes / 60);
-                            var durationMins = totalMinutes % 60;
-                            durationStr = String(durationHours).padStart(2, '0') + ':' + String(durationMins).padStart(2, '0');
-                        }
-                    }
-                    formData.append('duration', durationStr);
-                }
-            }
-
-            // Services (услуги)
-            var servicesSelect = document.getElementById('services');
-            if (servicesSelect && servicesSelect._selectedOptions) {
-                servicesSelect._selectedOptions.forEach(function (li) {
-                    var serviceId = li.getAttribute('data-value');
-                    if (serviceId) {
-                        formData.append('services', serviceId);
-                    }
-                });
-            }
-
-            // Total cost (стоимость)
-            var costElement = document.getElementById('bookingCostValue');
-            if (costElement) {
-                var costText = costElement.textContent.replace(/[^\d.,]/g, '').replace(',', '.');
-                if (costText) {
-                    formData.append('total_cost', costText);
-                }
-            }
-
-            // Comment (комментарий)
-            var commentField = document.getElementById('bookingComment');
-            if (commentField && commentField.value) {
-                formData.append('comment', commentField.value);
-            }
-
             var peopleCountInput = document.getElementById('people-count');
             if (peopleCountInput) {
                 var peopleCountVal = String(peopleCountInput.value || '').trim();
@@ -1348,9 +1260,188 @@
                 }
             }
 
-            var trialCheckbox = document.getElementById('trialLessonCheckbox');
-            if (trialCheckbox) {
-                formData.append('trialLesson', trialCheckbox.checked ? '1' : '0');
+            function normalizeCostText(text) {
+                return String(text || '').replace(/[^\d.,]/g, '').replace(',', '.');
+            }
+
+            function parseTimeToMinutes(hm) {
+                if (window.BookingModalUtils && typeof window.BookingModalUtils.parseHmToMinutes === 'function') {
+                    return window.BookingModalUtils.parseHmToMinutes(hm);
+                }
+                var s = String(hm || '').trim();
+                if (!s) return null;
+                var parts = s.split(':');
+                if (parts.length < 2) return null;
+                var h = parseInt(parts[0], 10);
+                var m = parseInt(parts[1], 10);
+                if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+                return (h * 60) + m;
+            }
+
+            function getBlockMinMinutes(blockEl) {
+                var isRepPointScenario = window.currentScenarioName === 'Репетиционная точка';
+                var isMusicClassScenario = window.currentScenarioName === 'Музыкальный класс';
+                var isTariffScenario = isRepPointScenario || isMusicClassScenario;
+
+                if (isTariffScenario) {
+                    var tariffSelect = blockEl ? blockEl.querySelector('.custom-select[id^="tariff"]') : null;
+                    var selectedTariff = tariffSelect ? tariffSelect.querySelector('ul.options li.selected') : null;
+                    if (selectedTariff) {
+                        var v = parseInt(selectedTariff.getAttribute('data-base-duration-minutes') || '0', 10);
+                        if (Number.isFinite(v) && v > 0) {
+                            return v;
+                        }
+                    }
+                }
+
+                var sid = (window.currentScenarioFilterId !== undefined && window.currentScenarioFilterId !== null)
+                    ? String(window.currentScenarioFilterId)
+                    : '';
+                if (sid && window.BookingTimeUtils && typeof window.BookingTimeUtils.getScenarioMinDurationMinutes === 'function') {
+                    var mm = window.BookingTimeUtils.getScenarioMinDurationMinutes(sid);
+                    if (Number.isFinite(mm) && mm > 0) {
+                        return mm;
+                    }
+                }
+                if (typeof window.getScenarioMinDurationMinutes === 'function') {
+                    var mm2 = window.getScenarioMinDurationMinutes();
+                    if (Number.isFinite(mm2) && mm2 > 0) {
+                        return mm2;
+                    }
+                }
+                return 60;
+            }
+
+            function formatDurationMinutesToHHMM(totalMinutes) {
+                var n = parseInt(totalMinutes || '0', 10);
+                if (!Number.isFinite(n) || n <= 0) return '';
+                if (window.BookingTimeUtils && typeof window.BookingTimeUtils.formatDurationHHMM === 'function') {
+                    return window.BookingTimeUtils.formatDurationHHMM(n);
+                }
+                var h = Math.floor(n / 60);
+                var m = n % 60;
+                return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+            }
+
+            function buildBlockPayload(blockEl) {
+                var dateInput = blockEl ? blockEl.querySelector('input[id^="modal-create-date"]') : null;
+                var dateIso = dateInput ? String(dateInput.value || '').trim() : '';
+
+                var state = (blockEl && blockEl._bulkTimeState) ? blockEl._bulkTimeState : {};
+                var startMinutes = (state.startMinutes !== undefined) ? state.startMinutes : null;
+                var endMinutes = (state.endMinutes !== undefined) ? state.endMinutes : null;
+                var selectedPeriods = (state.selectedPeriods !== undefined) ? state.selectedPeriods : null;
+
+                var startTimeSelectEl = blockEl ? blockEl.querySelector('.custom-select[id^="start-time"]') : null;
+                var endTimeSelectEl = blockEl ? blockEl.querySelector('.custom-select[id^="end-time"]') : null;
+                var durationSelectEl = blockEl ? blockEl.querySelector('.custom-select[id^="duration"]') : null;
+
+                var startSelected = startTimeSelectEl ? startTimeSelectEl.querySelector('ul.options li.selected') : null;
+                var endSelected = endTimeSelectEl ? endTimeSelectEl.querySelector('ul.options li.selected') : null;
+                var durationSelected = durationSelectEl ? durationSelectEl.querySelector('ul.options li.selected') : null;
+
+                if ((startMinutes === null || startMinutes === undefined) && startSelected) {
+                    var smRaw = startSelected.getAttribute('data-minutes');
+                    var sm = smRaw !== null && smRaw !== undefined ? parseInt(smRaw, 10) : null;
+                    if (!Number.isFinite(sm)) {
+                        sm = parseTimeToMinutes(startSelected.getAttribute('data-value') || startSelected.textContent);
+                    }
+                    startMinutes = Number.isFinite(sm) ? sm : startMinutes;
+                }
+
+                if ((endMinutes === null || endMinutes === undefined) && endSelected) {
+                    var emRaw = endSelected.getAttribute('data-minutes');
+                    var em = emRaw !== null && emRaw !== undefined ? parseInt(emRaw, 10) : null;
+                    if (!Number.isFinite(em)) {
+                        em = parseTimeToMinutes(endSelected.getAttribute('data-value') || endSelected.textContent);
+                    }
+                    endMinutes = Number.isFinite(em) ? em : endMinutes;
+                }
+
+                if ((selectedPeriods === null || selectedPeriods === undefined) && durationSelected) {
+                    var p = parseInt(durationSelected.getAttribute('data-periods') || '', 10);
+                    if (Number.isFinite(p) && p >= 1) {
+                        selectedPeriods = p;
+                    }
+                }
+
+                var fullDatetime = '';
+                if (dateIso && startMinutes !== null && startMinutes !== undefined) {
+                    fullDatetime = dateIso + ' ' + formatMinutesToHHMM(startMinutes) + ':00';
+                }
+
+                var durationStr = '';
+                if (durationSelected) {
+                    durationStr = durationSelected.getAttribute('data-value') || '';
+                }
+                if (!durationStr &&
+                    startMinutes !== null && startMinutes !== undefined &&
+                    endMinutes !== null && endMinutes !== undefined &&
+                    endMinutes > startMinutes
+                ) {
+                    durationStr = formatDurationMinutesToHHMM(endMinutes - startMinutes);
+                } else if (!durationStr && selectedPeriods !== null && selectedPeriods !== undefined) {
+                    var minMinutes = getBlockMinMinutes(blockEl);
+                    var totalMinutes = parseInt(selectedPeriods, 10) * parseInt(minMinutes, 10);
+                    durationStr = formatDurationMinutesToHHMM(totalMinutes);
+                }
+
+                var services = [];
+                var servicesSelect = blockEl ? blockEl.querySelector('.custom-select[id^="services"]') : null;
+                if (servicesSelect && servicesSelect._selectedOptions) {
+                    Array.from(servicesSelect._selectedOptions).forEach(function (li) {
+                        var serviceId = li.getAttribute('data-value');
+                        if (serviceId) {
+                            services.push(String(serviceId));
+                        }
+                    });
+                }
+
+                var tariffId = '';
+                var tariffSelect = blockEl ? blockEl.querySelector('.custom-select[id^="tariff"]') : null;
+                if (tariffSelect) {
+                    var selectedTariff = tariffSelect.querySelector('ul.options li.selected');
+                    if (selectedTariff) {
+                        tariffId = String(selectedTariff.getAttribute('data-value') || '');
+                    }
+                }
+
+                var comment = '';
+                var commentField = blockEl ? blockEl.querySelector('textarea[id^="bookingComment"]') : null;
+                if (commentField && commentField.value) {
+                    comment = String(commentField.value);
+                }
+
+                var totalCost = '';
+                var costElement = blockEl ? blockEl.querySelector('[id^="bookingCostValue"]') : null;
+                if (costElement) {
+                    totalCost = normalizeCostText(costElement.textContent);
+                }
+
+                var trialLesson = '';
+                var trialCheckbox = blockEl ? blockEl.querySelector('input[id^="trialLessonCheckbox"]') : null;
+                if (trialCheckbox) {
+                    trialLesson = trialCheckbox.checked ? '1' : '0';
+                }
+
+                return {
+                    full_datetime: fullDatetime,
+                    duration: durationStr,
+                    services: services,
+                    tariff_id: tariffId,
+                    total_cost: totalCost,
+                    comment: comment,
+                    trialLesson: trialLesson
+                };
+            }
+
+            var blocksContainer = document.getElementById('bookingBlocksContainer');
+            var blockEls = blocksContainer ? blocksContainer.querySelectorAll('.booking-create-block') : [];
+            var blocks = [];
+            if (blockEls && blockEls.length) {
+                Array.from(blockEls).forEach(function (blockEl) {
+                    blocks.push(buildBlockPayload(blockEl));
+                });
             }
 
             // Валидация обязательных полей
@@ -1378,19 +1469,61 @@
             }
 
             if (isPeopleCountScenario) {
-                var tariffIdVal = formData.get('tariff_id');
-                if (!tariffIdVal) {
-                    alert('Выберите тариф');
-                    return;
+                if (blocks && blocks.length) {
+                    for (var bi = 0; bi < blocks.length; bi++) {
+                        if (!blocks[bi] || !blocks[bi].tariff_id) {
+                            alert('Блок ' + (bi + 1) + ': выберите тариф');
+                            return;
+                        }
+                    }
                 }
             }
-            if (!formData.get('full_datetime')) {
-                alert('Выберите время начала');
+
+            if (blocks && blocks.length) {
+                for (var bi = 0; bi < blocks.length; bi++) {
+                    if (!blocks[bi] || !blocks[bi].full_datetime) {
+                        alert('Блок ' + (bi + 1) + ': выберите время начала');
+                        return;
+                    }
+                    if (!blocks[bi] || !blocks[bi].duration) {
+                        alert('Блок ' + (bi + 1) + ': выберите длительность');
+                        return;
+                    }
+                }
+            } else {
+                alert('Не найден ни один блок брони');
                 return;
             }
-            if (!formData.get('duration')) {
-                alert('Выберите длительность');
-                return;
+
+            if (blocks.length > 1) {
+                formData.append('blocks_json', JSON.stringify(blocks));
+            } else {
+                var b0 = blocks[0] || {};
+                if (b0.full_datetime) {
+                    formData.append('full_datetime', b0.full_datetime);
+                }
+                if (b0.duration) {
+                    formData.append('duration', b0.duration);
+                }
+                if (b0.tariff_id) {
+                    formData.append('tariff_id', b0.tariff_id);
+                }
+                if (Array.isArray(b0.services)) {
+                    b0.services.forEach(function (serviceId) {
+                        if (serviceId) {
+                            formData.append('services', String(serviceId));
+                        }
+                    });
+                }
+                if (b0.total_cost) {
+                    formData.append('total_cost', b0.total_cost);
+                }
+                if (b0.comment) {
+                    formData.append('comment', b0.comment);
+                }
+                if (b0.trialLesson !== undefined && b0.trialLesson !== null && String(b0.trialLesson) !== '') {
+                    formData.append('trialLesson', String(b0.trialLesson));
+                }
             }
 
             // Отправка запроса
@@ -1433,7 +1566,11 @@
                     var modal = bootstrap.Modal.getOrCreateInstance(modalElement);
                     modal.hide();
                 } else {
-                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                    if (data && data.block_index) {
+                        alert('Ошибка (блок ' + data.block_index + '): ' + (data.error || 'Неизвестная ошибка'));
+                    } else {
+                        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                    }
                 }
             })
             .catch(function (error) {
