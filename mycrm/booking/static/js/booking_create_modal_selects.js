@@ -117,7 +117,7 @@
             return String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
         }
 
-        function setTariffSelectDisabled(selectEl, text) {
+        function setTariffSelectDisabled(selectEl, text, blockEl) {
             if (!selectEl) return;
             selectEl.classList.add('disabled');
             selectEl.classList.remove('open');
@@ -133,12 +133,16 @@
 
             syncClearableSelectState(selectEl);
 
-            if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
-                window.syncCreateBookingTariffTimeFields();
+            if (blockEl && typeof blockEl._bulkOnTariffChanged === 'function') {
+                blockEl._bulkOnTariffChanged();
+            } else {
+                if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
+                    window.syncCreateBookingTariffTimeFields();
+                }
             }
         }
 
-        function renderTariffOptions(selectEl, tariffs) {
+        function renderTariffOptions(selectEl, tariffs, blockEl) {
             if (!selectEl) return;
 
             var optionsEl = selectEl.querySelector('ul.options');
@@ -171,8 +175,12 @@
                 if (selectedSpan) selectedSpan.textContent = restore.textContent;
                 syncClearableSelectState(selectEl);
 
-                if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
-                    window.syncCreateBookingTariffTimeFields();
+                if (blockEl && typeof blockEl._bulkOnTariffChanged === 'function') {
+                    blockEl._bulkOnTariffChanged();
+                } else {
+                    if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
+                        window.syncCreateBookingTariffTimeFields();
+                    }
                 }
                 return;
             }
@@ -182,6 +190,14 @@
                 selectedSpan.textContent = placeholder;
             }
 
+            if (blockEl && typeof blockEl._bulkOnTariffChanged === 'function') {
+                blockEl._bulkOnTariffChanged();
+            } else {
+                if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
+                    window.syncCreateBookingTariffTimeFields();
+                }
+            }
+
             if ((tariffs || []).length === 1) {
                 var onlyLi = optionsEl.querySelector('li');
                 if (onlyLi && window.BookingSelectsUtils && typeof window.BookingSelectsUtils.selectOption === 'function') {
@@ -189,14 +205,19 @@
                         selectEl: selectEl,
                         optionEl: onlyLi,
                         onSelected: function () {
-                            if (typeof window.calculateAndUpdateBookingCost === 'function') {
-                                window.calculateAndUpdateBookingCost();
-                            }
                             if (typeof window.updateSubmitButtonState === 'function') {
                                 window.updateSubmitButtonState();
                             }
-                            if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
-                                window.syncCreateBookingTariffTimeFields();
+
+                            if (blockEl && typeof blockEl._bulkOnTariffChanged === 'function') {
+                                blockEl._bulkOnTariffChanged();
+                            } else {
+                                if (typeof window.calculateAndUpdateBookingCost === 'function') {
+                                    window.calculateAndUpdateBookingCost();
+                                }
+                                if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
+                                    window.syncCreateBookingTariffTimeFields();
+                                }
                             }
                         }
                     });
@@ -204,105 +225,156 @@
             }
         }
 
-        function syncCreateBookingTariffs() {
-            var selectEl = document.getElementById('tariff');
-            if (!selectEl) return;
-
+        function syncCreateBookingTariffs(blockEl) {
             if (!isTariffScenario()) {
                 return;
             }
 
-            var roomIdField = document.getElementById('roomIdField');
-            var roomId = roomIdField ? String(roomIdField.value || '').trim() : '';
-            var scenarioId = (window.currentScenarioFilterId !== undefined && window.currentScenarioFilterId !== null)
-                ? String(window.currentScenarioFilterId)
-                : '';
-
-            var modalDateInput = document.getElementById('modal-create-date');
-            var dateIso = modalDateInput ? String(modalDateInput.value || '').trim() : '';
-
-            var startMinutes = window.currentStartTimeMinutes;
-            var startHm = (startMinutes !== null && startMinutes !== undefined) ? formatMinutesToHHMM(startMinutes) : '';
-            var endMinutes = window.currentEndTimeMinutes;
-            var endHm = (endMinutes !== null && endMinutes !== undefined) ? formatMinutesToHHMM(endMinutes) : '';
-
-            var peopleCountEl = document.getElementById('people-count');
-            var peopleCount = peopleCountEl ? String(peopleCountEl.value || '').trim() : '';
-
-            if (!scenarioId || !roomId || !dateIso || !startHm) {
-                selectEl._tariffsLastRequestKey = null;
-                setTariffSelectDisabled(selectEl, 'Выберите время начала');
-                if (typeof window.updateSubmitButtonState === 'function') {
-                    window.updateSubmitButtonState();
+            function parseTimeToMinutes(hm) {
+                if (window.BookingModalUtils && typeof window.BookingModalUtils.parseHmToMinutes === 'function') {
+                    return window.BookingModalUtils.parseHmToMinutes(hm);
                 }
-                if (typeof window.calculateAndUpdateBookingCost === 'function') {
-                    window.calculateAndUpdateBookingCost();
-                }
-                return;
+                var s = String(hm || '').trim();
+                if (!s) return null;
+                var parts = s.split(':');
+                if (parts.length < 2) return null;
+                var h = parseInt(parts[0], 10);
+                var m = parseInt(parts[1], 10);
+                if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+                return (h * 60) + m;
             }
 
-            var peopleCountInt = peopleCount ? parseInt(peopleCount, 10) : NaN;
-            if (!peopleCount || !Number.isFinite(peopleCountInt) || peopleCountInt < 1) {
-                selectEl._tariffsLastRequestKey = null;
-                setTariffSelectDisabled(selectEl, 'Укажите количество людей');
-                if (typeof window.updateSubmitButtonState === 'function') {
-                    window.updateSubmitButtonState();
+            function syncTariffsInBlock(b) {
+                if (!b || typeof b.querySelector !== 'function') return;
+
+                var selectEl = b.querySelector('.custom-select[id^="tariff"]');
+                if (!selectEl) return;
+
+                var roomIdField = document.getElementById('roomIdField');
+                var roomId = roomIdField ? String(roomIdField.value || '').trim() : '';
+                var scenarioId = (window.currentScenarioFilterId !== undefined && window.currentScenarioFilterId !== null)
+                    ? String(window.currentScenarioFilterId)
+                    : '';
+
+                var dateInput = b.querySelector('input[id^="modal-create-date"]');
+                var dateIso = dateInput ? String(dateInput.value || '').trim() : '';
+
+                var state = b._bulkTimeState || {};
+                var startMinutes = (state.startMinutes !== undefined) ? state.startMinutes : null;
+                var endMinutes = (state.endMinutes !== undefined) ? state.endMinutes : null;
+
+                if ((startMinutes === null || startMinutes === undefined)) {
+                    var startSelect = b.querySelector('.custom-select[id^="start-time"]');
+                    var startLi = startSelect ? startSelect.querySelector('ul.options li.selected') : null;
+                    if (startLi) {
+                        var smRaw = startLi.getAttribute('data-minutes');
+                        var sm = smRaw !== null && smRaw !== undefined ? parseInt(smRaw, 10) : null;
+                        if (!Number.isFinite(sm)) {
+                            sm = parseTimeToMinutes(startLi.getAttribute('data-value') || startLi.textContent);
+                        }
+                        startMinutes = Number.isFinite(sm) ? sm : startMinutes;
+                    }
                 }
-                if (typeof window.calculateAndUpdateBookingCost === 'function') {
-                    window.calculateAndUpdateBookingCost();
+                if ((endMinutes === null || endMinutes === undefined)) {
+                    var endSelect = b.querySelector('.custom-select[id^="end-time"]');
+                    var endLi = endSelect ? endSelect.querySelector('ul.options li.selected') : null;
+                    if (endLi) {
+                        var emRaw = endLi.getAttribute('data-minutes');
+                        var em = emRaw !== null && emRaw !== undefined ? parseInt(emRaw, 10) : null;
+                        if (!Number.isFinite(em)) {
+                            em = parseTimeToMinutes(endLi.getAttribute('data-value') || endLi.textContent);
+                        }
+                        endMinutes = Number.isFinite(em) ? em : endMinutes;
+                    }
                 }
-                return;
-            }
 
-            var qs = new URLSearchParams({
-                scenario_id: scenarioId,
-                room_id: roomId,
-                date_iso: dateIso,
-                start_time_hm: startHm,
-                people_count: peopleCount
-            });
-            if (endHm) {
-                qs.set('end_time_hm', endHm);
-            }
+                var startHm = (startMinutes !== null && startMinutes !== undefined) ? formatMinutesToHHMM(startMinutes) : '';
+                var endHm = (endMinutes !== null && endMinutes !== undefined) ? formatMinutesToHHMM(endMinutes) : '';
 
-            var requestKey = qs.toString();
-            if (selectEl._tariffsLastRequestKey === requestKey) {
-                return;
-            }
-            selectEl._tariffsLastRequestKey = requestKey;
+                var peopleCountEl = document.getElementById('people-count');
+                var peopleCount = peopleCountEl ? String(peopleCountEl.value || '').trim() : '';
 
-            fetch('/booking/get-available-tariffs/?' + requestKey, {
-                method: 'GET'
-            })
-            .then(function (resp) { return resp.json(); })
-            .then(function (data) {
-                if (!data || !data.success) {
-                    setTariffSelectDisabled(selectEl, 'Нет доступных тарифов');
+                if (!scenarioId || !roomId || !dateIso || !startHm) {
+                    selectEl._tariffsLastRequestKey = null;
+                    setTariffSelectDisabled(selectEl, 'Выберите время начала', b);
+                    if (typeof window.updateSubmitButtonState === 'function') {
+                        window.updateSubmitButtonState();
+                    }
                     return;
                 }
 
-                var tariffs = Array.isArray(data.tariffs) ? data.tariffs : [];
-                if (!tariffs.length) {
-                    setTariffSelectDisabled(selectEl, 'Нет доступных тарифов');
+                var peopleCountInt = peopleCount ? parseInt(peopleCount, 10) : NaN;
+                if (!peopleCount || !Number.isFinite(peopleCountInt) || peopleCountInt < 1) {
+                    selectEl._tariffsLastRequestKey = null;
+                    setTariffSelectDisabled(selectEl, 'Укажите количество людей', b);
+                    if (typeof window.updateSubmitButtonState === 'function') {
+                        window.updateSubmitButtonState();
+                    }
                     return;
                 }
 
-                renderTariffOptions(selectEl, tariffs);
-            })
-            .catch(function () {
-                setTariffSelectDisabled(selectEl, 'Нет доступных тарифов');
-            })
-            .finally(function () {
-                if (typeof window.updateSubmitButtonState === 'function') {
-                    window.updateSubmitButtonState();
-                }
-                if (typeof window.calculateAndUpdateBookingCost === 'function') {
-                    window.calculateAndUpdateBookingCost();
+                var qs = new URLSearchParams({
+                    scenario_id: scenarioId,
+                    room_id: roomId,
+                    date_iso: dateIso,
+                    start_time_hm: startHm,
+                    people_count: peopleCount
+                });
+                if (endHm) {
+                    qs.set('end_time_hm', endHm);
                 }
 
-                if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
-                    window.syncCreateBookingTariffTimeFields();
+                var requestKey = qs.toString();
+                if (selectEl._tariffsLastRequestKey === requestKey) {
+                    return;
                 }
+                selectEl._tariffsLastRequestKey = requestKey;
+
+                fetch('/booking/get-available-tariffs/?' + requestKey, {
+                    method: 'GET'
+                })
+                .then(function (resp) { return resp.json(); })
+                .then(function (data) {
+                    if (!data || !data.success) {
+                        setTariffSelectDisabled(selectEl, 'Нет доступных тарифов', b);
+                        return;
+                    }
+
+                    var tariffs = Array.isArray(data.tariffs) ? data.tariffs : [];
+                    if (!tariffs.length) {
+                        setTariffSelectDisabled(selectEl, 'Нет доступных тарифов', b);
+                        return;
+                    }
+
+                    renderTariffOptions(selectEl, tariffs, b);
+                })
+                .catch(function () {
+                    setTariffSelectDisabled(selectEl, 'Нет доступных тарифов', b);
+                })
+                .finally(function () {
+                    if (typeof window.updateSubmitButtonState === 'function') {
+                        window.updateSubmitButtonState();
+                    }
+                });
+            }
+
+            if (blockEl && typeof blockEl.querySelector === 'function') {
+                syncTariffsInBlock(blockEl);
+                return;
+            }
+
+            var blocksContainer = document.getElementById('bookingBlocksContainer');
+            var blocks = blocksContainer ? Array.from(blocksContainer.querySelectorAll('.booking-create-block')) : [];
+            if (!blocks.length) {
+                var rootTariffSelect = document.getElementById('tariff');
+                if (rootTariffSelect) {
+                    syncTariffsInBlock(document);
+                }
+                return;
+            }
+
+            blocks.forEach(function (b) {
+                syncTariffsInBlock(b);
             });
         }
 
@@ -654,6 +726,14 @@
             if (typeof window.syncCreateBookingMusicSchoolTimeFields === 'function') {
                 window.syncCreateBookingMusicSchoolTimeFields();
             }
+
+            var blocksContainer = document.getElementById('bookingBlocksContainer');
+            var blocks = blocksContainer ? Array.from(blocksContainer.querySelectorAll('.booking-create-block')) : [];
+            blocks.forEach(function (b) {
+                if (b && typeof b._bulkOnTariffChanged === 'function') {
+                    b._bulkOnTariffChanged();
+                }
+            });
         }
         window.applySpecialistServicesFilter = applySpecialistServicesFilter;
 
@@ -865,6 +945,13 @@
                             if (typeof window.syncCreateBookingMusicSchoolTimeFields === 'function') {
                                 window.syncCreateBookingMusicSchoolTimeFields();
                             }
+                            var blocksContainer = document.getElementById('bookingBlocksContainer');
+                            var blocks = blocksContainer ? Array.from(blocksContainer.querySelectorAll('.booking-create-block')) : [];
+                            blocks.forEach(function (b) {
+                                if (b && typeof b._bulkOnTariffChanged === 'function') {
+                                    b._bulkOnTariffChanged();
+                                }
+                            });
                         },
                         beforeClear: function (ctx) {
                             var selectEl = ctx ? ctx.selectEl : null;
@@ -882,6 +969,13 @@
                             if (typeof window.syncCreateBookingMusicSchoolTimeFields === 'function') {
                                 window.syncCreateBookingMusicSchoolTimeFields();
                             }
+                            var blocksContainer = document.getElementById('bookingBlocksContainer');
+                            var blocks = blocksContainer ? Array.from(blocksContainer.querySelectorAll('.booking-create-block')) : [];
+                            blocks.forEach(function (b) {
+                                if (b && typeof b._bulkOnTariffChanged === 'function') {
+                                    b._bulkOnTariffChanged();
+                                }
+                            });
                         }
                     },
                     'tariff': {

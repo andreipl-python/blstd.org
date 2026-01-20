@@ -572,6 +572,20 @@
                 return window.currentScenarioName === 'Репетиционная точка' || window.currentScenarioName === 'Музыкальный класс';
             }
 
+            function isMusicSchoolScenario() {
+                return window.currentScenarioName === 'Музыкальная школа';
+            }
+
+            function getSelectedSpecialistServiceDurationMinutesOrNull() {
+                var specialistServiceSelect = document.getElementById('specialist-service');
+                if (!specialistServiceSelect) return null;
+                var selectedLi = specialistServiceSelect.querySelector('ul.options li.selected');
+                if (!selectedLi) return null;
+                var raw = selectedLi.getAttribute('data-duration-minutes') || '0';
+                var n = parseInt(raw, 10);
+                return Number.isFinite(n) && n > 0 ? n : null;
+            }
+
             function parseTariffDayIntervalsMinutesOrNull() {
                 var tariffSelect = blockEl.querySelector('.custom-select[id^="tariff"]');
                 if (!tariffSelect) return null;
@@ -609,6 +623,10 @@
             }
 
             function getMinMinutes() {
+                if (isMusicSchoolScenario()) {
+                    var mmS = getSelectedSpecialistServiceDurationMinutesOrNull();
+                    if (mmS) return mmS;
+                }
                 if (isTariffScenario()) {
                     var tariffMin = getTariffBaseDurationMinutesOrNull();
                     if (tariffMin) return tariffMin;
@@ -684,6 +702,9 @@
                     if (typeof window.updateSubmitButtonState === 'function') {
                         window.updateSubmitButtonState();
                     }
+                    if (typeof window.syncCreateBookingTariffs === 'function') {
+                        window.syncCreateBookingTariffs(blockEl);
+                    }
                     calculateAndUpdateBookingCostInBlock(blockEl);
                 });
             }
@@ -732,11 +753,37 @@
 
                 var tariffIntervals = isTariffScenario() ? parseTariffDayIntervalsMinutesOrNull() : null;
 
+                var musicSchoolTimeFrozen = isMusicSchoolScenario() && !getSelectedSpecialistServiceDurationMinutesOrNull();
+
                 if (state._lastMinMinutes !== undefined && state._lastMinMinutes !== null && state._lastMinMinutes !== minMinutes) {
                     state.selectedPeriods = null;
                     state.endMinutes = null;
                 }
                 state._lastMinMinutes = minMinutes;
+
+                if (musicSchoolTimeFrozen) {
+                    state.selectedPeriods = null;
+                    state.endMinutes = null;
+
+                    var startSlotsNoService = utils.getStartTimeSlotsForPeriods(1, roomBookings, workStart, workEnd, minMinutes);
+                    utils.rebuildStartTimeSelect(startSelect, startSlotsNoService, state.startMinutes, function (minutes) {
+                        state.startMinutes = minutes;
+                        if (typeof window.updateSubmitButtonState === 'function') {
+                            window.updateSubmitButtonState();
+                        }
+                        if (typeof window.syncCreateBookingTariffs === 'function') {
+                            window.syncCreateBookingTariffs(blockEl);
+                        }
+                        calculateAndUpdateBookingCostInBlock(blockEl);
+                    });
+
+                    utils.rebuildDurationSelect(durationSelect, null, 0, minMinutes);
+                    utils.rebuildEndTimeSelect(endSelect, [], null);
+                    durationSelect.classList.add('disabled');
+                    endSelect.classList.add('disabled');
+                    calculateAndUpdateBookingCostInBlock(blockEl);
+                    return;
+                }
 
                 function filterStartSlotsByTariffDayIntervals(slots, requiredPeriods) {
                     if (!tariffIntervals) return slots;
@@ -847,6 +894,9 @@
                         if (typeof window.updateSubmitButtonState === 'function') {
                             window.updateSubmitButtonState();
                         }
+                        if (typeof window.syncCreateBookingTariffs === 'function') {
+                            window.syncCreateBookingTariffs(blockEl);
+                        }
                         calculateAndUpdateBookingCostInBlock(blockEl);
                     });
 
@@ -892,6 +942,10 @@
                     if (typeof window.updateSubmitButtonState === 'function') {
                         window.updateSubmitButtonState();
                     }
+                    if (typeof window.syncCreateBookingTariffs === 'function') {
+                        window.syncCreateBookingTariffs(blockEl);
+                    }
+                    calculateAndUpdateBookingCostInBlock(blockEl);
                 });
 
                 var startSlots;
@@ -942,6 +996,10 @@
                     if (typeof window.updateSubmitButtonState === 'function') {
                         window.updateSubmitButtonState();
                     }
+                    if (typeof window.syncCreateBookingTariffs === 'function') {
+                        window.syncCreateBookingTariffs(blockEl);
+                    }
+                    calculateAndUpdateBookingCostInBlock(blockEl);
                 });
 
                 var endTimes;
@@ -993,6 +1051,10 @@
                     if (typeof window.updateSubmitButtonState === 'function') {
                         window.updateSubmitButtonState();
                     }
+                    if (typeof window.syncCreateBookingTariffs === 'function') {
+                        window.syncCreateBookingTariffs(blockEl);
+                    }
+                    calculateAndUpdateBookingCostInBlock(blockEl);
                 });
             }
 
@@ -1008,6 +1070,9 @@
                         window.updateSubmitButtonState();
                     }
                     calculateAndUpdateBookingCostInBlock(blockEl);
+                    if (typeof window.syncCreateBookingTariffs === 'function') {
+                        window.syncCreateBookingTariffs(blockEl);
+                    }
                 }, forceReload === true);
             }
 
@@ -1166,6 +1231,7 @@
      */
     function adaptModalForScenario(scenarioName) {
         // Сохраняем название сценария глобально для валидации
+        var prevScenarioName = window.currentScenarioName || '';
         window.currentScenarioName = scenarioName;
         
         // Определяем тип сценария
@@ -1282,26 +1348,30 @@
             }
         });
         
-        // Изменить лейбл клиента (Репточка и Музыкальный класс - с группами)
+        // Изменить лейбл клиента (только Репточка — с группами)
         if (clientLabel) {
-            clientLabel.textContent = isSimplifiedScenario ? 'Клиент / группа' : 'Клиент';
+            clientLabel.textContent = isRepPoint ? 'Клиент / группа' : 'Клиент';
         }
         
-        // Показать/скрыть группы в списке клиентов (Репточка и Музыкальный класс)
+        // Показать/скрыть группы в списке клиентов (только Репточка)
         if (clientSelect) {
             var groupOptions = clientSelect.querySelectorAll('.client-group-option');
             groupOptions.forEach(function(opt) {
-                opt.style.display = isSimplifiedScenario ? '' : 'none';
+                opt.style.display = isRepPoint ? '' : 'none';
             });
-            
-            // Сбросить выбор клиента при смене сценария
+
             var selectedSpan = clientSelect.querySelector('.selected');
-            if (selectedSpan) {
-                selectedSpan.textContent = isSimplifiedScenario ? 'Выберите клиента или группу' : 'Выберите клиента';
-            }
-            var selectedLi = clientSelect.querySelector('ul.options li.selected');
-            if (selectedLi) {
+            var selectedLi = clientSelect.querySelector('ul.options li.selected:not(#search-option)');
+            var selectedType = selectedLi ? String(selectedLi.getAttribute('data-type') || 'client') : '';
+
+            // Если выбранная опция — группа, а текущий сценарий не Репточка — сбрасываем выбор
+            if (!isRepPoint && selectedLi && selectedType === 'group') {
                 selectedLi.classList.remove('selected');
+                if (selectedSpan) {
+                    selectedSpan.textContent = 'Выберите клиента';
+                }
+            } else if (!selectedLi && selectedSpan) {
+                selectedSpan.textContent = isRepPoint ? 'Выберите клиента или группу' : 'Выберите клиента';
             }
         }
         
@@ -1311,7 +1381,7 @@
         }
 
         var peopleCountInput = document.getElementById('people-count');
-        if (peopleCountInput && !isSimplifiedScenario) {
+        if (peopleCountInput && prevScenarioName && prevScenarioName !== scenarioName && !isSimplifiedScenario) {
             peopleCountInput.value = '';
         }
     }
