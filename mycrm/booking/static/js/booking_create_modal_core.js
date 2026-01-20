@@ -1170,6 +1170,29 @@
             var clone = source.cloneNode(true);
             uniquifyIdsInBlock(clone, newIndex);
             resetClonedBlockUiState(clone);
+
+            var srcDateInput = source.querySelector('input[id^="modal-create-date"]');
+            var dstDateInput = clone.querySelector('input[id^="modal-create-date"]');
+            if (srcDateInput && dstDateInput) {
+                var iso = String(srcDateInput.value || '').trim();
+                if (iso) {
+                    var parts = iso.split('-');
+                    if (parts.length >= 3) {
+                        var y = parseInt(parts[0], 10);
+                        var m = parseInt(parts[1], 10);
+                        var d = parseInt(parts[2], 10);
+                        if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+                            var dt = new Date(y, m - 1, d);
+                            dt.setHours(0, 0, 0, 0);
+                            dt.setDate(dt.getDate() + 1);
+                            var yy = dt.getFullYear();
+                            var mm = String(dt.getMonth() + 1).padStart(2, '0');
+                            var dd = String(dt.getDate()).padStart(2, '0');
+                            dstDateInput.value = yy + '-' + mm + '-' + dd;
+                        }
+                    }
+                }
+            }
             container.appendChild(clone);
             refreshBlocksUi();
 
@@ -1299,7 +1322,7 @@
             specialistServiceContainer.style.display = isMusicSchool ? '' : 'none';
         }
         
-        // Тариф (для Репетиционной точки и Музыкального класса) и позиционирование "Дополнительных услуг" (для Музыкальной школы)
+        // Тариф (для Репетиционной точки и Музыкального класса)
         var blocksContainer = document.getElementById('bookingBlocksContainer');
         var blocks = blocksContainer ? blocksContainer.querySelectorAll('.booking-create-block') : [];
         blocks.forEach(function (blockEl) {
@@ -1308,44 +1331,81 @@
                 tariffFieldContainer.style.display = isSimplifiedScenario ? '' : 'none';
             }
 
-            var trialLessonContainer = blockEl.querySelector('[id^="trial-lesson-container"]');
-            if (trialLessonContainer) {
-                trialLessonContainer.style.display = isSimplifiedScenario ? 'none' : '';
-            }
-
-            // Перемещение "Дополнительные услуги" для Музыкальной школы внутри каждого блока
+            var tariffRow = blockEl.querySelector('[id^="tariff-row"]');
+            var servicesLayoutRow = blockEl.querySelector('[id^="services-layout-row"]');
             var servicesContainer = blockEl.querySelector('[id^="services-container"]');
-            var additionalServicesRow = blockEl.querySelector('[id^="additional-services-row"]');
-            var additionalServicesCol = blockEl.querySelector('[id^="additional-services-col"]');
+            var servicesBadgesContainer = blockEl.querySelector('[id^="services-badges-container"]');
+            var servicesBadgesRow = blockEl.querySelector('[id^="services-badges-row"]');
 
-            // Ряд, где лежат Тариф + Доп. услуги
-            var tariffServicesRow = tariffFieldContainer ? tariffFieldContainer.closest('.row') : null;
-
-            if (!servicesContainer || !additionalServicesRow || !additionalServicesCol || !tariffServicesRow) {
-                return;
-            }
-
-            if (isMusicSchool) {
-                additionalServicesRow.style.display = '';
-                tariffServicesRow.style.display = 'none';
-
-                servicesContainer.classList.remove('col-md-6');
-                if (servicesContainer.parentElement !== additionalServicesCol) {
-                    additionalServicesCol.appendChild(servicesContainer);
+            if (isSimplifiedScenario) {
+                if (tariffRow) {
+                    tariffRow.style.display = 'none';
                 }
-            } else {
-                additionalServicesRow.style.display = 'none';
-                tariffServicesRow.style.display = '';
 
-                servicesContainer.classList.add('col-md-6');
-                if (servicesContainer.parentElement !== tariffServicesRow) {
-                    if (tariffFieldContainer && tariffFieldContainer.parentElement === tariffServicesRow) {
-                        tariffFieldContainer.insertAdjacentElement('afterend', servicesContainer);
-                    } else {
-                        tariffServicesRow.appendChild(servicesContainer);
+                if (servicesLayoutRow) {
+                    servicesLayoutRow.style.display = '';
+                }
+
+                if (servicesBadgesRow) {
+                    servicesBadgesRow.style.display = '';
+                }
+
+                if (servicesLayoutRow && tariffFieldContainer && tariffFieldContainer.parentNode !== servicesLayoutRow) {
+                    servicesLayoutRow.insertBefore(tariffFieldContainer, servicesLayoutRow.firstChild);
+                }
+                if (servicesLayoutRow && servicesContainer && servicesContainer.parentNode !== servicesLayoutRow) {
+                    servicesLayoutRow.appendChild(servicesContainer);
+                }
+                if (servicesLayoutRow && tariffFieldContainer && servicesContainer) {
+                    var children = Array.from(servicesLayoutRow.children || []);
+                    var ti = children.indexOf(tariffFieldContainer);
+                    var si = children.indexOf(servicesContainer);
+                    if (ti !== -1 && si !== -1 && si < ti) {
+                        servicesLayoutRow.insertBefore(tariffFieldContainer, servicesContainer);
                     }
                 }
+
+                if (servicesBadgesRow && servicesBadgesContainer) {
+                    var placeholder = servicesBadgesRow.querySelector('[data-services-badges-placeholder="1"]');
+                    if (!placeholder) {
+                        placeholder = document.createElement('div');
+                        placeholder.className = 'col-md-6';
+                        placeholder.setAttribute('data-services-badges-placeholder', '1');
+                    }
+                    if (servicesBadgesContainer.parentNode !== servicesBadgesRow) {
+                        servicesBadgesRow.innerHTML = '';
+                        servicesBadgesRow.appendChild(placeholder);
+                        servicesBadgesRow.appendChild(servicesBadgesContainer);
+                    }
+                }
+            } else {
+                if (tariffRow) {
+                    tariffRow.style.display = 'none';
+                }
+
+                if (servicesBadgesRow) {
+                    servicesBadgesRow.style.display = 'none';
+                    if (servicesBadgesContainer && servicesBadgesContainer.parentNode === servicesBadgesRow) {
+                        servicesBadgesRow.removeChild(servicesBadgesContainer);
+                    }
+                    servicesBadgesRow.innerHTML = '';
+                }
+
+                if (servicesLayoutRow) {
+                    servicesLayoutRow.style.display = '';
+                }
+
+                if (tariffRow && tariffFieldContainer && tariffFieldContainer.parentNode !== tariffRow) {
+                    tariffRow.appendChild(tariffFieldContainer);
+                }
+                if (servicesLayoutRow && servicesContainer && servicesContainer.parentNode !== servicesLayoutRow) {
+                    servicesLayoutRow.insertBefore(servicesContainer, servicesLayoutRow.firstChild);
+                }
+                if (servicesLayoutRow && servicesBadgesContainer && servicesBadgesContainer.parentNode !== servicesLayoutRow) {
+                    servicesLayoutRow.appendChild(servicesBadgesContainer);
+                }
             }
+
         });
         
         // Изменить лейбл клиента (только Репточка — с группами)

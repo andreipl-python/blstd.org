@@ -1227,10 +1227,6 @@
             if (peopleCountInput) {
                 peopleCountInput.value = '';
             }
-            var trialCheckbox = document.getElementById('trialLessonCheckbox');
-            if (trialCheckbox) {
-                trialCheckbox.checked = false;
-            }
             // Сбрасываем счётчик символов
             var commentCounter = document.getElementById('bookingCommentCounter');
             if (commentCounter) {
@@ -1512,20 +1508,13 @@
                     totalCost = normalizeCostText(costElement.textContent);
                 }
 
-                var trialLesson = '';
-                var trialCheckbox = blockEl ? blockEl.querySelector('input[id^="trialLessonCheckbox"]') : null;
-                if (trialCheckbox) {
-                    trialLesson = trialCheckbox.checked ? '1' : '0';
-                }
-
                 return {
                     full_datetime: fullDatetime,
                     duration: durationStr,
                     services: services,
                     tariff_id: tariffId,
                     total_cost: totalCost,
-                    comment: comment,
-                    trialLesson: trialLesson
+                    comment: comment
                 };
             }
 
@@ -1614,9 +1603,6 @@
                 }
                 if (b0.comment) {
                     formData.append('comment', b0.comment);
-                }
-                if (b0.trialLesson !== undefined && b0.trialLesson !== null && String(b0.trialLesson) !== '') {
-                    formData.append('trialLesson', String(b0.trialLesson));
                 }
             }
 

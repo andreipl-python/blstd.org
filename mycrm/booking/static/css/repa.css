@@ -1254,8 +1254,8 @@
     position: relative;
     border: 1px solid #EBEBEC;
     border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 16px;
+    padding: 12px;
+    margin-bottom: 12px;
   }
 
   .booking-create-block.booking-create-block--has-errors {
@@ -1267,7 +1267,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     font-family: 'Manrope';
     font-style: normal;
     font-weight: 600;
@@ -1307,6 +1307,27 @@
 
   .booking-create-block-action-btn:hover {
     border-color: #7A52FF;
+  }
+
+  #createBookingModal .booking-create-block .row.mb-3 {
+    margin-bottom: 8px !important;
+  }
+
+  #createBookingModal .booking-create-block .row.mb-4 {
+    margin-bottom: 10px !important;
+  }
+
+  #createBookingModal .booking-create-block .row.mb-5 {
+    margin-bottom: 12px !important;
+  }
+
+  #createBookingModal .custom-select.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  #createBookingModal .custom-select.disabled .selected {
+    color: #818EA2;
   }
 
   /*Сетка броней*/
@@ -1786,6 +1807,8 @@
     letter-spacing: -0.008em !important;
     color: #7A52FF;
     text-decoration: none;
+    margin-top: 10px;
+    display: inline-block;
   }
 
   /* Ссылка на историю платежей в модалке информации */
