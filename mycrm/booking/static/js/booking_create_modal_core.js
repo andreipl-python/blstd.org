@@ -16,6 +16,44 @@
             return Array.from(container.querySelectorAll('.booking-create-block'));
         }
 
+        function parseCostTextToNumber(text) {
+            var s = String(text || '').replace(',', '.');
+            var m = s.match(/-?\d+(?:\.\d+)?/);
+            if (!m) return 0;
+            var v = parseFloat(m[0]);
+            return Number.isFinite(v) ? v : 0;
+        }
+
+        function formatCostNumber(n) {
+            var v = Number(n || 0);
+            if (!Number.isFinite(v)) v = 0;
+            return v.toFixed(2).replace(/\.00$/, '');
+        }
+
+        function updateBulkTotalCost() {
+            var row = document.getElementById('bulkTotalCostRow');
+            var valueEl = document.getElementById('bulkTotalCostValue');
+            if (!row || !valueEl) return;
+
+            var blocks = getBlocks();
+            if (blocks.length <= 1) {
+                row.style.display = 'none';
+                valueEl.textContent = '0 BYN';
+                return;
+            }
+
+            var total = 0;
+            blocks.forEach(function (b) {
+                var ce = b ? b.querySelector('[id^="bookingCostValue"]') : null;
+                if (ce) {
+                    total += parseCostTextToNumber(ce.textContent);
+                }
+            });
+
+            valueEl.textContent = formatCostNumber(total) + ' BYN';
+            row.style.display = '';
+        }
+
         function normalizeIdForBlock(id, blockIndex) {
             if (!id) return id;
             var base = String(id).replace(/-b\d+$/, '');
@@ -435,6 +473,7 @@
                 var totalTariffCost = rentalCost + servicesCost;
                 var formattedTariff = Number(totalTariffCost || 0).toFixed(2).replace(/\.00$/, '');
                 costElement.textContent = formattedTariff + ' BYN';
+                updateBulkTotalCost();
                 return;
             }
 
@@ -445,6 +484,7 @@
                     selectedPeriods: selectedPeriods,
                     periodCost: _getScenarioTariffUnitCostGlobal()
                 });
+                updateBulkTotalCost();
                 return;
             }
 
@@ -455,6 +495,7 @@
             var totalCost = periodsTotalCost + servicesCost;
             var formatted = totalCost.toFixed(2).replace(/\.00$/, '');
             costElement.textContent = formatted + ' BYN';
+            updateBulkTotalCost();
         }
 
         function updateServicesBadgesInBlock(blockEl) {
@@ -1145,6 +1186,8 @@
                     removeBtn.disabled = false;
                 }
             });
+
+            updateBulkTotalCost();
         }
 
         function reindexBlocks() {
@@ -1169,6 +1212,8 @@
             if (typeof window.updateSubmitButtonState === 'function') {
                 window.updateSubmitButtonState();
             }
+
+            updateBulkTotalCost();
         }
 
         function addBlock() {

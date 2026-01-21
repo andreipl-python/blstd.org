@@ -1760,6 +1760,38 @@
     color: #7A52FF !important;
   }
 
+  .bulk-total-wrapper {
+    padding: 16px 18px;
+    border: 1px solid #EBEBEC;
+    border-radius: 18px;
+    background: #F8F8FA;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .bulk-total-text {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 130%;
+    letter-spacing: -0.01em;
+    color: #4F4F57;
+  }
+
+  .bulk-total-amount {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 700;
+    font-size: 22px;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    color: #7A52FF;
+    text-align: right;
+  }
+
   #bookingCommentCounter, #editBookingCommentCounter {
     display: flex;
     justify-content: flex-end;
