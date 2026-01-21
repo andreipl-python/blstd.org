@@ -42,6 +42,9 @@
 
             blockEl.classList.remove('booking-create-block--has-errors');
 
+            blockEl._bulkServerErrors = [];
+            blockEl._bulkServerErrorSnapshots = {};
+
             blockEl.querySelectorAll('.custom-select.open').forEach(function (el) {
                 el.classList.remove('open');
             });
@@ -49,6 +52,19 @@
             blockEl.querySelectorAll('.custom-select.has-warning').forEach(function (el) {
                 el.classList.remove('has-warning');
             });
+
+            blockEl.querySelectorAll('.modal-datepicker__trigger.has-warning').forEach(function (el) {
+                el.classList.remove('has-warning');
+            });
+
+            var blockWarn = blockEl.querySelector('[id^="block-warning-icon"]');
+            if (blockWarn) {
+                blockWarn.style.display = 'none';
+            }
+            var blockChecklist = blockEl.querySelector('[id^="block-checklist"]');
+            if (blockChecklist) {
+                blockChecklist.innerHTML = '';
+            }
 
             blockEl.querySelectorAll('[id^="start-time-warning-icon"], [id^="end-time-warning-icon"]').forEach(function (el) {
                 el.style.display = 'none';
@@ -1246,6 +1262,252 @@
         });
     }
 
+    function _normalizeCreateBookingErrorsPayload(data) {
+        if (data && Array.isArray(data.errors) && data.errors.length) {
+            return data.errors
+                .filter(function (e) { return e && (e.message || e.error); })
+                .map(function (e) {
+                    return {
+                        message: String(e.message || e.error || ''),
+                        field: (e.field !== undefined ? e.field : null),
+                        block_index: (e.block_index !== undefined ? e.block_index : null)
+                    };
+                });
+        }
+
+        if (data && (data.error || data.message)) {
+            return [
+                {
+                    message: String(data.error || data.message || ''),
+                    field: (data.field !== undefined ? data.field : null),
+                    block_index: (data.block_index !== undefined ? data.block_index : null)
+                }
+            ];
+        }
+
+        return [{ message: 'Неизвестная ошибка', field: null, block_index: null }];
+    }
+
+    function _getComparableValueForBlockField(blockEl, field) {
+        if (!blockEl) return '';
+
+        var dateInput = blockEl.querySelector('input[id^="modal-create-date"]');
+        var dateIso = dateInput ? String(dateInput.value || '').trim() : '';
+
+        var state = (blockEl && blockEl._bulkTimeState) ? blockEl._bulkTimeState : {};
+        var startMinutes = (state.startMinutes !== undefined) ? state.startMinutes : null;
+        var endMinutes = (state.endMinutes !== undefined) ? state.endMinutes : null;
+
+        function formatMinutesToHHMM(mins) {
+            var m = parseInt(mins, 10);
+            if (!Number.isFinite(m) || m < 0) return '';
+            var h = Math.floor(m / 60);
+            var mm = m % 60;
+            return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+        }
+
+        function buildBlockSnapshot() {
+            var startHm = (startMinutes !== null && startMinutes !== undefined) ? formatMinutesToHHMM(startMinutes) : '';
+            var endHm = (endMinutes !== null && endMinutes !== undefined) ? formatMinutesToHHMM(endMinutes) : '';
+            var tariffSel = blockEl.querySelector('.custom-select[id^="tariff"]');
+            var tariffLi = tariffSel ? tariffSel.querySelector('ul.options li.selected') : null;
+            var tariffId = tariffLi ? String(tariffLi.getAttribute('data-value') || '') : '';
+            return [dateIso, startHm, endHm, tariffId].join('|');
+        }
+
+        if (field === 'full_datetime') {
+            var startHm = (startMinutes !== null && startMinutes !== undefined) ? formatMinutesToHHMM(startMinutes) : '';
+            return dateIso && startHm ? (dateIso + ' ' + startHm) : '';
+        }
+
+        if (field === 'duration') {
+            var durationSelectEl = blockEl.querySelector('.custom-select[id^="duration"]');
+            var durationSelected = durationSelectEl ? durationSelectEl.querySelector('ul.options li.selected') : null;
+            if (durationSelected) {
+                return String(durationSelected.getAttribute('data-value') || durationSelected.textContent || '').trim();
+            }
+            if (startMinutes !== null && endMinutes !== null && Number.isFinite(startMinutes) && Number.isFinite(endMinutes) && endMinutes > startMinutes) {
+                return String(endMinutes - startMinutes);
+            }
+            return '';
+        }
+
+        if (field === 'tariff_id') {
+            var tariffSelect = blockEl.querySelector('.custom-select[id^="tariff"]');
+            var selectedTariff = tariffSelect ? tariffSelect.querySelector('ul.options li.selected') : null;
+            return selectedTariff ? String(selectedTariff.getAttribute('data-value') || '') : '';
+        }
+
+        if (!field) {
+            return buildBlockSnapshot();
+        }
+
+        return buildBlockSnapshot();
+    }
+
+    function _getComparableValueForSharedField(field) {
+        function buildSharedSnapshot() {
+            var peopleCountInput0 = document.getElementById('people-count');
+            var peopleCount0 = peopleCountInput0 ? String(peopleCountInput0.value || '').trim() : '';
+
+            var clientSelect0 = document.getElementById('client');
+            var selectedClient0 = clientSelect0 ? clientSelect0.querySelector('ul.options li.selected:not(#search-option)') : null;
+            var clientValue0 = selectedClient0 ? String(selectedClient0.getAttribute('data-value') || '') : '';
+            var clientType0 = selectedClient0 ? String(selectedClient0.getAttribute('data-type') || '') : '';
+
+            var teacherSelect0 = document.getElementById('teacher');
+            var selectedTeacher0 = teacherSelect0 ? teacherSelect0.querySelector('ul.options li.selected') : null;
+            var teacherId0 = selectedTeacher0 ? String(selectedTeacher0.getAttribute('data-value') || '') : '';
+
+            var directionSelect0 = document.getElementById('field-direction');
+            var selectedDirection0 = directionSelect0 ? directionSelect0.querySelector('ul.options li.selected') : null;
+            var directionId0 = selectedDirection0 ? String(selectedDirection0.getAttribute('data-value') || '') : '';
+
+            var ssSelect0 = document.getElementById('specialist-service');
+            var selectedSs0 = ssSelect0 ? ssSelect0.querySelector('ul.options li.selected') : null;
+            var ssId0 = selectedSs0 ? String(selectedSs0.getAttribute('data-value') || '') : '';
+
+            return [
+                peopleCount0,
+                clientType0 + ':' + clientValue0,
+                teacherId0,
+                directionId0,
+                ssId0
+            ].join('|');
+        }
+        if (!field) {
+            return buildSharedSnapshot();
+        }
+        if (field === 'people_count') {
+            var peopleCountInput = document.getElementById('people-count');
+            return peopleCountInput ? String(peopleCountInput.value || '').trim() : '';
+        }
+        if (field === 'client_id' || field === 'client_group_id') {
+            var clientSelect = document.getElementById('client');
+            var selectedClient = clientSelect ? clientSelect.querySelector('ul.options li.selected:not(#search-option)') : null;
+            var v = selectedClient ? String(selectedClient.getAttribute('data-value') || '') : '';
+            var t = selectedClient ? String(selectedClient.getAttribute('data-type') || '') : '';
+            return t + ':' + v;
+        }
+        if (field === 'specialist_id') {
+            var teacherSelect = document.getElementById('teacher');
+            var selectedTeacher = teacherSelect ? teacherSelect.querySelector('ul.options li.selected') : null;
+            return selectedTeacher ? String(selectedTeacher.getAttribute('data-value') || '') : '';
+        }
+        if (field === 'direction_id') {
+            var directionSelect = document.getElementById('field-direction');
+            var selectedDirection = directionSelect ? directionSelect.querySelector('ul.options li.selected') : null;
+            return selectedDirection ? String(selectedDirection.getAttribute('data-value') || '') : '';
+        }
+        if (field === 'specialist_service_id') {
+            var ssSelect = document.getElementById('specialist-service');
+            var selectedSs = ssSelect ? ssSelect.querySelector('ul.options li.selected') : null;
+            return selectedSs ? String(selectedSs.getAttribute('data-value') || '') : '';
+        }
+        return buildSharedSnapshot();
+    }
+
+    function clearBulkCreateBookingServerErrors() {
+        var modalEl = document.getElementById('createBookingModal');
+        if (modalEl) {
+            modalEl._bulkServerErrorsGlobal = [];
+            modalEl._bulkServerErrorSnapshotsGlobal = {};
+        }
+        var blocksContainer = document.getElementById('bookingBlocksContainer');
+        var blocks = blocksContainer ? Array.from(blocksContainer.querySelectorAll('.booking-create-block')) : [];
+        blocks.forEach(function (b) {
+            b._bulkServerErrors = [];
+            b._bulkServerErrorSnapshots = {};
+        });
+        if (typeof window.updateSubmitButtonState === 'function') {
+            window.updateSubmitButtonState();
+        }
+    }
+    window.clearBulkCreateBookingServerErrors = clearBulkCreateBookingServerErrors;
+
+    function scrollToFirstBulkBookingError() {
+        var modalEl = document.getElementById('createBookingModal');
+        if (!modalEl) return;
+
+        var first = modalEl.querySelector('.booking-create-block .has-warning')
+            || modalEl.querySelector('.booking-create-block.booking-create-block--has-errors')
+            || modalEl.querySelector('.has-warning');
+        if (!first) return;
+
+        try {
+            first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch (e) {
+            try { first.scrollIntoView(true); } catch (e2) {}
+        }
+    }
+    window.scrollToFirstBulkBookingError = scrollToFirstBulkBookingError;
+
+    function applyBulkCreateBookingServerErrors(data) {
+        var errors = _normalizeCreateBookingErrorsPayload(data);
+
+        var modalEl = document.getElementById('createBookingModal');
+        if (modalEl) {
+            modalEl._bulkServerErrorsGlobal = [];
+            if (!modalEl._bulkServerErrorSnapshotsGlobal) {
+                modalEl._bulkServerErrorSnapshotsGlobal = {};
+            }
+        }
+
+        var blocksContainer = document.getElementById('bookingBlocksContainer');
+        var blocks = blocksContainer ? Array.from(blocksContainer.querySelectorAll('.booking-create-block')) : [];
+        blocks.forEach(function (b) {
+            b._bulkServerErrors = [];
+            if (!b._bulkServerErrorSnapshots) {
+                b._bulkServerErrorSnapshots = {};
+            }
+        });
+
+        errors.forEach(function (e) {
+            var blockIndex = e.block_index ? parseInt(String(e.block_index), 10) : NaN;
+            var field = (e.field !== undefined ? e.field : null);
+
+            if (Number.isFinite(blockIndex) && blockIndex >= 1) {
+                var blockEl = blocks[blockIndex - 1];
+                if (blockEl) {
+                    if (!Array.isArray(blockEl._bulkServerErrors)) {
+                        blockEl._bulkServerErrors = [];
+                    }
+                    blockEl._bulkServerErrors.push({ message: e.message, field: field, block_index: blockIndex });
+                    if (blockEl._bulkServerErrorSnapshots) {
+                        var key = String(field || '');
+                        if (blockEl._bulkServerErrorSnapshots[key] === undefined) {
+                            blockEl._bulkServerErrorSnapshots[key] = _getComparableValueForBlockField(blockEl, field);
+                        }
+                    }
+                }
+                return;
+            }
+
+            if (modalEl) {
+                if (!Array.isArray(modalEl._bulkServerErrorsGlobal)) {
+                    modalEl._bulkServerErrorsGlobal = [];
+                }
+                modalEl._bulkServerErrorsGlobal.push({ message: e.message, field: field, block_index: null });
+                if (modalEl._bulkServerErrorSnapshotsGlobal) {
+                    var key2 = String(field || '');
+                    if (modalEl._bulkServerErrorSnapshotsGlobal[key2] === undefined) {
+                        modalEl._bulkServerErrorSnapshotsGlobal[key2] = _getComparableValueForSharedField(field);
+                    }
+                }
+            }
+        });
+
+        if (typeof window.updateSubmitButtonState === 'function') {
+            window.updateSubmitButtonState();
+        }
+        setTimeout(function () {
+            if (typeof window.scrollToFirstBulkBookingError === 'function') {
+                window.scrollToFirstBulkBookingError();
+            }
+        }, 50);
+    }
+    window.applyBulkCreateBookingServerErrors = applyBulkCreateBookingServerErrors;
+
     /**
      * Адаптация UI модалки под разные сценарии.
      * - "Репетиционная точка": скрываются Направление и Преподаватель, 
@@ -1281,11 +1543,9 @@
         }
 
         if (clientFieldContainer) {
-            clientFieldContainer.classList.remove('col-md-6', 'col-md-5');
+            clientFieldContainer.classList.remove('col-md-6', 'col-md-5', 'col-md-9');
             if (isRepPoint) {
                 clientFieldContainer.classList.add('col-md-5');
-            } else if (isMusicClass) {
-                clientFieldContainer.classList.add('col-md-9');
             } else {
                 clientFieldContainer.classList.add('col-md-6');
             }
@@ -2443,22 +2703,19 @@
 
                 // --- Функции управления UI ---
 
-                // Активирует/деактивирует кнопку "Добавить" в зависимости от заполненности полей и предупреждений
                 function updateSubmitButtonState() {
-                    if (!submitBtn) return;
-                    
-                    var checklist = [];
-                    
-                    // Определяем текущий сценарий для условной валидации
-                    var isRepPoint = (window.currentScenarioName === 'Репетиционная точка');
-                    var isMusicClass = (window.currentScenarioName === 'Музыкальный класс');
+                    var scenarioName = window.currentScenarioName || '';
+                    var isRepPoint = (scenarioName === 'Репетиционная точка');
+                    var isMusicClass = (scenarioName === 'Музыкальный класс');
                     var isSimplifiedScenario = isRepPoint || isMusicClass;
-                    
+                    var checklist = [];
+
                     // Shared: преподаватель/направление/услуга преподавателя + клиент/группа + контакт/люди
                     var teacherSelectForWarning = document.getElementById('teacher');
                     var teacherWarning = document.getElementById('teacher-warning-icon');
                     var hasTeacherWarning = teacherWarning && teacherWarning.style.display !== 'none';
                     if (teacherSelectForWarning) {
+                        teacherSelectForWarning.classList.remove('has-warning');
                         teacherSelectForWarning.classList.toggle('has-warning', !isSimplifiedScenario && !!hasTeacherWarning);
                     }
 
@@ -2466,6 +2723,20 @@
                     var directionSelect = document.getElementById('field-direction');
                     var clientSelect = document.getElementById('client');
                     var contactPersonSelect = document.getElementById('contact-person');
+
+                    if (directionSelect) {
+                        directionSelect.classList.remove('has-warning');
+                    }
+                    if (clientSelect) {
+                        clientSelect.classList.remove('has-warning');
+                    }
+                    if (contactPersonSelect) {
+                        contactPersonSelect.classList.remove('has-warning');
+                    }
+                    var specialistServiceSelectForWarning = document.getElementById('specialist-service');
+                    if (specialistServiceSelectForWarning) {
+                        specialistServiceSelectForWarning.classList.remove('has-warning');
+                    }
 
                     var teacherSelectedLi = teacherSelect ? teacherSelect.querySelector('ul.options li.selected') : null;
                     var directionSelectedLi = directionSelect ? directionSelect.querySelector('ul.options li.selected') : null;
@@ -2480,6 +2751,11 @@
 
                     var contactSelectedLi = contactPersonSelect ? contactPersonSelect.querySelector('ul.options li.selected') : null;
                     var hasContactPerson = !!(contactSelectedLi && contactSelectedLi.getAttribute('data-value'));
+
+                    var peopleCountInput = document.getElementById('people-count');
+                    if (peopleCountInput) {
+                        peopleCountInput.classList.remove('has-warning');
+                    }
                     
                     // Формируем чек-лист
                     var blocksContainer = document.getElementById('bookingBlocksContainer');
@@ -2494,10 +2770,34 @@
 
                         var blockErrors = [];
 
+                        if (blockEl && Array.isArray(blockEl._bulkServerErrors) && blockEl._bulkServerErrors.length) {
+                            var snap = blockEl._bulkServerErrorSnapshots || {};
+                            blockEl._bulkServerErrors = blockEl._bulkServerErrors.filter(function (e) {
+                                if (!e) return false;
+                                var key = String(e.field || '');
+                                var before = snap[key];
+                                if (before === undefined) return true;
+                                var now = _getComparableValueForBlockField(blockEl, e.field);
+                                if (now !== before) {
+                                    try { delete snap[key]; } catch (ex) {}
+                                    return false;
+                                }
+                                return true;
+                            });
+                            blockEl._bulkServerErrorSnapshots = snap;
+                        }
+
                         var dateInput = blockEl.querySelector('input[id^="modal-create-date"]');
                         var dateIso = dateInput ? String(dateInput.value || '').trim() : '';
+                        var dateTrigger = blockEl.querySelector('[id^="datepicker-trigger"]');
+                        if (dateTrigger) {
+                            dateTrigger.classList.remove('has-warning');
+                        }
                         if (!dateIso) {
                             blockErrors.push('Выберите дату');
+                            if (dateTrigger) {
+                                dateTrigger.classList.add('has-warning');
+                            }
                         }
 
                         var startTimeSelectEl = blockEl.querySelector('.custom-select[id^="start-time"]');
@@ -2519,38 +2819,90 @@
                         if (endTimeSelectEl) {
                             endTimeSelectEl.classList.toggle('has-warning', !!hasEndWarning);
                         }
+                        if (durationSelectEl) {
+                            durationSelectEl.classList.remove('has-warning');
+                        }
 
                         if (!startSelected) {
                             blockErrors.push('Выберите время начала');
+                            if (startTimeSelectEl) {
+                                startTimeSelectEl.classList.add('has-warning');
+                            }
                         } else if (hasStartWarning) {
                             blockErrors.push('Выберите доступное время начала');
                         }
 
                         if (!endSelected) {
                             blockErrors.push('Выберите время окончания');
+                            if (endTimeSelectEl) {
+                                endTimeSelectEl.classList.add('has-warning');
+                            }
                         } else if (hasEndWarning) {
                             blockErrors.push('Выберите доступное время окончания');
                         }
 
                         if (!durationSelected) {
                             blockErrors.push('Выберите длительность');
+                            if (durationSelectEl) {
+                                durationSelectEl.classList.add('has-warning');
+                            }
                         }
 
                         if (isSimplifiedScenario) {
                             var tariffSelectEl = blockEl.querySelector('.custom-select[id^="tariff"]');
                             var tariffSelected = tariffSelectEl ? tariffSelectEl.querySelector('ul.options li.selected') : null;
+                            if (tariffSelectEl) {
+                                tariffSelectEl.classList.remove('has-warning');
+                            }
                             if (!tariffSelected) {
                                 blockErrors.push('Выберите тариф');
+                                if (tariffSelectEl) {
+                                    tariffSelectEl.classList.add('has-warning');
+                                }
                             }
                         }
+
+                        var serverErrors = (blockEl && Array.isArray(blockEl._bulkServerErrors)) ? blockEl._bulkServerErrors : [];
+                        if (serverErrors.length) {
+                            serverErrors.forEach(function (e) {
+                                if (e && e.message) {
+                                    blockErrors.push(String(e.message));
+                                }
+                                var f = e ? e.field : null;
+                                if (f === 'full_datetime') {
+                                    if (dateTrigger) dateTrigger.classList.add('has-warning');
+                                    if (startTimeSelectEl) startTimeSelectEl.classList.add('has-warning');
+                                } else if (f === 'duration') {
+                                    if (durationSelectEl) durationSelectEl.classList.add('has-warning');
+                                } else if (f === 'tariff_id') {
+                                    var tariffSelectEl2 = blockEl.querySelector('.custom-select[id^="tariff"]');
+                                    if (tariffSelectEl2) tariffSelectEl2.classList.add('has-warning');
+                                }
+                            });
+                        }
+
+                        var blockWarning = blockEl.querySelector('[id^="block-warning-icon"]');
+                        var blockChecklistEl = blockEl.querySelector('[id^="block-checklist"]');
 
                         if (blockErrors.length > 0) {
                             checklist = checklist.concat(blockErrors.map(function (msg) {
                                 return blockPrefix + msg;
                             }));
                             blockEl.classList.add('booking-create-block--has-errors');
+
+                            if (blockWarning) blockWarning.style.display = 'inline-block';
+                            if (blockChecklistEl) {
+                                blockChecklistEl.innerHTML = blockErrors.map(function (item) {
+                                    return '<li>' + item + '</li>';
+                                }).join('');
+                            }
                         } else {
                             blockEl.classList.remove('booking-create-block--has-errors');
+
+                            if (blockWarning) blockWarning.style.display = 'none';
+                            if (blockChecklistEl) {
+                                blockChecklistEl.innerHTML = '';
+                            }
                         }
                     });
                     
@@ -2558,12 +2910,21 @@
                     if (!isSimplifiedScenario) {
                         if (!hasTeacher) {
                             checklist.push('Выберите преподавателя');
+                            if (teacherSelect) {
+                                teacherSelect.classList.add('has-warning');
+                            }
                         } else if (hasTeacherWarning) {
                             checklist.push('Выберите доступного преподавателя');
+                            if (teacherSelect) {
+                                teacherSelect.classList.add('has-warning');
+                            }
                         }
                         
                         if (!hasDirection) {
                             checklist.push('Выберите направление');
+                            if (directionSelect) {
+                                directionSelect.classList.add('has-warning');
+                            }
                         }
                         
                         // Проверяем выбор услуги преподавателя
@@ -2572,33 +2933,79 @@
                         var hasSpecialistService = specialistServiceSelectedLi !== null;
                         if (!hasSpecialistService) {
                             checklist.push('Выберите услугу преподавателя');
+                            if (specialistServiceSelect) {
+                                specialistServiceSelect.classList.add('has-warning');
+                            }
                         }
                     }
-                    
+
                     // Для Репточки - клиент или группа, для остальных - только клиент
                     if (!hasClientOrGroup) {
                         checklist.push(isRepPoint ? 'Выберите клиента или группу' : 'Выберите клиента');
-                    }
-
-                    if (isRepPoint) {
-                        if (!hasContactPerson) {
-                            checklist.push('Выберите контактное лицо');
+                        if (clientSelect) {
+                            clientSelect.classList.add('has-warning');
                         }
                     }
 
-                    var peopleCountInput = document.getElementById('people-count');
                     var peopleCountVal = peopleCountInput ? String(peopleCountInput.value || '').trim() : '';
                     if (isSimplifiedScenario) {
                         if (!peopleCountVal) {
                             checklist.push('Укажите количество людей');
+                            if (peopleCountInput) {
+                                peopleCountInput.classList.add('has-warning');
+                            }
                         } else {
                             var pcInt = parseInt(peopleCountVal, 10);
                             if (!Number.isFinite(pcInt) || pcInt < 1 || pcInt > 99) {
                                 checklist.push('Количество людей должно быть от 1 до 99');
+                                if (peopleCountInput) {
+                                    peopleCountInput.classList.add('has-warning');
+                                }
                             }
                         }
 
                         // Тариф проверяется per-block выше
+                    }
+
+                    var modalEl = document.getElementById('createBookingModal');
+
+                    if (modalEl && Array.isArray(modalEl._bulkServerErrorsGlobal) && modalEl._bulkServerErrorsGlobal.length) {
+                        var snapG = modalEl._bulkServerErrorSnapshotsGlobal || {};
+                        modalEl._bulkServerErrorsGlobal = modalEl._bulkServerErrorsGlobal.filter(function (e) {
+                            if (!e) return false;
+                            var key = String(e.field || '');
+                            var before = snapG[key];
+                            if (before === undefined) return true;
+                            var now = _getComparableValueForSharedField(e.field);
+                            if (now !== before) {
+                                try { delete snapG[key]; } catch (ex) {}
+                                return false;
+                            }
+                            return true;
+                        });
+                        modalEl._bulkServerErrorSnapshotsGlobal = snapG;
+
+                        modalEl._bulkServerErrorsGlobal.forEach(function (e) {
+                            if (!e || !e.message) return;
+                            checklist.push(String(e.message));
+
+                            if (e.field === 'people_count' && peopleCountInput) {
+                                peopleCountInput.classList.add('has-warning');
+                            }
+                            if ((e.field === 'client_id' || e.field === 'client_group_id') && clientSelect) {
+                                clientSelect.classList.add('has-warning');
+                            }
+                            if (e.field === 'specialist_id' && teacherSelect) {
+                                teacherSelect.classList.add('has-warning');
+                            }
+                            if (e.field === 'direction_id' && directionSelect) {
+                                directionSelect.classList.add('has-warning');
+                            }
+                            if (e.field === 'specialist_service_id') {
+                                var ssSelect2 = document.getElementById('specialist-service');
+                                if (ssSelect2) ssSelect2.classList.add('has-warning');
+                            }
+                        });
                     }
                     
                     // Обновляем чек-лист в тултипе
@@ -3551,6 +3958,7 @@
                 if (timeField) timeField.value = timeHm;
             }
         }
+
     }
 
     // Счётчик символов для поля комментария

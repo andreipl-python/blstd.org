@@ -436,7 +436,9 @@
                 // Проверяем доступность по времени
                 var timeAvailable = true;
                 if (checkStartMinutes !== null && checkEndMinutes !== null) {
-                    timeAvailable = !window.isSpecialistBusy(teacherId, checkStartMinutes, checkEndMinutes);
+                    if (typeof window.isSpecialistBusy === 'function') {
+                        timeAvailable = !window.isSpecialistBusy(teacherId, checkStartMinutes, checkEndMinutes);
+                    }
                 }
                 
                 // Проверяем, оказывает ли специалист выбранную услугу (если услуга выбрана)
@@ -603,7 +605,7 @@
             // 7) Проверка выбранного преподавателя на доступность
             if (selectedTeacherId && checkStartMinutes !== null && checkEndMinutes !== null) {
                 var teacherIdInt = parseInt(selectedTeacherId, 10);
-                if (window.isSpecialistBusy(teacherIdInt, checkStartMinutes, checkEndMinutes)) {
+                if (typeof window.isSpecialistBusy === 'function' && window.isSpecialistBusy(teacherIdInt, checkStartMinutes, checkEndMinutes)) {
                     if (teacherWarning) teacherWarning.style.display = 'inline-block';
                 } else {
                     if (teacherWarning) teacherWarning.style.display = 'none';
@@ -913,6 +915,23 @@
                         focusSearchOnOpen: true,
                         clearSearchOnSelect: true,
                         onSelected: function () {
+                            if (typeof window.updateSubmitButtonState === 'function') {
+                                window.updateSubmitButtonState();
+                            }
+                        },
+                        onCleared: function () {
+                            if (typeof window.updateSubmitButtonState === 'function') {
+                                window.updateSubmitButtonState();
+                            }
+                        }
+                    },
+                    'contact-person': {
+                        onSelected: function () {
+                            if (typeof window.updateSubmitButtonState === 'function') {
+                                window.updateSubmitButtonState();
+                            }
+                        },
+                        onCleared: function () {
                             if (typeof window.updateSubmitButtonState === 'function') {
                                 window.updateSubmitButtonState();
                             }
@@ -1279,6 +1298,15 @@
             var form = document.getElementById('bookingForm');
             if (!form) return;
 
+            function abortWithErrors() {
+                if (typeof window.updateSubmitButtonState === 'function') {
+                    window.updateSubmitButtonState();
+                }
+                if (typeof window.scrollToFirstBulkBookingError === 'function') {
+                    window.scrollToFirstBulkBookingError();
+                }
+            }
+
             // Собираем данные формы
             var formData = new FormData();
 
@@ -1532,7 +1560,7 @@
             var isRepPointScenario = window.currentScenarioName === 'Репетиционная точка';
             var hasClientOrGroup = formData.get('client_id') || formData.get('client_group_id');
             if (!hasClientOrGroup) {
-                alert(isRepPointScenario ? 'Выберите клиента или группу' : 'Выберите клиента');
+                abortWithErrors();
                 return;
             }
 
@@ -1541,12 +1569,12 @@
             if (isPeopleCountScenario) {
                 var peopleCountVal = formData.get('people_count');
                 if (!peopleCountVal) {
-                    alert('Укажите количество людей');
+                    abortWithErrors();
                     return;
                 }
                 var pcInt = parseInt(String(peopleCountVal), 10);
                 if (!Number.isFinite(pcInt) || pcInt < 1 || pcInt > 99) {
-                    alert('Количество людей должно быть от 1 до 99');
+                    abortWithErrors();
                     return;
                 }
             }
@@ -1555,7 +1583,7 @@
                 if (blocks && blocks.length) {
                     for (var bi = 0; bi < blocks.length; bi++) {
                         if (!blocks[bi] || !blocks[bi].tariff_id) {
-                            alert('Блок ' + (bi + 1) + ': выберите тариф');
+                            abortWithErrors();
                             return;
                         }
                     }
@@ -1565,16 +1593,16 @@
             if (blocks && blocks.length) {
                 for (var bi = 0; bi < blocks.length; bi++) {
                     if (!blocks[bi] || !blocks[bi].full_datetime) {
-                        alert('Блок ' + (bi + 1) + ': выберите время начала');
+                        abortWithErrors();
                         return;
                     }
                     if (!blocks[bi] || !blocks[bi].duration) {
-                        alert('Блок ' + (bi + 1) + ': выберите длительность');
+                        abortWithErrors();
                         return;
                     }
                 }
             } else {
-                alert('Не найден ни один блок брони');
+                abortWithErrors();
                 return;
             }
 
@@ -1646,20 +1674,40 @@
                     var modal = bootstrap.Modal.getOrCreateInstance(modalElement);
                     modal.hide();
                 } else {
-                    if (data && data.block_index) {
-                        alert('Ошибка (блок ' + data.block_index + '): ' + (data.error || 'Неизвестная ошибка'));
+                    if (typeof window.applyBulkCreateBookingServerErrors === 'function') {
+                        window.applyBulkCreateBookingServerErrors(data);
                     } else {
-                        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                        abortWithErrors();
                     }
                 }
             })
             .catch(function (error) {
-                alert('Ошибка сети: ' + error.message);
+                if (typeof window.applyBulkCreateBookingServerErrors === 'function') {
+                    window.applyBulkCreateBookingServerErrors({
+                        success: false,
+                        error: 'Ошибка сети: ' + (error && error.message ? error.message : 'Неизвестная ошибка'),
+                        field: null,
+                        errors: [
+                            {
+                                message: 'Ошибка сети: ' + (error && error.message ? error.message : 'Неизвестная ошибка'),
+                                field: null,
+                                block_index: null
+                            }
+                        ]
+                    });
+                } else {
+                    abortWithErrors();
+                }
             })
             .finally(function () {
                 if (submitBtn) {
-                    submitBtn.disabled = false;
                     submitBtn.textContent = 'Добавить';
+                }
+
+                if (typeof window.updateSubmitButtonState === 'function') {
+                    window.updateSubmitButtonState();
+                } else if (submitBtn) {
+                    submitBtn.disabled = false;
                 }
             });
         }

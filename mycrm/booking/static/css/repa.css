@@ -1224,6 +1224,68 @@
     display: block;
   }
 
+  .block-warning-icon {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    cursor: help;
+    z-index: 10;
+  }
+
+  .block-warning-icon svg {
+    display: block;
+    width: 24px;
+    height: 24px;
+  }
+
+  .block-warning-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    right: 0;
+    width: 260px;
+    padding: 12px 14px;
+    background: #3D3356;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(61, 51, 86, 0.25);
+    z-index: 100;
+  }
+
+  .block-warning-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 8px;
+    border: 6px solid transparent;
+    border-top-color: #3D3356;
+  }
+
+  .block-warning-tooltip ul {
+    margin: 0;
+    padding: 0 0 0 18px;
+    list-style: disc;
+  }
+
+  .block-warning-tooltip ul li {
+    margin-bottom: 4px;
+  }
+
+  .block-warning-tooltip ul li:last-child {
+    margin-bottom: 0;
+  }
+
+  .block-warning-icon:hover .block-warning-tooltip {
+    display: block;
+  }
+
+  .modal-datepicker__trigger.has-warning {
+    border-color: #E53935;
+  }
+
   .button-third {
     background: transparent;
     border: none;

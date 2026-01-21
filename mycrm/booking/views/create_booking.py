@@ -33,10 +33,16 @@ _TARIFF_REQUIRED_SCENARIOS = {
 
 
 class BulkCreateBookingError(Exception):
-    def __init__(self, message: str, block_index: int | None = None):
+    def __init__(
+        self,
+        message: str,
+        block_index: int | None = None,
+        field: str | None = None,
+    ):
         super().__init__(message)
         self.message = message
         self.block_index = block_index
+        self.field = field
 
 
 def _quantize_money(value: Decimal) -> Decimal:
@@ -351,7 +357,20 @@ def check_specialist_availability(
 @csrf_exempt
 def create_booking_view(request):
     if request.method != "POST":
-        return JsonResponse({"success": False, "error": "Неверный метод запроса"})
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Неверный метод запроса",
+                "field": None,
+                "errors": [
+                    {
+                        "message": "Неверный метод запроса",
+                        "field": None,
+                        "block_index": None,
+                    }
+                ],
+            }
+        )
 
     try:
         blocks_json = request.POST.get("blocks_json")
@@ -360,7 +379,18 @@ def create_booking_view(request):
                 blocks = json.loads(blocks_json)
             except Exception:
                 return JsonResponse(
-                    {"success": False, "error": "Некорректный формат blocks_json"}
+                    {
+                        "success": False,
+                        "error": "Некорректный формат blocks_json",
+                        "field": "blocks_json",
+                        "errors": [
+                            {
+                                "message": "Некорректный формат blocks_json",
+                                "field": "blocks_json",
+                                "block_index": None,
+                            }
+                        ],
+                    }
                 )
 
             if not isinstance(blocks, list) or not blocks:
@@ -368,6 +398,14 @@ def create_booking_view(request):
                     {
                         "success": False,
                         "error": "blocks_json должен быть непустым массивом",
+                        "field": "blocks_json",
+                        "errors": [
+                            {
+                                "message": "blocks_json должен быть непустым массивом",
+                                "field": "blocks_json",
+                                "block_index": None,
+                            }
+                        ],
                     }
                 )
 
@@ -391,6 +429,14 @@ def create_booking_view(request):
                         {
                             "success": False,
                             "error": "Некорректное количество людей",
+                            "field": "people_count",
+                            "errors": [
+                                {
+                                    "message": "Некорректное количество людей",
+                                    "field": "people_count",
+                                    "block_index": None,
+                                }
+                            ],
                         }
                     )
                 if people_count < 1 or people_count > 99:
@@ -398,6 +444,14 @@ def create_booking_view(request):
                         {
                             "success": False,
                             "error": "Количество людей должно быть от 1 до 99",
+                            "field": "people_count",
+                            "errors": [
+                                {
+                                    "message": "Количество людей должно быть от 1 до 99",
+                                    "field": "people_count",
+                                    "block_index": None,
+                                }
+                            ],
                         }
                     )
 
@@ -412,7 +466,18 @@ def create_booking_view(request):
             has_client_or_group = client_id or client_group_id
             if not all([scenario_id, has_client_or_group, room_id]):
                 return JsonResponse(
-                    {"success": False, "error": "Не все обязательные поля заполнены"}
+                    {
+                        "success": False,
+                        "error": "Не все обязательные поля заполнены",
+                        "field": None,
+                        "errors": [
+                            {
+                                "message": "Не все обязательные поля заполнены",
+                                "field": None,
+                                "block_index": None,
+                            }
+                        ],
+                    }
                 )
 
             try:
@@ -430,17 +495,80 @@ def create_booking_view(request):
                     else None
                 )
             except Room.DoesNotExist:
-                return JsonResponse({"success": False, "error": "Комната не найдена"})
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Комната не найдена",
+                        "field": "room_id",
+                        "errors": [
+                            {
+                                "message": "Комната не найдена",
+                                "field": "room_id",
+                                "block_index": None,
+                            }
+                        ],
+                    }
+                )
             except Scenario.DoesNotExist:
-                return JsonResponse({"success": False, "error": "Сценарий не найден"})
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Сценарий не найден",
+                        "field": "scenario_id",
+                        "errors": [
+                            {
+                                "message": "Сценарий не найден",
+                                "field": "scenario_id",
+                                "block_index": None,
+                            }
+                        ],
+                    }
+                )
             except Specialist.DoesNotExist:
-                return JsonResponse({"success": False, "error": "Специалист не найден"})
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Специалист не найден",
+                        "field": "specialist_id",
+                        "errors": [
+                            {
+                                "message": "Специалист не найден",
+                                "field": "specialist_id",
+                                "block_index": None,
+                            }
+                        ],
+                    }
+                )
             except Direction.DoesNotExist:
                 return JsonResponse(
-                    {"success": False, "error": "Направление не найдено"}
+                    {
+                        "success": False,
+                        "error": "Направление не найдено",
+                        "field": "direction_id",
+                        "errors": [
+                            {
+                                "message": "Направление не найдено",
+                                "field": "direction_id",
+                                "block_index": None,
+                            }
+                        ],
+                    }
                 )
             except ClientGroup.DoesNotExist:
-                return JsonResponse({"success": False, "error": "Группа не найдена"})
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Группа не найдена",
+                        "field": "client_group_id",
+                        "errors": [
+                            {
+                                "message": "Группа не найдена",
+                                "field": "client_group_id",
+                                "block_index": None,
+                            }
+                        ],
+                    }
+                )
 
             specialist_service = None
             if scenario and scenario.name == "Музыкальная школа":
@@ -449,6 +577,14 @@ def create_booking_view(request):
                         {
                             "success": False,
                             "error": "Выберите услугу преподавателя",
+                            "field": "specialist_service_id",
+                            "errors": [
+                                {
+                                    "message": "Выберите услугу преподавателя",
+                                    "field": "specialist_service_id",
+                                    "block_index": None,
+                                }
+                            ],
                         }
                     )
                 specialist_service = SpecialistService.objects.filter(
@@ -460,6 +596,14 @@ def create_booking_view(request):
                         {
                             "success": False,
                             "error": "Выбранная услуга преподавателя неактивна",
+                            "field": "specialist_service_id",
+                            "errors": [
+                                {
+                                    "message": "Выбранная услуга преподавателя неактивна",
+                                    "field": "specialist_service_id",
+                                    "block_index": None,
+                                }
+                            ],
                         }
                     )
 
@@ -478,6 +622,7 @@ def create_booking_view(request):
                         raise BulkCreateBookingError(
                             "Элемент blocks_json должен быть объектом",
                             block_index=i + 1,
+                            field="blocks_json",
                         )
 
                     service_ids = block.get("services")
@@ -498,17 +643,23 @@ def create_booking_view(request):
                             total_cost = Decimal(str(total_cost_raw).replace(",", "."))
                         except Exception:
                             raise BulkCreateBookingError(
-                                "Некорректный формат стоимости", block_index=i + 1
+                                "Некорректный формат стоимости",
+                                block_index=i + 1,
+                                field="total_cost",
                             )
 
                     if not full_datetime:
                         raise BulkCreateBookingError(
-                            "Не указано время начала брони", block_index=i + 1
+                            "Не указано время начала брони",
+                            block_index=i + 1,
+                            field="full_datetime",
                         )
 
                     if not booking_duration:
                         raise BulkCreateBookingError(
-                            "Не указана длительность", block_index=i + 1
+                            "Не указана длительность",
+                            block_index=i + 1,
+                            field="duration",
                         )
 
                     datetime_match = re.match(
@@ -519,6 +670,7 @@ def create_booking_view(request):
                         raise BulkCreateBookingError(
                             f"Неверный формат даты/времени: {full_datetime}",
                             block_index=i + 1,
+                            field="full_datetime",
                         )
                     full_datetime_clean = (
                         f"{datetime_match.group(1)} {datetime_match.group(2)}"
@@ -539,17 +691,22 @@ def create_booking_view(request):
                     if is_tariff_required:
                         if people_count is None:
                             raise BulkCreateBookingError(
-                                "Укажите количество людей", block_index=i + 1
+                                "Укажите количество людей",
+                                block_index=i + 1,
+                                field="people_count",
                             )
                         if not tariff_id:
                             raise BulkCreateBookingError(
-                                "Выберите тариф", block_index=i + 1
+                                "Выберите тариф",
+                                block_index=i + 1,
+                                field="tariff_id",
                             )
                     else:
                         if tariff_id:
                             raise BulkCreateBookingError(
                                 "Тариф нельзя указывать для выбранного сценария",
                                 block_index=i + 1,
+                                field="tariff_id",
                             )
 
                     try:
@@ -562,6 +719,7 @@ def create_booking_view(request):
                         raise BulkCreateBookingError(
                             e.messages[0] if getattr(e, "messages", None) else str(e),
                             block_index=i + 1,
+                            field="full_datetime",
                         )
 
                     tariff = None
@@ -571,7 +729,9 @@ def create_booking_view(request):
                         ).first()
                         if not tariff:
                             raise BulkCreateBookingError(
-                                "Выбранный тариф недоступен", block_index=i + 1
+                                "Выбранный тариф недоступен",
+                                block_index=i + 1,
+                                field="tariff_id",
                             )
 
                         available_tariffs = get_available_tariffs_for_booking(
@@ -584,7 +744,9 @@ def create_booking_view(request):
                         )
                         if str(tariff.id) not in {str(t.id) for t in available_tariffs}:
                             raise BulkCreateBookingError(
-                                "Выбранный тариф недоступен", block_index=i + 1
+                                "Выбранный тариф недоступен",
+                                block_index=i + 1,
+                                field="tariff_id",
                             )
 
                     service_ids_list = []
@@ -892,6 +1054,14 @@ def create_booking_view(request):
                 "success": False,
                 "error": e.message,
                 "block_index": e.block_index,
+                "field": e.field,
+                "errors": [
+                    {
+                        "message": e.message,
+                        "field": e.field,
+                        "block_index": e.block_index,
+                    }
+                ],
             }
         )
 
