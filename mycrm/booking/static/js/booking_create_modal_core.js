@@ -54,6 +54,163 @@
             row.style.display = '';
         }
 
+        var __bulkBusySpecialistsByDateCache = window.__bulkBusySpecialistsByDateCache || (window.__bulkBusySpecialistsByDateCache = {});
+        var __bulkBusySpecialistsByDateInflight = window.__bulkBusySpecialistsByDateInflight || (window.__bulkBusySpecialistsByDateInflight = {});
+
+        function _loadBusySpecialistsByDateIso(dateIso, callback) {
+            var iso = String(dateIso || '').trim();
+            if (!iso) {
+                if (callback) callback([]);
+                return;
+            }
+
+            if (__bulkBusySpecialistsByDateCache[iso] !== undefined) {
+                if (callback) callback(__bulkBusySpecialistsByDateCache[iso]);
+                return;
+            }
+
+            if (__bulkBusySpecialistsByDateInflight[iso]) {
+                __bulkBusySpecialistsByDateInflight[iso].push(callback);
+                return;
+            }
+
+            __bulkBusySpecialistsByDateInflight[iso] = [callback];
+
+            fetch('/booking/busy-specialists-for-date/?date=' + encodeURIComponent(iso), {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var result = (data && data.success && Array.isArray(data.busy_specialists)) ? data.busy_specialists : [];
+                    __bulkBusySpecialistsByDateCache[iso] = result;
+                })
+                .catch(function () {
+                    __bulkBusySpecialistsByDateCache[iso] = [];
+                })
+                .finally(function () {
+                    var cbs = __bulkBusySpecialistsByDateInflight[iso] || [];
+                    delete __bulkBusySpecialistsByDateInflight[iso];
+                    cbs.forEach(function (cb) {
+                        if (typeof cb === 'function') {
+                            cb(__bulkBusySpecialistsByDateCache[iso] || []);
+                        }
+                    });
+                });
+        }
+
+        function _mergeMinuteIntervals(intervals) {
+            var src = Array.isArray(intervals) ? intervals : [];
+            var items = [];
+            src.forEach(function (it) {
+                if (!it) return;
+                var s = parseInt(it.startMinutes, 10);
+                var e = parseInt(it.endMinutes, 10);
+                if (!Number.isFinite(s) || !Number.isFinite(e)) return;
+                if (e <= s) return;
+                if (s < 0) s = 0;
+                if (e > 24 * 60) e = 24 * 60;
+                items.push([s, e]);
+            });
+            items.sort(function (a, b) { return a[0] - b[0]; });
+            var merged = [];
+            items.forEach(function (it) {
+                if (!merged.length || it[0] > merged[merged.length - 1][1]) {
+                    merged.push([it[0], it[1]]);
+                } else {
+                    merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], it[1]);
+                }
+            });
+            return merged;
+        }
+
+        function _hasFreeInterval(mergedBusyIntervals, requiredMinutes) {
+            var need = parseInt(requiredMinutes, 10);
+            if (!Number.isFinite(need) || need <= 0) need = 1;
+            var busy = Array.isArray(mergedBusyIntervals) ? mergedBusyIntervals : [];
+            var prev = 0;
+            for (var i = 0; i < busy.length; i++) {
+                var s = busy[i][0];
+                var e = busy[i][1];
+                if (s - prev >= need) return true;
+                prev = Math.max(prev, e);
+            }
+            return ((24 * 60) - prev) >= need;
+        }
+
+        function _hasFreeIntervalInWindow(mergedBusyIntervals, requiredMinutes, windowStartMinutes, windowEndMinutes) {
+            var need = parseInt(requiredMinutes, 10);
+            if (!Number.isFinite(need) || need <= 0) need = 1;
+
+            var ws = parseInt(windowStartMinutes, 10);
+            var we = parseInt(windowEndMinutes, 10);
+            if (!Number.isFinite(ws)) ws = 0;
+            if (!Number.isFinite(we)) we = 24 * 60;
+            if (ws < 0) ws = 0;
+            if (we > 24 * 60) we = 24 * 60;
+            if (we <= ws) return false;
+
+            var busy = Array.isArray(mergedBusyIntervals) ? mergedBusyIntervals : [];
+            var prev = ws;
+
+            for (var i = 0; i < busy.length; i++) {
+                var s = busy[i][0];
+                var e = busy[i][1];
+                if (!Number.isFinite(s) || !Number.isFinite(e)) continue;
+                if (e <= ws) continue;
+                if (s >= we) break;
+
+                var ss = Math.max(s, ws);
+                var ee = Math.min(e, we);
+                if (ee <= ss) continue;
+
+                if (ss - prev >= need) return true;
+                prev = Math.max(prev, ee);
+                if (prev >= we) return false;
+            }
+
+            return (we - prev) >= need;
+        }
+
+        function _parseTimeFieldToMinutesOrNull(raw) {
+            var s = String(raw || '').trim();
+            if (!s) return null;
+            var parts = s.split(':');
+            if (parts.length < 2) return null;
+            var h = parseInt(parts[0], 10);
+            var m = parseInt(parts[1], 10);
+            if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+            return (h * 60) + m;
+        }
+
+        function _getRoomWorkWindowMinutes(roomId) {
+            var rid = String(roomId || '').trim();
+            if (!rid) return null;
+            if (!Array.isArray(window.ROOMS)) return null;
+
+            var room = null;
+            for (var i = 0; i < window.ROOMS.length; i++) {
+                var r = window.ROOMS[i];
+                if (!r) continue;
+                if (String(r.pk) === rid) {
+                    room = r;
+                    break;
+                }
+            }
+            if (!room || !room.fields) return null;
+
+            var start = _parseTimeFieldToMinutesOrNull(room.fields.hourstart);
+            var end = _parseTimeFieldToMinutesOrNull(room.fields.hourend);
+            if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+            if (start === 0 && end === 0) {
+                end = 24 * 60;
+            } else if (end === 0 && start > 0) {
+                end = 24 * 60;
+            }
+            if (end <= start) return null;
+            return { startMinutes: start, endMinutes: end };
+        }
+
         function normalizeIdForBlock(id, blockIndex) {
             if (!id) return id;
             var base = String(id).replace(/-b\d+$/, '');
@@ -238,6 +395,8 @@
                     var cellDate = new Date(year, month, d);
                     cellDate.setHours(0, 0, 0, 0);
 
+                    cell.setAttribute('data-date-iso', formatDateIso(cellDate));
+
                     if (cellDate.getTime() === today.getTime()) {
                         cell.classList.add('modal-datepicker__day--today');
                     }
@@ -281,7 +440,298 @@
                 populateMonthSelect();
                 populateYearSelect();
                 buildGrid();
+
+                if (typeof blockEl._bulkUpdateDatepickerScenarioHighlight === 'function') {
+                    blockEl._bulkUpdateDatepickerScenarioHighlight();
+                }
             }
+
+            function clearScenarioDayHighlights() {
+                var cells = Array.from(grid.querySelectorAll('.modal-datepicker__day'));
+                cells.forEach(function (c) {
+                    c.classList.remove('modal-datepicker__day--scenario-available', 'modal-datepicker__day--scenario-unavailable', 'modal-datepicker__day--scenario-pending');
+                    if (c.hasAttribute('data-scenario-tooltip')) {
+                        c.removeAttribute('data-scenario-tooltip');
+                    }
+                });
+            }
+
+            function updateScenarioDayHighlights() {
+                if (!popup.classList.contains('open')) {
+                    return;
+                }
+
+                clearScenarioDayHighlights();
+
+                var scenarioName = String(window.currentScenarioName || '').trim();
+                if (scenarioName !== 'Музыкальная школа') {
+                    return;
+                }
+
+                var teacherSelect = document.getElementById('teacher');
+                var directionSelect = document.getElementById('field-direction');
+                var specialistServiceSelect = document.getElementById('specialist-service');
+
+                var teacherLi = teacherSelect ? teacherSelect.querySelector('ul.options li.selected') : null;
+                var directionLi = directionSelect ? directionSelect.querySelector('ul.options li.selected') : null;
+                var ssLi = specialistServiceSelect ? specialistServiceSelect.querySelector('ul.options li.selected') : null;
+
+                var teacherId = teacherLi ? String(teacherLi.getAttribute('data-value') || '') : '';
+                var directionId = directionLi ? String(directionLi.getAttribute('data-value') || '') : '';
+                var ssId = ssLi ? String(ssLi.getAttribute('data-value') || '') : '';
+
+                if (!teacherId || !directionId || !ssId) {
+                    return;
+                }
+
+                var teacherIdInt = parseInt(teacherId, 10);
+                if (!Number.isFinite(teacherIdInt)) {
+                    return;
+                }
+
+                var dirsRaw = teacherLi ? String(teacherLi.getAttribute('data-directions') || '') : '';
+                var dirs = dirsRaw ? dirsRaw.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : [];
+                if (dirs.indexOf(directionId) === -1) {
+                    return;
+                }
+
+                var mappingEl = document.getElementById('specialist_service_to_specialists_json');
+                var serviceToSpecialists = {};
+                if (mappingEl) {
+                    try {
+                        serviceToSpecialists = JSON.parse(mappingEl.textContent || '{}');
+                    } catch (e) {
+                        serviceToSpecialists = {};
+                    }
+                }
+                var specialistsForService = serviceToSpecialists[ssId] || null;
+                if (Array.isArray(specialistsForService) && specialistsForService.indexOf(teacherIdInt) === -1) {
+                    return;
+                }
+
+                var timeState = blockEl._bulkTimeState || {};
+
+                var minMinutes = (timeState._lastMinMinutes !== undefined && timeState._lastMinMinutes !== null)
+                    ? parseInt(timeState._lastMinMinutes, 10)
+                    : null;
+                if (!Number.isFinite(minMinutes) || minMinutes <= 0) {
+                    minMinutes = 60;
+                    if (window.currentScenarioFilterId && window.BookingTimeUtils && typeof window.BookingTimeUtils.getScenarioMinDurationMinutes === 'function') {
+                        minMinutes = window.BookingTimeUtils.getScenarioMinDurationMinutes(window.currentScenarioFilterId) || 60;
+                    }
+                }
+
+                var periods = (timeState.selectedPeriods !== undefined && timeState.selectedPeriods !== null)
+                    ? parseInt(timeState.selectedPeriods, 10)
+                    : null;
+                var requiredMinutes = (Number.isFinite(periods) && periods >= 1) ? (periods * minMinutes) : minMinutes;
+
+                var workStart = 0;
+                var workEnd = 24 * 60;
+                if (window.currentScenarioFilterId && window.BookingTimeUtils) {
+                    if (typeof window.BookingTimeUtils.getScenarioWorkTimeStartMinutes === 'function') {
+                        workStart = window.BookingTimeUtils.getScenarioWorkTimeStartMinutes(window.currentScenarioFilterId);
+                    }
+                    if (typeof window.BookingTimeUtils.getScenarioWorkTimeEndMinutes === 'function') {
+                        workEnd = window.BookingTimeUtils.getScenarioWorkTimeEndMinutes(window.currentScenarioFilterId);
+                    }
+                }
+                if (!Number.isFinite(workStart)) workStart = 0;
+                if (!Number.isFinite(workEnd)) workEnd = 24 * 60;
+                if (workStart < 0) workStart = 0;
+                if (workEnd > 24 * 60) workEnd = 24 * 60;
+                if (workEnd <= workStart) {
+                    workStart = 0;
+                    workEnd = 24 * 60;
+                }
+
+                var roomIdField = document.getElementById('roomIdField');
+                var roomId = roomIdField ? String(roomIdField.value || '').trim() : '';
+                var roomWindow = _getRoomWorkWindowMinutes(roomId);
+                if (roomWindow) {
+                    workStart = Math.max(workStart, roomWindow.startMinutes);
+                    workEnd = Math.min(workEnd, roomWindow.endMinutes);
+
+                    if (workEnd <= workStart) {
+                        workStart = roomWindow.startMinutes;
+                        workEnd = roomWindow.endMinutes;
+                    }
+                }
+
+                function _normalizeMinutesValue(v) {
+                    if (v === undefined || v === null) return null;
+
+                    if (typeof v === 'number') {
+                        return Number.isFinite(v) ? v : null;
+                    }
+
+                    var s = String(v).trim();
+                    if (!s) return null;
+
+                    if (s.indexOf(':') !== -1) {
+                        var parts = s.split(':');
+                        if (parts.length >= 2) {
+                            var h = parseInt(parts[0], 10);
+                            var m = parseInt(parts[1], 10);
+                            if (Number.isFinite(h) && Number.isFinite(m)) {
+                                return (h * 60) + m;
+                            }
+                        }
+                        return null;
+                    }
+
+                    var n = parseInt(s, 10);
+                    return Number.isFinite(n) ? n : null;
+                }
+
+                function _readSelectedMinutesFromTimeSelect(selectEl) {
+                    if (!selectEl) return null;
+                    var li = selectEl.querySelector('ul.options li.selected');
+                    if (!li) return null;
+
+                    var rawMinutes = li.getAttribute('data-minutes');
+                    var m = rawMinutes !== null ? parseInt(rawMinutes, 10) : NaN;
+                    if (Number.isFinite(m)) return m;
+
+                    var rawAttrValue = li.getAttribute('data-value');
+                    var rawTextValue = li.textContent;
+                    var s = '';
+                    if (rawAttrValue && String(rawAttrValue).indexOf(':') !== -1) {
+                        s = String(rawAttrValue).trim();
+                    } else {
+                        s = String(rawTextValue || rawAttrValue || '').trim();
+                    }
+                    if (!s) return null;
+
+                    if (s.indexOf(':') !== -1) {
+                        var parts = s.split(':');
+                        if (parts.length >= 2) {
+                            var h = parseInt(parts[0], 10);
+                            var mm = parseInt(parts[1], 10);
+                            if (Number.isFinite(h) && Number.isFinite(mm)) {
+                                return (h * 60) + mm;
+                            }
+                        }
+                        return null;
+                    }
+
+                    var n = parseInt(s, 10);
+                    return Number.isFinite(n) ? n : null;
+                }
+
+                var startMinutes = _normalizeMinutesValue(timeState.startMinutes);
+                var endMinutes = _normalizeMinutesValue(timeState.endMinutes);
+
+                if (startMinutes === null || endMinutes === null) {
+                    var startSelect = blockEl.querySelector('.custom-select[id^="start-time"]');
+                    var endSelect = blockEl.querySelector('.custom-select[id^="end-time"]');
+                    if (startMinutes === null) {
+                        startMinutes = _readSelectedMinutesFromTimeSelect(startSelect);
+                    }
+                    if (endMinutes === null) {
+                        endMinutes = _readSelectedMinutesFromTimeSelect(endSelect);
+                    }
+                }
+
+                if (startMinutes !== null) {
+                    startMinutes = Math.max(0, Math.min(24 * 60, startMinutes));
+                }
+                if (endMinutes !== null) {
+                    endMinutes = Math.max(0, Math.min(24 * 60, endMinutes));
+                }
+
+                var hasExactTime = (startMinutes !== null && endMinutes !== null && Number.isFinite(startMinutes) && Number.isFinite(endMinutes) && endMinutes > startMinutes);
+                var searchWindowStart = workStart;
+                var searchWindowEnd = workEnd;
+                if (!hasExactTime) {
+                    if (startMinutes !== null && Number.isFinite(startMinutes)) {
+                        searchWindowStart = Math.max(workStart, startMinutes);
+                    } else if (endMinutes !== null && Number.isFinite(endMinutes)) {
+                        searchWindowEnd = Math.min(workEnd, endMinutes);
+                    }
+                }
+
+                blockEl._bulkScenarioDateHighlightGen = (blockEl._bulkScenarioDateHighlightGen || 0) + 1;
+                var gen = blockEl._bulkScenarioDateHighlightGen;
+
+                var dayCells = Array.from(grid.querySelectorAll('.modal-datepicker__day:not(.modal-datepicker__day--outside)'));
+                dayCells.forEach(function (c) {
+                    var iso = c.getAttribute('data-date-iso') || '';
+                    if (!iso) return;
+                    c.classList.add('modal-datepicker__day--scenario-pending');
+                });
+
+                dayCells.forEach(function (c) {
+                    var iso = c.getAttribute('data-date-iso') || '';
+                    if (!iso) return;
+
+                    _loadBusySpecialistsByDateIso(iso, function (busySpecialists) {
+                        if (blockEl._bulkScenarioDateHighlightGen !== gen) {
+                            return;
+                        }
+
+                        var spec = null;
+                        var arr = Array.isArray(busySpecialists) ? busySpecialists : [];
+                        for (var i = 0; i < arr.length; i++) {
+                            if (String(arr[i].id) === String(teacherIdInt)) {
+                                spec = arr[i];
+                                break;
+                            }
+                        }
+                        var intervals = spec && Array.isArray(spec.intervals) ? spec.intervals : [];
+                        var merged = _mergeMinuteIntervals(intervals);
+
+                        var available = false;
+                        var reason = '';
+
+                        if (hasExactTime) {
+                            if (startMinutes < workStart || endMinutes > workEnd) {
+                                available = false;
+                                reason = 'Вне времени работы';
+                            } else {
+                            var busy = false;
+                            for (var j = 0; j < intervals.length; j++) {
+                                var it = intervals[j];
+                                if (!it) continue;
+                                var s = parseInt(it.startMinutes, 10);
+                                var e = parseInt(it.endMinutes, 10);
+                                if (!Number.isFinite(s) || !Number.isFinite(e)) continue;
+                                if (startMinutes < e && endMinutes > s) {
+                                    busy = true;
+                                    break;
+                                }
+                            }
+                            available = !busy;
+                            if (!available) {
+                                reason = 'Недоступно в выбранное время';
+                            }
+                            }
+                        } else {
+                            available = _hasFreeIntervalInWindow(merged, requiredMinutes, searchWindowStart, searchWindowEnd);
+                            if (!available) {
+                                reason = 'Нет свободного времени для выбранной длительности';
+                            }
+                        }
+
+                        c.classList.remove('modal-datepicker__day--scenario-pending');
+                        c.classList.remove('modal-datepicker__day--scenario-available', 'modal-datepicker__day--scenario-unavailable');
+                        if (c.hasAttribute('data-scenario-tooltip')) {
+                            c.removeAttribute('data-scenario-tooltip');
+                        }
+
+                        if (available) {
+                            c.classList.add('modal-datepicker__day--scenario-available');
+                        } else {
+                            c.classList.add('modal-datepicker__day--scenario-unavailable');
+                            if (reason) {
+                                c.setAttribute('data-scenario-tooltip', reason);
+                            }
+                        }
+                    });
+                });
+            }
+
+            blockEl._bulkUpdateDatepickerScenarioHighlight = updateScenarioDayHighlights;
 
             trigger.addEventListener('click', function (e) {
                 e.stopPropagation();
@@ -763,6 +1213,9 @@
                         window.syncCreateBookingTariffs(blockEl);
                     }
                     calculateAndUpdateBookingCostInBlock(blockEl);
+                    if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                        window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                    }
                 });
             }
 
@@ -832,6 +1285,9 @@
                             window.syncCreateBookingTariffs(blockEl);
                         }
                         calculateAndUpdateBookingCostInBlock(blockEl);
+                        if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                            window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                        }
                     });
 
                     utils.rebuildDurationSelect(durationSelect, null, 0, minMinutes);
@@ -955,6 +1411,9 @@
                             window.syncCreateBookingTariffs(blockEl);
                         }
                         calculateAndUpdateBookingCostInBlock(blockEl);
+                        if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                            window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                        }
                     });
 
                     utils.rebuildDurationSelect(durationSelect, null, 0, minMinutes);
@@ -1003,6 +1462,9 @@
                         window.syncCreateBookingTariffs(blockEl);
                     }
                     calculateAndUpdateBookingCostInBlock(blockEl);
+                    if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                        window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                    }
                 });
 
                 var startSlots;
@@ -1057,6 +1519,9 @@
                         window.syncCreateBookingTariffs(blockEl);
                     }
                     calculateAndUpdateBookingCostInBlock(blockEl);
+                    if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                        window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                    }
                 });
 
                 var endTimes;
@@ -1112,6 +1577,9 @@
                         window.syncCreateBookingTariffs(blockEl);
                     }
                     calculateAndUpdateBookingCostInBlock(blockEl);
+                    if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                        window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                    }
                 });
             }
 
@@ -1162,6 +1630,17 @@
             initDatepickerInBlock(blockEl);
             initTimeControllerInBlock(blockEl);
         }
+
+        window.refreshCreateBookingOpenDatepickersScenarioHighlight = function () {
+            var blocks = getBlocks();
+            blocks.forEach(function (b) {
+                var popup = b ? b.querySelector('[id^="datepicker-popup"]') : null;
+                if (!popup || !popup.classList.contains('open')) return;
+                if (typeof b._bulkUpdateDatepickerScenarioHighlight === 'function') {
+                    b._bulkUpdateDatepickerScenarioHighlight();
+                }
+            });
+        };
 
         function refreshBlocksUi() {
             var blocks = getBlocks();
@@ -1755,6 +2234,21 @@
     function openModal(date, time, roomName, roomId, cell) {
         if (typeof window.resetCreateBookingModalSelects === 'function') {
             window.resetCreateBookingModalSelects();
+        }
+
+        if (window.__bulkBusySpecialistsByDateCache) {
+            try {
+                Object.keys(window.__bulkBusySpecialistsByDateCache).forEach(function (k) {
+                    delete window.__bulkBusySpecialistsByDateCache[k];
+                });
+            } catch (e) {}
+        }
+        if (window.__bulkBusySpecialistsByDateInflight) {
+            try {
+                Object.keys(window.__bulkBusySpecialistsByDateInflight).forEach(function (k) {
+                    delete window.__bulkBusySpecialistsByDateInflight[k];
+                });
+            } catch (e) {}
         }
 
         initializeBulkCreateBlocks();
@@ -3651,12 +4145,12 @@
                     // Дни предыдущего месяца
                     for (var i = startDayOfWeek - 1; i >= 0; i--) {
                         var dayNum = prevMonthLastDay - i;
-                        var cell = document.createElement('div');
-                        cell.className = 'modal-datepicker__day modal-datepicker__day--outside';
-                        cell.textContent = dayNum;
-                        datepickerGrid.appendChild(cell);
+                        var outsideCell = document.createElement('div');
+                        outsideCell.className = 'modal-datepicker__day modal-datepicker__day--outside';
+                        outsideCell.textContent = dayNum;
+                        datepickerGrid.appendChild(outsideCell);
                     }
-                    
+
                     // Дни текущего месяца
                     for (var d = 1; d <= daysInMonth; d++) {
                         var cell = document.createElement('div');
@@ -3665,6 +4159,8 @@
                         
                         var cellDate = new Date(year, month, d);
                         cellDate.setHours(0, 0, 0, 0);
+
+                        cell.setAttribute('data-date-iso', formatDateIso(cellDate));
                         
                         // Сегодня
                         if (cellDate.getTime() === today.getTime()) {
@@ -3693,10 +4189,10 @@
                     var totalCells = datepickerGrid.children.length;
                     var remainingCells = (7 - (totalCells % 7)) % 7;
                     for (var n = 1; n <= remainingCells; n++) {
-                        var cell = document.createElement('div');
-                        cell.className = 'modal-datepicker__day modal-datepicker__day--outside';
-                        cell.textContent = n;
-                        datepickerGrid.appendChild(cell);
+                        var nextCell = document.createElement('div');
+                        nextCell.className = 'modal-datepicker__day modal-datepicker__day--outside';
+                        nextCell.textContent = n;
+                        datepickerGrid.appendChild(nextCell);
                     }
                 }
                 
@@ -3705,6 +4201,9 @@
                     populateMonthSelect();
                     populateYearSelect();
                     buildDatepickerGrid();
+                    if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                        window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                    }
                 }
                 
                 // Обработчик выбора даты

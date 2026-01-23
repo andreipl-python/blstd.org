@@ -895,8 +895,20 @@ def get_busy_specialists_for_date(request):
         # Конвертируем время в минуты от полуночи
         local_start = timezone.localtime(booking.datetimestart)
         local_end = timezone.localtime(booking.datetimeend)
-        start_minutes = local_start.hour * 60 + local_start.minute
-        end_minutes = local_end.hour * 60 + local_end.minute
+
+        start_minutes = (
+            0
+            if local_start.date() < target_date
+            else (local_start.hour * 60 + local_start.minute)
+        )
+        end_minutes = (
+            (24 * 60)
+            if local_end.date() > target_date
+            else (local_end.hour * 60 + local_end.minute)
+        )
+
+        if end_minutes <= start_minutes:
+            continue
 
         busy_specialists[spec_id]["intervals"].append(
             {
@@ -920,8 +932,20 @@ def get_busy_specialists_for_date(request):
 
             local_start = timezone.localtime(booking.datetimestart)
             local_end = timezone.localtime(booking.datetimeend)
-            start_minutes = local_start.hour * 60 + local_start.minute
-            end_minutes = local_end.hour * 60 + local_end.minute
+
+            start_minutes = (
+                0
+                if local_start.date() < target_date
+                else (local_start.hour * 60 + local_start.minute)
+            )
+            end_minutes = (
+                (24 * 60)
+                if local_end.date() > target_date
+                else (local_end.hour * 60 + local_end.minute)
+            )
+
+            if end_minutes <= start_minutes:
+                continue
 
             busy_specialists[spec_id]["intervals"].append(
                 {

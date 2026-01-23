@@ -557,14 +557,23 @@
                 // Нет доступных специалистов
                 teacherSelect.classList.add('disabled');
                 teacherSelect.classList.remove('open');
-                teacherSelect.classList.remove('has-selection');
-                teacherLis.forEach(function (li) {
-                    li.classList.remove('selected');
-                });
-                selectedTeacherId = '';
-                if (teacherSelectedSpan) teacherSelectedSpan.textContent = 'Нет доступных преподавателей';
-                syncClearableSelectState(teacherSelect);
-                if (teacherWarning) teacherWarning.style.display = 'none';
+                if (selectedTeacherId) {
+                    teacherSelect.classList.add('has-selection');
+                    var selectedLiStill = teacherSelect.querySelector('ul.options li.selected');
+                    if (teacherSelectedSpan && selectedLiStill) {
+                        teacherSelectedSpan.textContent = selectedLiStill.textContent;
+                    }
+                    syncClearableSelectState(teacherSelect);
+                } else {
+                    teacherSelect.classList.remove('has-selection');
+                    teacherLis.forEach(function (li) {
+                        li.classList.remove('selected');
+                    });
+                    selectedTeacherId = '';
+                    if (teacherSelectedSpan) teacherSelectedSpan.textContent = 'Нет доступных преподавателей';
+                    syncClearableSelectState(teacherSelect);
+                    if (teacherWarning) teacherWarning.style.display = 'none';
+                }
             } else {
                 teacherSelect.classList.remove('disabled');
                 if (!selectedTeacherId && teacherSelectedSpan) {
@@ -941,20 +950,32 @@
                         onSelected: function () {
                             teacherDirectionLastChanged = 'teacher';
                             applyTeacherDirectionFilters();
+                            if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                                window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                            }
                         },
                         onCleared: function () {
                             teacherDirectionLastChanged = 'teacher';
                             applyTeacherDirectionFilters();
+                            if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                                window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                            }
                         }
                     },
                     'field-direction': {
                         onSelected: function () {
                             teacherDirectionLastChanged = 'field-direction';
                             applyTeacherDirectionFilters();
+                            if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                                window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                            }
                         },
                         onCleared: function () {
                             teacherDirectionLastChanged = 'field-direction';
                             applyTeacherDirectionFilters();
+                            if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                                window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                            }
                         }
                     },
                     'specialist-service': {
@@ -971,6 +992,9 @@
                                     b._bulkOnTariffChanged();
                                 }
                             });
+                            if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                                window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                            }
                         },
                         beforeClear: function (ctx) {
                             var selectEl = ctx ? ctx.selectEl : null;
@@ -995,6 +1019,9 @@
                                     b._bulkOnTariffChanged();
                                 }
                             });
+                            if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                                window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                            }
                         }
                     },
                     'tariff': {
