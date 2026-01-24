@@ -450,6 +450,66 @@
         let tariffWeeklyIntervals = [];
         let tariffTimeFrozen = false;
 
+        function getSelectedTeacherIdOrNull() {
+            var teacherSelect = document.getElementById('edit-teacher');
+            if (!teacherSelect) return null;
+            var selectedLi = teacherSelect.querySelector('ul.options li.selected');
+            if (!selectedLi) return null;
+            var raw = selectedLi.getAttribute('data-value');
+            var tid = parseInt(String(raw || ''), 10);
+            return Number.isFinite(tid) ? tid : null;
+        }
+
+        function filterStartSlotsByTeacherAvailability(slotsMinutes, startMinutesForCheck, endMinutesForCheck) {
+            var slots = Array.isArray(slotsMinutes) ? slotsMinutes : [];
+            var scenarioName = getCurrentScenarioName();
+            if (scenarioName !== 'Музыкальная школа') return slots;
+
+            var tid = getSelectedTeacherIdOrNull();
+            if (tid === null) return slots;
+
+            var excludeBookingId = window.currentBookingId;
+            if (endMinutesForCheck !== null && endMinutesForCheck !== undefined) {
+                return slots.filter(function (s) {
+                    return !isEditSpecialistBusy(tid, s, endMinutesForCheck, excludeBookingId);
+                });
+            }
+
+            var periods = (currentSelectedPeriods !== null && currentSelectedPeriods !== undefined) ? currentSelectedPeriods : 1;
+            var dur = minMinutes * periods;
+            if (!Number.isFinite(dur) || dur <= 0) return [];
+            return slots.filter(function (s) {
+                return !isEditSpecialistBusy(tid, s, s + dur, excludeBookingId);
+            });
+        }
+
+        function filterEndTimesByTeacherAvailability(endTimesMinutes) {
+            var endTimes = Array.isArray(endTimesMinutes) ? endTimesMinutes : [];
+            var scenarioName = getCurrentScenarioName();
+            if (scenarioName !== 'Музыкальная школа') return endTimes;
+
+            var tid = getSelectedTeacherIdOrNull();
+            if (tid === null) return endTimes;
+
+            var excludeBookingId = window.currentBookingId;
+
+            if (currentStartTimeMinutes !== null) {
+                return endTimes.filter(function (e) {
+                    return e > currentStartTimeMinutes && !isEditSpecialistBusy(tid, currentStartTimeMinutes, e, excludeBookingId);
+                });
+            }
+
+            var periods = (currentSelectedPeriods !== null && currentSelectedPeriods !== undefined) ? currentSelectedPeriods : 1;
+            var dur = minMinutes * periods;
+            if (!Number.isFinite(dur) || dur <= 0) return [];
+
+            return endTimes.filter(function (e) {
+                var s = e - dur;
+                if (!Number.isFinite(s) || s < 0 || s >= e) return false;
+                return !isEditSpecialistBusy(tid, s, e, excludeBookingId);
+            });
+        }
+
         function getCurrentScenarioName() {
             var currentScenarioId = scenarioId || (modalEl ? modalEl.getAttribute('data-scenario-id') : null);
             var scenarioName = '';
@@ -1099,11 +1159,19 @@
                         1
                     );
 
-            if (currentEndTimeMinutes !== null && filteredEndTimes.indexOf(currentEndTimeMinutes) === -1) {
+            const filteredStartSlotsByTeacher = filterStartSlotsByTeacherAvailability(
+                filteredStartSlots,
+                currentEndTimeMinutes !== null && currentStartTimeMinutes === null ? null : currentStartTimeMinutes,
+                currentEndTimeMinutes !== null && currentStartTimeMinutes === null ? currentEndTimeMinutes : null
+            );
+
+            const filteredEndTimesByTeacher = filterEndTimesByTeacherAvailability(filteredEndTimes);
+
+            if (currentEndTimeMinutes !== null && filteredEndTimesByTeacher.indexOf(currentEndTimeMinutes) === -1) {
                 currentEndTimeMinutes = null;
             }
 
-            utils.rebuildStartTimeSelect(startTimeSelect, filteredStartSlots, currentStartTimeMinutes, function (minutes) {
+            utils.rebuildStartTimeSelect(startTimeSelect, filteredStartSlotsByTeacher, currentStartTimeMinutes, function (minutes) {
                 hideWarnings();
                 currentStartTimeMinutes = minutes;
 
@@ -1148,7 +1216,7 @@
                 }
             });
 
-            utils.rebuildEndTimeSelect(endTimeSelect, filteredEndTimes, currentEndTimeMinutes, function (minutes) {
+            utils.rebuildEndTimeSelect(endTimeSelect, filteredEndTimesByTeacher, currentEndTimeMinutes, function (minutes) {
                 hideWarnings();
                 currentEndTimeMinutes = minutes;
 
@@ -1320,6 +1388,11 @@
             get _currentEndTimeMinutes() { return currentEndTimeMinutes; },
             get _minMinutes() { return minMinutes; },
             updateSubmitButtonState: updateSubmitButtonState,
+            rebuildAll: function () {
+                rebuildAll();
+                validateWarnings();
+                updateSubmitButtonState();
+            },
             syncMusicSchoolTimeFields: function () {
                 syncEditBookingMusicSchoolTimeFields();
                 rebuildAll();
@@ -1414,13 +1487,23 @@
     // Проверить, занят ли специалист в указанное время
     function isEditSpecialistBusy(specialistId, startMinutes, endMinutes, excludeBookingId) {
         var busySpecs = editBusySpecialistsCache.specialists || [];
+
+        var excludeId = null;
+        if (excludeBookingId !== undefined && excludeBookingId !== null && excludeBookingId !== '') {
+            var ex = parseInt(excludeBookingId, 10);
+            excludeId = Number.isFinite(ex) ? ex : null;
+        }
+
         for (var i = 0; i < busySpecs.length; i++) {
             if (busySpecs[i].id === specialistId) {
                 var intervals = busySpecs[i].intervals || [];
                 for (var j = 0; j < intervals.length; j++) {
                     var interval = intervals[j];
-                    if (excludeBookingId && interval.booking_id && interval.booking_id === excludeBookingId) {
-                        continue;
+                    if (excludeId !== null && interval && interval.booking_id !== undefined && interval.booking_id !== null) {
+                        var bid = parseInt(interval.booking_id, 10);
+                        if (Number.isFinite(bid) && bid === excludeId) {
+                            continue;
+                        }
                     }
                     // Интервалы могут означать как реальную занятость бронью,
                     // так и "не работает" по расписанию (gaps).
@@ -1563,7 +1646,8 @@
             var dirs = dRaw ? dRaw.split(',').map(function(v) { return v.trim(); }).filter(Boolean) : [];
             var dirMatch = !selectedDirectionId || dirs.indexOf(String(selectedDirectionId)) !== -1;
             var timeOk = availableTeacherIds.indexOf(tid) !== -1;
-            var vis = dirMatch && timeOk;
+            var isSelectedTeacher = selectedTeacherId && String(tid) === String(selectedTeacherId);
+            var vis = dirMatch && (timeOk || isSelectedTeacher);
             li.style.display = vis ? '' : 'none';
             if (vis) { visibleTeacherCount++; lastVisibleTeacherLi = li; }
         });
@@ -1836,7 +1920,13 @@
             popup.classList.remove('open');
             var ctrl = ensureEditTimeController();
             if (ctrl && ctrl.handleRoomOrDateChange) ctrl.handleRoomOrDateChange();
-            loadEditBusySpecialistsForDate(iso, function() { applyEditTeacherDirectionFilters(); });
+            loadEditBusySpecialistsForDate(iso, function() {
+                var ctrl2 = ensureEditTimeController();
+                if (ctrl2 && typeof ctrl2.rebuildAll === 'function') {
+                    ctrl2.rebuildAll();
+                }
+                applyEditTeacherDirectionFilters();
+            });
         }
 
         if (!trigger._bound) {

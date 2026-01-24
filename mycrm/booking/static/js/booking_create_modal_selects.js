@@ -614,8 +614,27 @@
             // 7) Проверка выбранного преподавателя на доступность
             if (selectedTeacherId && checkStartMinutes !== null && checkEndMinutes !== null) {
                 var teacherIdInt = parseInt(selectedTeacherId, 10);
-                if (typeof window.isSpecialistBusy === 'function' && window.isSpecialistBusy(teacherIdInt, checkStartMinutes, checkEndMinutes)) {
+                var reasonInfo = null;
+                if (typeof window.getSpecialistBusyReason === 'function') {
+                    reasonInfo = window.getSpecialistBusyReason(teacherIdInt, checkStartMinutes, checkEndMinutes);
+                }
+                var isBusy = false;
+                if (reasonInfo && reasonInfo.busy === true) {
+                    isBusy = true;
+                } else if (typeof window.isSpecialistBusy === 'function') {
+                    isBusy = window.isSpecialistBusy(teacherIdInt, checkStartMinutes, checkEndMinutes);
+                }
+
+                if (isBusy) {
                     if (teacherWarning) teacherWarning.style.display = 'inline-block';
+                    var tooltipEl = teacherWarning ? teacherWarning.querySelector('.warning-tooltip') : null;
+                    if (tooltipEl) {
+                        var msg = 'Этот преподаватель занят в выбранное время.';
+                        if (reasonInfo && reasonInfo.reason === 'schedule') {
+                            msg = reasonInfo.is_day_off ? 'Этот преподаватель не работает в выбранный день.' : 'Этот преподаватель не работает в выбранное время.';
+                        }
+                        tooltipEl.textContent = msg;
+                    }
                 } else {
                     if (teacherWarning) teacherWarning.style.display = 'none';
                 }
@@ -949,6 +968,18 @@
                     'teacher': {
                         onSelected: function () {
                             teacherDirectionLastChanged = 'teacher';
+                            var blocksContainer = document.getElementById('bookingBlocksContainer');
+                            var blocks = blocksContainer ? Array.from(blocksContainer.querySelectorAll('.booking-create-block')) : [];
+                            blocks.forEach(function (b) {
+                                if (b && typeof b._bulkTimeControllerRebuildAll === 'function') {
+                                    b._bulkTimeControllerRebuildAll();
+                                }
+                            });
+                            var modalEl = document.getElementById('createBookingModal');
+                            var singleCtrl = modalEl ? modalEl._createSingleTimeController : null;
+                            if (singleCtrl && typeof singleCtrl.rebuildAll === 'function') {
+                                singleCtrl.rebuildAll();
+                            }
                             applyTeacherDirectionFilters();
                             if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
                                 window.refreshCreateBookingOpenDatepickersScenarioHighlight();
@@ -956,6 +987,18 @@
                         },
                         onCleared: function () {
                             teacherDirectionLastChanged = 'teacher';
+                            var blocksContainer = document.getElementById('bookingBlocksContainer');
+                            var blocks = blocksContainer ? Array.from(blocksContainer.querySelectorAll('.booking-create-block')) : [];
+                            blocks.forEach(function (b) {
+                                if (b && typeof b._bulkTimeControllerRebuildAll === 'function') {
+                                    b._bulkTimeControllerRebuildAll();
+                                }
+                            });
+                            var modalEl = document.getElementById('createBookingModal');
+                            var singleCtrl = modalEl ? modalEl._createSingleTimeController : null;
+                            if (singleCtrl && typeof singleCtrl.rebuildAll === 'function') {
+                                singleCtrl.rebuildAll();
+                            }
                             applyTeacherDirectionFilters();
                             if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
                                 window.refreshCreateBookingOpenDatepickersScenarioHighlight();

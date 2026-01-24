@@ -450,8 +450,11 @@
                             if (typeof window.setEditTeacherDirectionLastChanged === 'function') {
                                 window.setEditTeacherDirectionLastChanged('edit-teacher');
                             }
-                            applyEditTeacherDirectionFilters();
                             var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                            if (ctrl && typeof ctrl.rebuildAll === 'function') {
+                                ctrl.rebuildAll();
+                            }
+                            applyEditTeacherDirectionFilters();
                             if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
                                 ctrl.updateSubmitButtonState();
                             }
@@ -460,8 +463,11 @@
                             if (typeof window.setEditTeacherDirectionLastChanged === 'function') {
                                 window.setEditTeacherDirectionLastChanged('edit-teacher');
                             }
-                            applyEditTeacherDirectionFilters();
                             var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+                            if (ctrl && typeof ctrl.rebuildAll === 'function') {
+                                ctrl.rebuildAll();
+                            }
+                            applyEditTeacherDirectionFilters();
                             if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
                                 ctrl.updateSubmitButtonState();
                             }
@@ -703,7 +709,13 @@
 
         // Загрузка занятых специалистов на дату брони
         if (booking.date_iso) {
-            loadEditBusySpecialistsForDate(booking.date_iso, function() { applyEditTeacherDirectionFilters(); });
+            loadEditBusySpecialistsForDate(booking.date_iso, function() {
+                const controller = ensureEditTimeController();
+                if (controller && typeof controller.rebuildAll === 'function') {
+                    controller.rebuildAll();
+                }
+                applyEditTeacherDirectionFilters();
+            });
         }
 
         setCustomSelectValue(modalEl.querySelector('#edit-direction'), booking.direction_id, 'Выберите направление');
