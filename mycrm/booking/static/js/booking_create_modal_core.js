@@ -16,6 +16,112 @@
             return Array.from(container.querySelectorAll('.booking-create-block'));
         }
 
+        function _getBulkBlockIntervalForDate(blockEl) {
+            if (!blockEl) return null;
+            var dateInput = blockEl.querySelector('input[id^="modal-create-date"]');
+            var dateIso = dateInput ? String(dateInput.value || '').trim() : '';
+            if (!dateIso) return null;
+
+            var utils = window.BookingTimeUtils || null;
+            function parseHHMMToMinutes(text) {
+                if (utils && typeof utils.parseTimeToMinutes === 'function') {
+                    return utils.parseTimeToMinutes(text);
+                }
+                var s = String(text || '').trim();
+                var parts = s.split(':');
+                if (parts.length < 2) return null;
+                var h = parseInt(parts[0], 10);
+                var m = parseInt(parts[1], 10);
+                if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+                return (h * 60) + m;
+            }
+
+            function getSelectedMinutesFromTimeSelect(selectEl) {
+                if (!selectEl) return null;
+                var li = selectEl.querySelector('ul.options li.selected');
+                if (li) {
+                    var raw = li.getAttribute('data-minutes');
+                    var n = raw !== null && raw !== undefined ? parseInt(raw, 10) : null;
+                    if (Number.isFinite(n)) return n;
+                    var v = li.getAttribute('data-value') || li.textContent;
+                    var p = parseHHMMToMinutes(v);
+                    if (Number.isFinite(p)) return p;
+                }
+                var span = selectEl.querySelector('.selected');
+                if (span) {
+                    var p2 = parseHHMMToMinutes(span.textContent);
+                    if (Number.isFinite(p2)) return p2;
+                }
+                return null;
+            }
+
+            function getSelectedDurationMinutes(durationSelectEl) {
+                if (!durationSelectEl) return null;
+                var li = durationSelectEl.querySelector('ul.options li.selected');
+                if (!li) return null;
+                var v = li.getAttribute('data-value') || '';
+                var p = parseHHMMToMinutes(v);
+                return Number.isFinite(p) && p > 0 ? p : null;
+            }
+
+            var state = blockEl._bulkTimeState || {};
+
+            var startMinutes = Number.isFinite(state.startMinutes)
+                ? state.startMinutes
+                : getSelectedMinutesFromTimeSelect(blockEl.querySelector('.custom-select[id^="start-time"]'));
+            if (!Number.isFinite(startMinutes)) return null;
+
+            var endMinutes = Number.isFinite(state.endMinutes)
+                ? state.endMinutes
+                : getSelectedMinutesFromTimeSelect(blockEl.querySelector('.custom-select[id^="end-time"]'));
+
+            if (!Number.isFinite(endMinutes) || endMinutes <= startMinutes) {
+                var durM = getSelectedDurationMinutes(blockEl.querySelector('.custom-select[id^="duration"]'));
+                if (Number.isFinite(durM) && durM > 0) {
+                    endMinutes = startMinutes + durM;
+                }
+            }
+
+            if (!Number.isFinite(endMinutes) || endMinutes <= startMinutes) return null;
+
+            return { dateIso: dateIso, startMinutes: startMinutes, endMinutes: endMinutes };
+        }
+
+        function _getSyntheticRoomBookingsForDate(excludeBlockEl, dateIso) {
+            var iso = String(dateIso || '').trim();
+            if (!iso) return [];
+            var res = [];
+            var blocks = getBlocks();
+            blocks.forEach(function (b, i) {
+                if (!b || b === excludeBlockEl) return;
+                var it = _getBulkBlockIntervalForDate(b);
+                if (!it) return;
+                if (String(it.dateIso) !== iso) return;
+                res.push({ bookingId: 'bulk-block-' + String(i + 1), startMinutes: it.startMinutes, endMinutes: it.endMinutes });
+            });
+            return res;
+        }
+
+        function _rebuildOtherBlocksTimeControllers(changedBlockEl) {
+            var blocks = getBlocks();
+            blocks.forEach(function (b) {
+                if (!b || b === changedBlockEl) return;
+                if (typeof b._bulkTimeControllerRebuildAll === 'function') {
+                    b._bulkTimeControllerRebuildAll();
+                }
+            });
+        }
+
+        function _rebuildAllBlocksTimeControllers() {
+            var blocks = getBlocks();
+            blocks.forEach(function (b) {
+                if (!b) return;
+                if (typeof b._bulkTimeControllerRebuildAll === 'function') {
+                    b._bulkTimeControllerRebuildAll();
+                }
+            });
+        }
+
         function parseCostTextToNumber(text) {
             var s = String(text || '').replace(',', '.');
             var m = s.match(/-?\d+(?:\.\d+)?/);
@@ -57,6 +163,9 @@
         var __bulkBusySpecialistsByDateCache = window.__bulkBusySpecialistsByDateCache || (window.__bulkBusySpecialistsByDateCache = {});
         var __bulkBusySpecialistsByDateInflight = window.__bulkBusySpecialistsByDateInflight || (window.__bulkBusySpecialistsByDateInflight = {});
 
+        var __bulkAvailableTariffsByKeyCache = window.__bulkAvailableTariffsByKeyCache || (window.__bulkAvailableTariffsByKeyCache = {});
+        var __bulkAvailableTariffsByKeyInflight = window.__bulkAvailableTariffsByKeyInflight || (window.__bulkAvailableTariffsByKeyInflight = {});
+
         function _loadBusySpecialistsByDateIso(dateIso, callback) {
             var iso = String(dateIso || '').trim();
             if (!iso) {
@@ -94,6 +203,48 @@
                     cbs.forEach(function (cb) {
                         if (typeof cb === 'function') {
                             cb(__bulkBusySpecialistsByDateCache[iso] || []);
+                        }
+                    });
+                });
+        }
+
+        function _loadAvailableTariffsByRequestKey(requestKey, callback) {
+            var key = String(requestKey || '').trim();
+            if (!key) {
+                if (callback) callback([]);
+                return;
+            }
+
+            if (__bulkAvailableTariffsByKeyCache[key] !== undefined) {
+                if (callback) callback(__bulkAvailableTariffsByKeyCache[key]);
+                return;
+            }
+
+            if (__bulkAvailableTariffsByKeyInflight[key]) {
+                __bulkAvailableTariffsByKeyInflight[key].push(callback);
+                return;
+            }
+
+            __bulkAvailableTariffsByKeyInflight[key] = [callback];
+
+            fetch('/booking/get-available-tariffs/?' + key, {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var tariffs = (data && data.success && Array.isArray(data.tariffs)) ? data.tariffs : [];
+                    __bulkAvailableTariffsByKeyCache[key] = tariffs;
+                })
+                .catch(function () {
+                    __bulkAvailableTariffsByKeyCache[key] = [];
+                })
+                .finally(function () {
+                    var cbs = __bulkAvailableTariffsByKeyInflight[key] || [];
+                    delete __bulkAvailableTariffsByKeyInflight[key];
+                    cbs.forEach(function (cb) {
+                        if (typeof cb === 'function') {
+                            cb(__bulkAvailableTariffsByKeyCache[key] || []);
                         }
                     });
                 });
@@ -464,7 +615,139 @@
                 clearScenarioDayHighlights();
 
                 var scenarioName = String(window.currentScenarioName || '').trim();
-                if (scenarioName !== 'Музыкальная школа') {
+                var isMusicSchoolScenario = scenarioName === 'Музыкальная школа';
+                var isTariffScenario = scenarioName === 'Репетиционная точка' || scenarioName === 'Музыкальный класс';
+                if (!isMusicSchoolScenario && !isTariffScenario) {
+                    return;
+                }
+
+                if (isTariffScenario) {
+                    var scenarioId = (window.currentScenarioFilterId !== undefined && window.currentScenarioFilterId !== null)
+                        ? String(window.currentScenarioFilterId)
+                        : '';
+                    var roomIdField = document.getElementById('roomIdField');
+                    var roomId = roomIdField ? String(roomIdField.value || '').trim() : '';
+                    var peopleCountEl = document.getElementById('people-count');
+                    var peopleCountRaw = peopleCountEl ? String(peopleCountEl.value || '').trim() : '';
+                    var peopleCountInt = peopleCountRaw ? parseInt(peopleCountRaw, 10) : NaN;
+
+                    if (!scenarioId || !roomId || !peopleCountRaw || !Number.isFinite(peopleCountInt) || peopleCountInt < 1) {
+                        return;
+                    }
+
+                    var timeStateTariff = blockEl._bulkTimeState || {};
+
+                    function _normalizeMinutesValueTariff(v) {
+                        if (v === undefined || v === null) return null;
+                        if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+                        var n = parseInt(String(v).trim(), 10);
+                        return Number.isFinite(n) ? n : null;
+                    }
+
+                    function _readSelectedMinutesFromTimeSelectTariff(selectEl) {
+                        if (!selectEl) return null;
+                        var li = selectEl.querySelector('ul.options li.selected');
+                        if (!li) return null;
+                        var rawMinutes = li.getAttribute('data-minutes');
+                        var m = rawMinutes !== null ? parseInt(rawMinutes, 10) : NaN;
+                        if (Number.isFinite(m)) return m;
+                        var rawAttr = li.getAttribute('data-value') || '';
+                        var rawText = li.textContent || '';
+                        var s = (rawAttr && String(rawAttr).indexOf(':') !== -1) ? String(rawAttr).trim() : String(rawText).trim();
+                        if (!s || s.indexOf(':') === -1) return null;
+                        var parts = s.split(':');
+                        if (parts.length < 2) return null;
+                        var h = parseInt(parts[0], 10);
+                        var mm = parseInt(parts[1], 10);
+                        if (!Number.isFinite(h) || !Number.isFinite(mm)) return null;
+                        return (h * 60) + mm;
+                    }
+
+                    function _formatMinutesToHHMMTariff(totalMinutes) {
+                        if (window.BookingTimeUtils && typeof window.BookingTimeUtils.formatTimeHHMM === 'function') {
+                            return window.BookingTimeUtils.formatTimeHHMM(totalMinutes);
+                        }
+                        var h = Math.floor(totalMinutes / 60);
+                        var m = totalMinutes % 60;
+                        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+                    }
+
+                    var startMinutesTariff = _normalizeMinutesValueTariff(timeStateTariff.startMinutes);
+                    var endMinutesTariff = _normalizeMinutesValueTariff(timeStateTariff.endMinutes);
+                    if (startMinutesTariff === null) {
+                        startMinutesTariff = _normalizeMinutesValueTariff(window.currentStartTimeMinutes);
+                    }
+                    if (endMinutesTariff === null) {
+                        endMinutesTariff = _normalizeMinutesValueTariff(window.currentEndTimeMinutes);
+                    }
+
+                    if (startMinutesTariff === null || endMinutesTariff === null) {
+                        var startSel = blockEl.querySelector('.custom-select[id^="start-time"]');
+                        var endSel = blockEl.querySelector('.custom-select[id^="end-time"]');
+                        if (startMinutesTariff === null) startMinutesTariff = _readSelectedMinutesFromTimeSelectTariff(startSel);
+                        if (endMinutesTariff === null) endMinutesTariff = _readSelectedMinutesFromTimeSelectTariff(endSel);
+                    }
+
+                    if (startMinutesTariff === null || !Number.isFinite(startMinutesTariff)) {
+                        return;
+                    }
+
+                    startMinutesTariff = Math.max(0, Math.min(24 * 60, startMinutesTariff));
+                    if (endMinutesTariff !== null && Number.isFinite(endMinutesTariff)) {
+                        endMinutesTariff = Math.max(0, Math.min(24 * 60, endMinutesTariff));
+                    }
+
+                    var startHmTariff = _formatMinutesToHHMMTariff(startMinutesTariff);
+                    var hasExactTimeTariff = (endMinutesTariff !== null && Number.isFinite(endMinutesTariff) && endMinutesTariff > startMinutesTariff);
+                    var endHmTariff = hasExactTimeTariff ? _formatMinutesToHHMMTariff(endMinutesTariff) : '';
+
+                    blockEl._bulkScenarioDateHighlightGen = (blockEl._bulkScenarioDateHighlightGen || 0) + 1;
+                    var genTariff = blockEl._bulkScenarioDateHighlightGen;
+
+                    var dayCellsTariff = Array.from(grid.querySelectorAll('.modal-datepicker__day:not(.modal-datepicker__day--outside)'));
+                    dayCellsTariff.forEach(function (c) {
+                        var iso = c.getAttribute('data-date-iso') || '';
+                        if (!iso) return;
+                        c.classList.add('modal-datepicker__day--scenario-pending');
+                    });
+
+                    dayCellsTariff.forEach(function (c) {
+                        var iso = c.getAttribute('data-date-iso') || '';
+                        if (!iso) return;
+
+                        var qs = new URLSearchParams({
+                            scenario_id: scenarioId,
+                            room_id: roomId,
+                            date_iso: iso,
+                            start_time_hm: startHmTariff,
+                            people_count: peopleCountRaw
+                        });
+                        if (endHmTariff) {
+                            qs.set('end_time_hm', endHmTariff);
+                        }
+
+                        var requestKey = qs.toString();
+                        _loadAvailableTariffsByRequestKey(requestKey, function (tariffs) {
+                            if (blockEl._bulkScenarioDateHighlightGen !== genTariff) {
+                                return;
+                            }
+
+                            var available = Array.isArray(tariffs) && tariffs.length > 0;
+
+                            c.classList.remove('modal-datepicker__day--scenario-pending');
+                            c.classList.remove('modal-datepicker__day--scenario-available', 'modal-datepicker__day--scenario-unavailable');
+                            if (c.hasAttribute('data-scenario-tooltip')) {
+                                c.removeAttribute('data-scenario-tooltip');
+                            }
+
+                            if (available) {
+                                c.classList.add('modal-datepicker__day--scenario-available');
+                            } else {
+                                c.classList.add('modal-datepicker__day--scenario-unavailable');
+                                c.setAttribute('data-scenario-tooltip', 'Нет доступных тарифов');
+                            }
+                        });
+                    });
                     return;
                 }
 
@@ -1252,6 +1535,7 @@
                     if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
                         window.refreshCreateBookingOpenDatepickersScenarioHighlight();
                     }
+                    _rebuildOtherBlocksTimeControllers(blockEl);
                 });
             }
 
@@ -1377,7 +1661,9 @@
                 var minMinutes = getMinMinutes();
                 var workStart = getWorkStart();
                 var workEnd = getWorkEnd();
-                var roomBookings = Array.isArray(state.roomBookings) ? state.roomBookings : [];
+                var isoForBlocks = String(dateInput.value || '').trim();
+                var roomBookingsBase = Array.isArray(state.roomBookings) ? state.roomBookings : [];
+                var roomBookings = roomBookingsBase.concat(_getSyntheticRoomBookingsForDate(blockEl, isoForBlocks));
 
                 var tariffIntervals = isTariffScenario() ? parseTariffDayIntervalsMinutesOrNull() : null;
 
@@ -1407,6 +1693,7 @@
                         if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
                             window.refreshCreateBookingOpenDatepickersScenarioHighlight();
                         }
+                        _rebuildOtherBlocksTimeControllers(blockEl);
                     });
 
                     utils.rebuildDurationSelect(durationSelect, null, 0, minMinutes);
@@ -1534,6 +1821,7 @@
                         if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
                             window.refreshCreateBookingOpenDatepickersScenarioHighlight();
                         }
+                        _rebuildOtherBlocksTimeControllers(blockEl);
                     });
 
                     utils.rebuildDurationSelect(durationSelect, null, 0, minMinutes);
@@ -1585,6 +1873,7 @@
                     if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
                         window.refreshCreateBookingOpenDatepickersScenarioHighlight();
                     }
+                    _rebuildOtherBlocksTimeControllers(blockEl);
                 });
 
                 var startSlots;
@@ -1644,6 +1933,7 @@
                     if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
                         window.refreshCreateBookingOpenDatepickersScenarioHighlight();
                     }
+                    _rebuildOtherBlocksTimeControllers(blockEl);
                 });
 
                 var endTimes;
@@ -1704,6 +1994,7 @@
                     if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
                         window.refreshCreateBookingOpenDatepickersScenarioHighlight();
                     }
+                    _rebuildOtherBlocksTimeControllers(blockEl);
                 });
             }
 
@@ -1747,7 +2038,15 @@
                 state.startMinutes = null;
                 state.endMinutes = null;
                 state.selectedPeriods = null;
+                state.roomBookings = [];
+                state.busySpecialists = [];
+                state.busySpecialistsDate = String(iso || '').trim();
                 closeAll();
+                rebuildAll();
+                if (typeof window.updateSubmitButtonState === 'function') {
+                    window.updateSubmitButtonState();
+                }
+                _rebuildOtherBlocksTimeControllers(blockEl);
                 reloadByDate(iso, true);
             };
 
@@ -1755,6 +2054,7 @@
                 closeAll();
                 rebuildAll();
                 calculateAndUpdateBookingCostInBlock(blockEl);
+                _rebuildOtherBlocksTimeControllers(blockEl);
             };
 
             blockEl._bulkTimeControllerRebuildAll = function () {
@@ -1831,6 +2131,8 @@
             if (target) target.remove();
             refreshBlocksUi();
 
+            _rebuildAllBlocksTimeControllers();
+
             if (typeof adaptModalForScenario === 'function') {
                 adaptModalForScenario(window.currentScenarioName || '');
             }
@@ -1884,6 +2186,8 @@
 
             initClonedBlockInteractiveUi(clone);
 
+            _rebuildAllBlocksTimeControllers();
+
             if (typeof adaptModalForScenario === 'function') {
                 adaptModalForScenario(window.currentScenarioName || '');
             }
@@ -1898,6 +2202,8 @@
                 if ((i + 1) > 1) b.remove();
             });
             refreshBlocksUi();
+
+            _rebuildAllBlocksTimeControllers();
 
             container._bulkNextIdIndex = 2;
 
@@ -3577,6 +3883,90 @@
                         blocks = [rootEl];
                     }
 
+                    function parseHHMMToMinutes(text) {
+                        if (window.BookingTimeUtils && typeof window.BookingTimeUtils.parseTimeToMinutes === 'function') {
+                            return window.BookingTimeUtils.parseTimeToMinutes(text);
+                        }
+                        var s = String(text || '').trim();
+                        var parts = s.split(':');
+                        if (parts.length < 2) return null;
+                        var h = parseInt(parts[0], 10);
+                        var m = parseInt(parts[1], 10);
+                        if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+                        return (h * 60) + m;
+                    }
+
+                    function getSelectedMinutesFromTimeSelect(selectEl) {
+                        if (!selectEl) return null;
+                        var li = selectEl.querySelector('ul.options li.selected');
+                        if (li) {
+                            var raw = li.getAttribute('data-minutes');
+                            var n = raw !== null && raw !== undefined ? parseInt(raw, 10) : null;
+                            if (Number.isFinite(n)) return n;
+                            var v = li.getAttribute('data-value') || li.textContent;
+                            var p = parseHHMMToMinutes(v);
+                            if (Number.isFinite(p)) return p;
+                        }
+                        var span = selectEl.querySelector('.selected');
+                        if (span) {
+                            var p2 = parseHHMMToMinutes(span.textContent);
+                            if (Number.isFinite(p2)) return p2;
+                        }
+                        return null;
+                    }
+
+                    function getSelectedDurationMinutes(durationSelectEl) {
+                        if (!durationSelectEl) return null;
+                        var li = durationSelectEl.querySelector('ul.options li.selected');
+                        if (!li) return null;
+                        var v = li.getAttribute('data-value') || '';
+                        var p = parseHHMMToMinutes(v);
+                        return Number.isFinite(p) && p > 0 ? p : null;
+                    }
+
+                    var overlapByIndex = {};
+                    var intervals = [];
+                    blocks.forEach(function (blockEl, idx) {
+                        if (!blockEl) return;
+                        var dateInput0 = blockEl.querySelector ? blockEl.querySelector('input[id^="modal-create-date"]') : null;
+                        var dateIso0 = dateInput0 ? String(dateInput0.value || '').trim() : '';
+                        if (!dateIso0) return;
+
+                        var st0 = blockEl._bulkTimeState || {};
+                        var sm0 = Number.isFinite(st0.startMinutes)
+                            ? st0.startMinutes
+                            : getSelectedMinutesFromTimeSelect(blockEl.querySelector ? blockEl.querySelector('.custom-select[id^="start-time"]') : null);
+                        if (!Number.isFinite(sm0)) return;
+
+                        var em0 = Number.isFinite(st0.endMinutes)
+                            ? st0.endMinutes
+                            : getSelectedMinutesFromTimeSelect(blockEl.querySelector ? blockEl.querySelector('.custom-select[id^="end-time"]') : null);
+
+                        if (!Number.isFinite(em0) || em0 <= sm0) {
+                            var durM0 = getSelectedDurationMinutes(blockEl.querySelector ? blockEl.querySelector('.custom-select[id^="duration"]') : null);
+                            if (Number.isFinite(durM0) && durM0 > 0) {
+                                em0 = sm0 + durM0;
+                            }
+                        }
+
+                        if (!Number.isFinite(em0) || em0 <= sm0) return;
+                        intervals.push({ index: idx + 1, dateIso: dateIso0, startMinutes: sm0, endMinutes: em0 });
+                    });
+                    for (var oi = 0; oi < intervals.length; oi++) {
+                        for (var oj = oi + 1; oj < intervals.length; oj++) {
+                            var a = intervals[oi];
+                            var b = intervals[oj];
+                            if (!a || !b) continue;
+                            if (String(a.dateIso) !== String(b.dateIso)) continue;
+                            if (a.startMinutes < b.endMinutes && a.endMinutes > b.startMinutes) {
+                                if (!overlapByIndex[a.index]) overlapByIndex[a.index] = [];
+                                if (!overlapByIndex[b.index]) overlapByIndex[b.index] = [];
+                                if (overlapByIndex[a.index].indexOf(b.index) === -1) overlapByIndex[a.index].push(b.index);
+                                if (overlapByIndex[b.index].indexOf(a.index) === -1) overlapByIndex[b.index].push(a.index);
+                            }
+                        }
+                    }
+
                     blocks.forEach(function (blockEl, idx) {
                         var blockPrefix = '№' + String(idx + 1) + ': ';
 
@@ -3661,6 +4051,15 @@
                             if (durationSelectEl) {
                                 durationSelectEl.classList.add('has-warning');
                             }
+                        }
+
+                        var overlaps = overlapByIndex[idx + 1];
+                        if (overlaps && overlaps.length) {
+                            overlaps.forEach(function (otherIdx) {
+                                blockErrors.push('Пересечение с блоком №' + String(otherIdx));
+                            });
+                            if (startTimeSelectEl) startTimeSelectEl.classList.add('has-warning');
+                            if (endTimeSelectEl) endTimeSelectEl.classList.add('has-warning');
                         }
 
                         if (isSimplifiedScenario) {

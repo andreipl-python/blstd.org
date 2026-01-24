@@ -617,6 +617,8 @@ def create_booking_view(request):
 
                 approved_status = ReservationStatusType.objects.get(id=1080)
 
+                bulk_intervals = []
+
                 for i, block in enumerate(blocks):
                     if not isinstance(block, dict):
                         raise BulkCreateBookingError(
@@ -686,6 +688,20 @@ def create_booking_view(request):
                     )
                     end_datetime = start_datetime + timedelta(
                         hours=duration_hours, minutes=duration_minutes
+                    )
+
+                    for prev in bulk_intervals:
+                        if (
+                            prev["start"] < end_datetime
+                            and prev["end"] > start_datetime
+                        ):
+                            raise BulkCreateBookingError(
+                                f"Пересечение с блоком №{prev['index']}",
+                                block_index=i + 1,
+                                field="full_datetime",
+                            )
+                    bulk_intervals.append(
+                        {"index": i + 1, "start": start_datetime, "end": end_datetime}
                     )
 
                     if is_tariff_required:

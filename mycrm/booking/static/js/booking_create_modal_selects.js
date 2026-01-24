@@ -30,6 +30,9 @@
                 if (typeof window.syncCreateBookingTariffs === 'function') {
                     window.syncCreateBookingTariffs();
                 }
+                if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                    window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                }
             });
         }
 
@@ -1092,6 +1095,10 @@
                             if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
                                 window.syncCreateBookingTariffTimeFields();
                             }
+
+                            if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                                window.refreshCreateBookingOpenDatepickersScenarioHighlight();
+                            }
                         },
                         onCleared: function () {
                             if (typeof window.calculateAndUpdateBookingCost === 'function') {
@@ -1103,6 +1110,10 @@
 
                             if (typeof window.syncCreateBookingTariffTimeFields === 'function') {
                                 window.syncCreateBookingTariffTimeFields();
+                            }
+
+                            if (typeof window.refreshCreateBookingOpenDatepickersScenarioHighlight === 'function') {
+                                window.refreshCreateBookingOpenDatepickersScenarioHighlight();
                             }
                         }
                     }
