@@ -433,6 +433,32 @@
     border-bottom-right-radius: 16px;
   }
 
+  #booking-filters .custom-select[data-filter-type="scenario"] .options li[data-inactive="1"] {
+    position: relative;
+  }
+
+  #booking-filters .custom-select[data-filter-type="scenario"] .options li[data-inactive="1"]::after {
+    content: '⚠';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #E53935;
+  }
+
+  #booking-filters .custom-select[data-filter-type="area"] .options li[data-inactive="1"] {
+    position: relative;
+  }
+
+  #booking-filters .custom-select[data-filter-type="area"] .options li[data-inactive="1"]::after {
+    content: '⚠';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #E53935;
+  }
+
   /* Кастомный select: отключить hover для поиска */
   .custom-select .search-option:hover,
   .custom-select .search-option.selected {
@@ -1128,8 +1154,55 @@
     z-index: 5;
   }
 
+  .inline-warning-icon {
+    position: relative;
+    top: auto;
+    right: auto;
+    transform: none;
+    margin-left: 6px;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
   .custom-select.has-warning {
     border-color: #E53935;
+  }
+
+  #booking-filters .custom-select[data-filter-type="scenario"].has-warning {
+    padding-right: 72px;
+  }
+
+  #booking-filters .custom-select[data-filter-type="area"].has-warning {
+    padding-right: 72px;
+  }
+
+  #booking-filters #scenario-filter-warning-icon.start-time-warning-icon {
+    right: 48px;
+  }
+
+  #booking-filters #area-filter-warning-icon.start-time-warning-icon {
+    right: 48px;
+  }
+
+  #edit-room.has-warning {
+    padding-right: 72px;
+  }
+
+  #edit-room .options li[data-inactive="1"] {
+    position: relative;
+  }
+
+  #edit-room .options li[data-inactive="1"]::after {
+    content: '⚠';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #E53935;
+  }
+
+  #edit-room-warning-icon.start-time-warning-icon {
+    right: 48px;
   }
 
   .start-time-warning-icon .warning-tooltip,
@@ -1163,6 +1236,18 @@
   .start-time-warning-icon:hover .warning-tooltip,
   .teacher-warning-icon:hover .warning-tooltip {
     display: block;
+  }
+
+  .table-bordered tbody tr td:first-child .start-time-warning-icon .warning-tooltip {
+    width: 170px;
+    padding: 8px 10px;
+    font-size: 11px;
+    line-height: 1.35;
+    right: 0;
+  }
+
+  .table-bordered tbody tr td:first-child .start-time-warning-icon .warning-tooltip::after {
+    right: 12px;
   }
 
   /* Значок предупреждения для кнопки Добавить (в правом нижнем углу модалки) */
@@ -1296,6 +1381,11 @@
     cursor: pointer;
     display: inline-flex;
     align-items: center;
+  }
+
+  .button-third:disabled {
+    opacity: 0.6;
+    cursor: default;
   }
 
   .modal-close-icon {

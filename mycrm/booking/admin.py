@@ -203,7 +203,8 @@ class ReservationAdmin(admin.ModelAdmin):
 
 @admin.register(Scenario)
 class ScenarioAdmin(admin.ModelAdmin):
-    list_display = ("name",)
+    list_display = ("name", "active")
+    list_filter = ("active",)
     search_fields = ("name",)
 
 
@@ -302,8 +303,8 @@ class ClientRatingAdmin(admin.ModelAdmin):
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ("name", "area", "hourstart", "hourend")
-    list_filter = ("area",)
+    list_display = ("name", "is_active", "area", "hourstart", "hourend")
+    list_filter = ("area", "is_active")
     search_fields = ("name", "area__name")
     filter_horizontal = ("scenario",)
 
@@ -339,6 +340,7 @@ class RoomAdmin(admin.ModelAdmin):
 
 @admin.register(Area)
 class AreaAdmin(admin.ModelAdmin):
-    list_display = ("name",)
+    list_display = ("name", "is_active")
+    list_filter = ("is_active",)
     search_fields = ("name",)
     filter_horizontal = ("scenario",)

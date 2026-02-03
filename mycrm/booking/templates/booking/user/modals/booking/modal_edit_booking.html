@@ -84,6 +84,10 @@
                                 <label for="edit-room" class="form-label">Комната</label>
                                 <div class="custom-select" id="edit-room" name="edit-room">
                                     <span class="selected">Выберите комнату</span>
+                                    <span id="edit-room-warning-icon" class="start-time-warning-icon" style="display: none;">
+                                        <span class="warning-tooltip">Комната или помещение выключены. Редактирование брони недоступно.</span>
+                                        ⚠
+                                    </span>
                                     <span class="chevron">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -92,7 +96,7 @@
                                     </span>
                                     <ul class="options">
                                         {% for room in rooms %}
-                                            <li data-value="{{ room.id }}">{{ room.name }}</li>
+                                            <li data-value="{{ room.id }}" data-inactive="{% if not room.is_active or not room.area.is_active %}1{% else %}0{% endif %}"{% if not room.is_active or not room.area.is_active %} title="Комната или помещение выключены"{% endif %}>{{ room.name }}</li>
                                         {% endfor %}
                                     </ul>
                                 </div>

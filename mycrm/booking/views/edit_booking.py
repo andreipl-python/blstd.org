@@ -206,6 +206,7 @@ def get_booking_details(request, booking_id):
 
         booking_data = {
             "id": booking.id,
+            "public_id": getattr(booking, "external_id", booking.id),
             "date": date_str,
             "time": time_str,
             "duration": duration_str,
@@ -215,6 +216,14 @@ def get_booking_details(request, booking_id):
             "duration_hhmm": f"{duration_hours:02d}:{duration_minutes:02d}",
             "room_id": booking.room.id if booking.room else None,
             "room_name": booking.room.name if booking.room else "Не указано",
+            "room_is_active": (
+                getattr(booking.room, "is_active", True) if booking.room else True
+            ),
+            "area_is_active": (
+                getattr(getattr(booking.room, "area", None), "is_active", True)
+                if booking.room
+                else True
+            ),
             "tariff_id": booking.tariff_id,
             "tariff_name": booking.tariff.name if booking.tariff else None,
             "tariff_base_duration_minutes": (
@@ -336,6 +345,12 @@ def edit_booking_view(request, booking_id):
 
         booking = get_object_or_404(Reservation, id=booking_id)
 
+        if booking.scenario and not booking.scenario.active:
+            return JsonResponse(
+                {"success": False, "error": "Сценарий этой брони выключен"},
+                status=400,
+            )
+
         date_iso = data.get("date_iso") or data.get("date")
         start_time_hm = data.get("start_time_hm") or data.get("start_time")
         duration_hhmm = data.get("duration_hhmm") or data.get("duration")
@@ -415,6 +430,22 @@ def edit_booking_view(request, booking_id):
         )
 
         room = get_object_or_404(Room, id=room_id_int)
+
+        if room and not getattr(room, "is_active", True):
+            return JsonResponse(
+                {"success": False, "error": "Выбранная комната выключена"},
+                status=400,
+            )
+
+        if (
+            room
+            and getattr(room, "area", None) is not None
+            and not getattr(room.area, "is_active", True)
+        ):
+            return JsonResponse(
+                {"success": False, "error": "Выбранное помещение выключено"},
+                status=400,
+            )
 
         direction = None
         if direction_id:

@@ -136,6 +136,46 @@
             </div>
         </div>
     </div>
+
+    <div class="row mt-2 align-items-start" data-role="specialists-section" data-section="technicians" ;>
+        <h6 class="d-flex align-items-center gap-3 w-100" data-role="specialists-section-toggle">
+            Техники
+            <svg data-role="chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: rotate(180deg);">
+                <path d="M18 15L12 9L6 15" stroke="#818EA2" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+            </svg>
+        </h6>
+
+        <div data-role="specialists-section-body" style="display: none;">
+            <div class="d-flex">
+                <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+                    <img src="{% static 'image/default.png' %}" alt="Описание картинки" width="32" height="32">
+                </div>
+                <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+                    <span class="fw-semibold" style="font-size: 14px;">Техник 1</span>
+                    <div class="d-flex w-100 specialist-time">
+                        {% for i in time_cells %}
+                        <div class="time-cell flex-fill"></div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex">
+                <div class="me-3 d-flex" style="width: 96px; justify-content: flex-end;">
+                    <img src="{% static 'image/default.png' %}" alt="Описание картинки" width="32" height="32">
+                </div>
+                <div class="d-flex flex-column justify-content-between specialist-time mb-3" style="flex:1;">
+                    <span class="fw-semibold" style="font-size: 14px;">Техник 2</span>
+                    <div class="d-flex w-100 specialist-time">
+                        {% for i in time_cells %}
+                        <div class="time-cell flex-fill"></div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 <!--Таблица броней-->
 <div style="height: 12px;"></div>
@@ -154,7 +194,10 @@
         {% for room in rooms %}
         <tr id="row-{{ forloop.counter }}">
             <td title="{{ room.name }}">
-                {{ room.name }}
+                <span>{{ room.name }}</span>
+                {% if not room.is_active or room.area and not room.area.is_active %}
+                    <span class="start-time-warning-icon inline-warning-icon" title="{% if not room.is_active and room.area and not room.area.is_active %}Комната и помещение выключены{% elif not room.is_active %}Комната выключена{% else %}Помещение выключено{% endif %}">⚠</span>
+                {% endif %}
             </td>
 
             {% for cell_time_str in time_cells %}

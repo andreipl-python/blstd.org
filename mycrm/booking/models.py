@@ -869,6 +869,13 @@ class Area(models.Model):
     description = models.TextField(
         help_text="Описание помещения", verbose_name="Описание", null=True, blank=True
     )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Активно",
+        help_text="Доступно ли помещение для выбора и работы",
+    )
+
     scenario = models.ManyToManyField(
         "Scenario",
         related_name="areas",
@@ -909,6 +916,12 @@ class Room(models.Model):
     )
     hourend = models.TimeField(
         help_text="Время окончания работы комнаты", verbose_name="Конец работы"
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Активна",
+        help_text="Доступна ли комната для выбора и бронирования",
     )
 
     scenario = models.ManyToManyField(

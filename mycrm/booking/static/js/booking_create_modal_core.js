@@ -1,5 +1,22 @@
 // JS модалки создания брони
 
+    // Bulk-create (массовая бронь) живёт в этой же модалке и реализован как набор блоков
+    // `.booking-create-block` внутри `#bookingBlocksContainer`.
+    //
+    // Ключевые принципы:
+    // - Каждый блок хранит своё состояние времени в `blockEl._bulkTimeState`.
+    // - Чтобы блоки не пересекались между собой по времени, выбранные интервалы других
+    //   блоков добавляются в расчёт доступных слотов как «синтетическая занятость».
+    // - Плюс есть клиентская валидация пересечений (и на фронте, и на бэке), чтобы
+    //   исключить выбор/сохранение конфликтующих интервалов.
+
+    /**
+     * Инициализирует логику bulk-create: навешивает обработчики и создаёт контроллеры
+     * времени для каждого блока.
+     *
+     * Важно: функция должна вызываться идемпотентно — при повторном вызове ничего не
+     * дублирует (используется флаг `container._bulkBlocksBound`).
+     */
     function initializeBulkCreateBlocks() {
         var container = document.getElementById('bookingBlocksContainer');
         if (!container) return;
@@ -12,10 +29,21 @@
 
         var MAX_BLOCKS = 3;
 
+        // Текущее состояние bulk UI: список DOM-элементов блоков.
         function getBlocks() {
             return Array.from(container.querySelectorAll('.booking-create-block'));
         }
 
+        /**
+         * Возвращает интервал выбранного времени в блоке (для текущей выбранной даты).
+         *
+         * Используется в двух местах:
+         * - для построения «синтетической занятости» (другие блоки считаются занятыми);
+         * - для клиентской проверки пересечений между блоками.
+         *
+         * Источник значений: сначала `blockEl._bulkTimeState`, а при рассинхроне делаем
+         * fallback на DOM (`ul.options li.selected`, `data-minutes`).
+         */
         function _getBulkBlockIntervalForDate(blockEl) {
             if (!blockEl) return null;
             var dateInput = blockEl.querySelector('input[id^="modal-create-date"]');
@@ -87,6 +115,13 @@
             return { dateIso: dateIso, startMinutes: startMinutes, endMinutes: endMinutes };
         }
 
+        /**
+         * Строит массив «синтетических» бронирований комнаты на дату `dateIso`.
+         *
+         * Это ключевой механизм, который предотвращает пересечение блоков:
+         * при пересборке слотов времени для текущего блока мы добавляем интервалы
+         * других блоков в список занятости комнаты.
+         */
         function _getSyntheticRoomBookingsForDate(excludeBlockEl, dateIso) {
             var iso = String(dateIso || '').trim();
             if (!iso) return [];
@@ -102,6 +137,8 @@
             return res;
         }
 
+        // После изменения времени/даты в одном блоке нужно пересобрать селекты времени
+        // во всех остальных блоках, иначе их список доступных слотов может остаться устаревшим.
         function _rebuildOtherBlocksTimeControllers(changedBlockEl) {
             var blocks = getBlocks();
             blocks.forEach(function (b) {
@@ -112,6 +149,8 @@
             });
         }
 
+        // Пересборка селектов времени во всех блоках (используется при массовых изменениях,
+        // например после добавления/удаления блоков или смены глобальных параметров).
         function _rebuildAllBlocksTimeControllers() {
             var blocks = getBlocks();
             blocks.forEach(function (b) {
@@ -1566,6 +1605,10 @@
                 }
             }
 
+            // Состояние времени для bulk-блока.
+            // Хранится на DOM-элементе, чтобы:
+            // - не теряться при пересборках селектов;
+            // - быть доступным другим частям UI (валидации, синхронизации тарифов).
             var state = {
                 roomBookings: [],
                 busySpecialists: null,
@@ -1574,6 +1617,8 @@
                 endMinutes: null,
                 selectedPeriods: null
             };
+            // Первичная инициализация: если блок был клонирован или открывается заново,
+            // пытаемся прочитать текущие выбранные значения из DOM.
             readStateFromDom(state);
             blockEl._bulkTimeState = state;
 
@@ -1663,6 +1708,8 @@
                 var workEnd = getWorkEnd();
                 var isoForBlocks = String(dateInput.value || '').trim();
                 var roomBookingsBase = Array.isArray(state.roomBookings) ? state.roomBookings : [];
+                // Синтетическая занятость: выбранные интервалы других bulk-блоков на ту же дату
+                // добавляются к реальным броням комнаты. Это делает невозможным выбор пересечений.
                 var roomBookings = roomBookingsBase.concat(_getSyntheticRoomBookingsForDate(blockEl, isoForBlocks));
 
                 var tariffIntervals = isTariffScenario() ? parseTariffDayIntervalsMinutesOrNull() : null;
@@ -2003,6 +2050,8 @@
                 if (!iso) {
                     return;
                 }
+                // Загружаем брони комнаты на выбранную дату (кэшируется в BookingTimeUtils).
+                // Затем (для музыкальной школы) подтягиваем занятость преподавателей на дату.
                 utils.loadRoomBookingsForDate(roomId, iso, null, function (intervals) {
                     state.roomBookings = Array.isArray(intervals) ? intervals : [];
                     var loadBusy = (typeof _loadBusySpecialistsByDateIso === 'function') ? _loadBusySpecialistsByDateIso : null;
@@ -2035,6 +2084,8 @@
             }
 
             blockEl._bulkOnDateChanged = function (iso) {
+                // При смене даты сбрасываем выбранное время/длительность и заново грузим данные.
+                // Также инициируем пересборку других блоков, т.к. синтетическая занятость могла измениться.
                 state.startMinutes = null;
                 state.endMinutes = null;
                 state.selectedPeriods = null;
@@ -2051,6 +2102,7 @@
             };
 
             blockEl._bulkOnTariffChanged = function () {
+                // Смена тарифа влияет на ограничения по времени/периодам.
                 closeAll();
                 rebuildAll();
                 calculateAndUpdateBookingCostInBlock(blockEl);
@@ -2058,6 +2110,8 @@
             };
 
             blockEl._bulkTimeControllerRebuildAll = function () {
+                // Публичная точка входа для пересборки селектов времени блока.
+                // Используется контейнером bulk-блоков при изменениях в соседних блоках.
                 rebuildAll();
             };
 
@@ -2728,6 +2782,42 @@
             roomNameSpan.textContent = roomName;
         }
 
+        var roomWarningIcon = document.getElementById('create-room-warning-icon');
+        var roomWarningTooltip = roomWarningIcon ? roomWarningIcon.querySelector('.warning-tooltip') : null;
+        var isRoomInactive = false;
+        var isAreaInactive = false;
+        try {
+            if (roomId && Array.isArray(window.ROOMS)) {
+                var roomObj = window.ROOMS.find(function (r) {
+                    return r && String(r.pk) === String(roomId);
+                }) || null;
+                if (roomObj && roomObj.fields && roomObj.fields.is_active === false) {
+                    isRoomInactive = true;
+                }
+                if (roomObj && roomObj.fields && roomObj.fields.area && Array.isArray(window.AREAS)) {
+                    var areaObj = window.AREAS.find(function (a) {
+                        return a && String(a.pk) === String(roomObj.fields.area);
+                    }) || null;
+                    if (areaObj && areaObj.fields && areaObj.fields.is_active === false) {
+                        isAreaInactive = true;
+                    }
+                }
+            }
+        } catch (e) {}
+
+        if (roomWarningIcon) {
+            roomWarningIcon.style.display = (isRoomInactive || isAreaInactive) ? 'inline-block' : 'none';
+            if (roomWarningTooltip) {
+                if (isRoomInactive && isAreaInactive) {
+                    roomWarningTooltip.textContent = 'Комната и помещение выключены. Создание брони недоступно.';
+                } else if (isRoomInactive) {
+                    roomWarningTooltip.textContent = 'Комната выключена. Создание брони недоступно.';
+                } else if (isAreaInactive) {
+                    roomWarningTooltip.textContent = 'Помещение выключено. Создание брони недоступно.';
+                }
+            }
+        }
+
         // Сценарий: берём из глобального фильтра window.currentScenarioFilterId + window.SCENARIOS (из user_index.html)
         var currentScenarioName = '';
         if (window.currentScenarioFilterId && Array.isArray(window.SCENARIOS)) {
@@ -2987,6 +3077,20 @@
                 // Рассчитать и обновить стоимость брони
                 // Стоимость = (кол-во периодов × стоимость периода) + сумма услуг
                 // Если время не выбрано — показываем только стоимость услуг
+                /**
+                 * Пересчитывает стоимость в single-create модалке и обновляет `#bookingCostValue`.
+                 *
+                 * Источники данных:
+                 * - Время/длительность берётся из глобальных переменных single-контроллера:
+                 *   `currentStartTimeMinutes`, `currentEndTimeMinutes`, `currentSelectedPeriods`, `minMinutes`.
+                 * - Услуги берутся из селекта `#services`.
+                 * - Для тарифных сценариев используется выбранный тариф (baseCost/baseDurationMinutes)
+                 *   и формула пропорциональной стоимости аренды + стоимость услуг.
+                 *
+                 * Важно: в bulk-create стоимость считается отдельно per-block
+                 * (см. `calculateAndUpdateBookingCostInBlock`), а эта функция вызывается
+                 * из кода, который относится к single-режиму.
+                 */
                 function calculateAndUpdateBookingCost() {
                     if (!isTariffScenario() && window.BookingServicesUtils && typeof window.BookingServicesUtils.calculateAndUpdateTotalCost === 'function') {
                         window.BookingServicesUtils.calculateAndUpdateTotalCost({
@@ -3610,6 +3714,25 @@
                     return Math.max(0, Math.min(baseMaxPeriods, maxByTariff));
                 }
 
+                /**
+                 * Синхронизирует time-селекты single-create под выбранный тариф.
+                 *
+                 * Что делает:
+                 * - Если тариф не выбран/не содержит `baseDurationMinutes`, включается режим
+                 *   `tariffTimeFrozen`: замораживаем выбор длительности/окончания и показываем
+                 *   только стартовые слоты по базовому `minMinutes` сценария.
+                 * - Если тариф выбран, подменяем `minMinutes` на `tariff.baseDurationMinutes` и
+                 *   перестраиваем доступные слоты/периоды с учётом дневных интервалов тарифа.
+                 *
+                 * Побочные эффекты:
+                 * - Обновляет `minMinutes` и `window.currentMinMinutes`.
+                 * - Может сбросить `currentSelectedPeriods`/`currentEndTimeMinutes` при смене
+                 *   базовой длительности тарифа.
+                 * - Дёргает `window.updateSubmitButtonState()` и пересчёт стоимости.
+                 *
+                 * Важно: bulk-create имеет собственную логику заморозки/перестройки времени
+                 * внутри `initTimeControllerInBlock` и не полагается на глобальные переменные.
+                 */
                 function syncCreateBookingTariffTimeFields() {
                     if (!isTariffScenario()) return;
 
@@ -3924,6 +4047,13 @@
                         return Number.isFinite(p) && p > 0 ? p : null;
                     }
 
+                    // Клиентская проверка пересечений между блоками.
+                    //
+                    // Что считаем пересечением:
+                    // - интервалы относятся к одной и той же дате
+                    // - и пересекаются по правилу half-open: [start, end)
+                    //
+                    // Почему O(n^2) нормально: блоков в bulk-create максимум 3.
                     var overlapByIndex = {};
                     var intervals = [];
                     blocks.forEach(function (blockEl, idx) {

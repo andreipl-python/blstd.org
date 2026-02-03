@@ -30,6 +30,7 @@
 
     <script>
         window.ROOMS = JSON.parse('{{ rooms_json|escapejs }}');
+        window.AREAS = JSON.parse('{{ areas_json|escapejs }}');
         window.TIME_BLOCKS = JSON.parse('{{ time_blocks_json|escapejs }}');
         window.SCENARIOS = JSON.parse('{{ scenarios_json|escapejs }}');
         window.SPECIALISTS = JSON.parse('{{ specialists_json|escapejs }}');
@@ -86,6 +87,10 @@
                     <div class="custom-select-wrapper">
                         <div class="custom-select" data-placeholder="Выберите помещение" data-filter-type="area">
                             <span class="selected">Выберите помещение</span>
+                            <span id="area-filter-warning-icon" class="start-time-warning-icon" style="display: none;">
+                                <span class="warning-tooltip">Это помещение выключено. Создание и редактирование брони недоступны.</span>
+                                ⚠
+                            </span>
                             <span class="chevron">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
@@ -94,7 +99,7 @@
                             </span>
                             <ul class="options">
                                 {% for area in areas %}
-                                <li data-value="{{ area.id }}">{{ area.name }}</li>
+                                <li data-value="{{ area.id }}" data-inactive="{% if not area.is_active %}1{% else %}0{% endif %}"{% if not area.is_active %} title="Помещение выключено"{% endif %}>{{ area.name }}</li>
                                 {% endfor %}
                             </ul>
                         </div>
@@ -105,6 +110,10 @@
                     <div class="custom-select-wrapper">
                         <div class="custom-select" data-placeholder="Выберите сценарий" data-filter-type="scenario">
                             <span class="selected">Выберите сценарий</span>
+                            <span id="scenario-filter-warning-icon" class="start-time-warning-icon" style="display: none;">
+                                <span class="warning-tooltip">Этот сценарий выключен. Создание и редактирование брони недоступны.</span>
+                                ⚠
+                            </span>
                             <span class="chevron">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
@@ -113,7 +122,7 @@
                             </span>
                             <ul class="options">
                                 {% for scenario in scenarios %}
-                                <li data-value="{{ scenario.id }}">{{ scenario.name }}</li>
+                                <li data-value="{{ scenario.id }}" data-inactive="{% if not scenario.active %}1{% else %}0{% endif %}"{% if not scenario.active %} title="Сценарий выключен"{% endif %}>{{ scenario.name }}</li>
                                 {% endfor %}
                             </ul>
                         </div>
@@ -485,20 +494,211 @@
                 el.style.display = 'none';
             }
 
+            function getDayBlockEl(dayEl) {
+                return dayEl ? dayEl.querySelector('[data-role="specialists-block"]') : null;
+            }
+
+            function getDayToggleEl(dayEl) {
+                return dayEl ? dayEl.querySelector('[data-role="specialists-toggle"]') : null;
+            }
+
+            function getDaySections(dayEl) {
+                return Array.prototype.slice.call(dayEl.querySelectorAll('[data-role="specialists-section"]'));
+            }
+
+            if (typeof window.__specialistsScheduleVisible !== 'boolean') {
+                window.__specialistsScheduleVisible = false;
+            }
+            if (!window.__specialistsSectionsVisible || typeof window.__specialistsSectionsVisible !== 'object') {
+                window.__specialistsSectionsVisible = { admins: false, teachers: false, technicians: false };
+            }
+
+            if (typeof window.__specialistsSectionsVisible.admins !== 'boolean') {
+                window.__specialistsSectionsVisible.admins = false;
+            }
+            if (typeof window.__specialistsSectionsVisible.teachers !== 'boolean') {
+                window.__specialistsSectionsVisible.teachers = false;
+            }
+            if (typeof window.__specialistsSectionsVisible.technicians !== 'boolean') {
+                window.__specialistsSectionsVisible.technicians = false;
+            }
+
+            function getSectionContainer(dayEl, sectionKey) {
+                if (!dayEl || !sectionKey) {
+                    return null;
+                }
+                return dayEl.querySelector('[data-role="specialists-section"][data-section="' + sectionKey + '"]');
+            }
+
+            function setSectionContainerVisibleForDay(dayEl, sectionKey, visible) {
+                var sectionEl = getSectionContainer(dayEl, sectionKey);
+                if (!sectionEl) {
+                    return;
+                }
+                sectionEl.style.display = visible ? '' : 'none';
+                if (!visible) {
+                    var bodyEl = sectionEl.querySelector('[data-role="specialists-section-body"]');
+                    var headerEl = sectionEl.querySelector('[data-role="specialists-section-toggle"]');
+                    var chevronEl = headerEl ? headerEl.querySelector('[data-role="chevron"]') : null;
+                    if (bodyEl) {
+                        hideEl(bodyEl);
+                    }
+                    setChevronDown(chevronEl);
+                }
+            }
+
+            function getSelectedScenarioName() {
+                var scenarioId = window.currentScenarioFilterId ? String(window.currentScenarioFilterId) : null;
+                if (scenarioId && Array.isArray(window.SCENARIOS)) {
+                    var scenario = window.SCENARIOS.find(function (s) {
+                        return s && String(s.pk) === scenarioId;
+                    }) || null;
+                    if (scenario && scenario.fields && typeof scenario.fields.name === 'string') {
+                        return scenario.fields.name;
+                    }
+                    if (scenario && typeof scenario.name === 'string') {
+                        return scenario.name;
+                    }
+                }
+                var selectEl = document.querySelector('.custom-select[data-filter-type="scenario"]');
+                var selectedLi = selectEl ? selectEl.querySelector('.options li.selected') : null;
+                if (selectedLi) {
+                    return selectedLi.textContent;
+                }
+                return null;
+            }
+
+            function isRtOrMkScenarioName(scenarioName) {
+                var name = (typeof scenarioName === 'string') ? scenarioName.trim() : '';
+                return name === 'Репетиционная точка' || name === 'Музыкальный класс';
+            }
+
+            function applyScenarioDependentSectionsVisibility(dayEls) {
+                var scenarioName = getSelectedScenarioName();
+                var showTeachers = scenarioName ? !isRtOrMkScenarioName(scenarioName) : true;
+                dayEls.forEach(function (dayEl) {
+                    setSectionContainerVisibleForDay(dayEl, 'teachers', showTeachers);
+                    setSectionContainerVisibleForDay(dayEl, 'admins', true);
+                    setSectionContainerVisibleForDay(dayEl, 'technicians', true);
+                });
+            }
+
+            function getSectionBody(dayEl, sectionKey) {
+                if (!dayEl || !sectionKey) {
+                    return null;
+                }
+                var sectionEl = dayEl.querySelector('[data-role="specialists-section"][data-section="' + sectionKey + '"]');
+                return sectionEl ? sectionEl.querySelector('[data-role="specialists-section-body"]') : null;
+            }
+
+            function getSectionHeaderChevron(dayEl, sectionKey) {
+                if (!dayEl || !sectionKey) {
+                    return null;
+                }
+                var sectionEl = dayEl.querySelector('[data-role="specialists-section"][data-section="' + sectionKey + '"]');
+                var headerEl = sectionEl ? sectionEl.querySelector('[data-role="specialists-section-toggle"]') : null;
+                return headerEl ? headerEl.querySelector('[data-role="chevron"]') : null;
+            }
+
+            function setSectionExpandedForDay(dayEl, sectionKey, expanded, animate) {
+                var sectionEl = getSectionContainer(dayEl, sectionKey);
+                if (sectionEl && isHidden(sectionEl)) {
+                    var headerEl = sectionEl.querySelector('[data-role="specialists-section-toggle"]');
+                    var chevronElHidden = headerEl ? headerEl.querySelector('[data-role="chevron"]') : null;
+                    var bodyElHidden = sectionEl.querySelector('[data-role="specialists-section-body"]');
+                    if (bodyElHidden) {
+                        hideEl(bodyElHidden);
+                    }
+                    setChevronDown(chevronElHidden);
+                    return;
+                }
+                var bodyEl = getSectionBody(dayEl, sectionKey);
+                var chevronEl = getSectionHeaderChevron(dayEl, sectionKey);
+                if (!bodyEl) {
+                    return;
+                }
+
+                clearSlideStyles(bodyEl);
+
+                if (expanded) {
+                    if (animate) {
+                        slideDown(bodyEl);
+                    } else {
+                        showEl(bodyEl);
+                    }
+                    setChevronUp(chevronEl);
+                } else {
+                    if (animate) {
+                        slideUp(bodyEl);
+                    } else {
+                        hideEl(bodyEl);
+                    }
+                    setChevronDown(chevronEl);
+                }
+            }
+
+            function setDayToggleUi(dayEl, expanded) {
+                var toggleEl = getDayToggleEl(dayEl);
+                var toggleTextEl = toggleEl ? toggleEl.querySelector('[data-role="specialists-toggle-text"]') : null;
+                var toggleChevronEl = toggleEl ? toggleEl.querySelector('[data-role="chevron"]') : null;
+                if (toggleTextEl) {
+                    toggleTextEl.textContent = expanded ? 'Скрыть специалистов' : 'Показать специалистов';
+                }
+                if (expanded) {
+                    setChevronUp(toggleChevronEl);
+                } else {
+                    setChevronDown(toggleChevronEl);
+                }
+            }
+
+            function applyGlobalSpecialistsState(dayEls, animate) {
+                applyScenarioDependentSectionsVisibility(dayEls);
+                dayEls.forEach(function (dayEl) {
+                    var blockEl = getDayBlockEl(dayEl);
+                    if (!blockEl) {
+                        return;
+                    }
+
+                    clearSlideStyles(blockEl);
+
+                    if (window.__specialistsScheduleVisible) {
+                        // Перед раскрытием проставляем состояние секций, чтобы высота блока считалась корректно.
+                        showEl(blockEl);
+                        setSectionExpandedForDay(dayEl, 'admins', !!window.__specialistsSectionsVisible.admins, false);
+                        setSectionExpandedForDay(dayEl, 'teachers', !!window.__specialistsSectionsVisible.teachers, false);
+                        setSectionExpandedForDay(dayEl, 'technicians', !!window.__specialistsSectionsVisible.technicians, false);
+
+                        if (animate) {
+                            slideDown(blockEl);
+                        } else {
+                            showEl(blockEl);
+                        }
+                    } else {
+                        // При скрытии — прячем секции без изменения глобального состояния.
+                        setSectionExpandedForDay(dayEl, 'admins', false, false);
+                        setSectionExpandedForDay(dayEl, 'teachers', false, false);
+                        setSectionExpandedForDay(dayEl, 'technicians', false, false);
+
+                        if (animate) {
+                            slideUp(blockEl);
+                        } else {
+                            hideEl(blockEl);
+                        }
+                    }
+
+                    setDayToggleUi(dayEl, window.__specialistsScheduleVisible);
+                });
+                applyScenarioDependentSectionsVisibility(dayEls);
+            }
+
             var dayEls = Array.prototype.slice.call(container.querySelectorAll('[data-role="calendar-day"]'));
+            applyGlobalSpecialistsState(dayEls, false);
+
             dayEls.forEach(function (dayEl) {
                 var toggleEl = dayEl.querySelector('[data-role="specialists-toggle"]');
                 var toggleTextEl = toggleEl ? toggleEl.querySelector('[data-role="specialists-toggle-text"]') : null;
                 var toggleChevronEl = toggleEl ? toggleEl.querySelector('[data-role="chevron"]') : null;
                 var blockEl = dayEl.querySelector('[data-role="specialists-block"]');
-
-                if (blockEl) {
-                    hideEl(blockEl);
-                }
-                if (toggleTextEl) {
-                    toggleTextEl.textContent = 'Показать специалистов';
-                }
-                setChevronDown(toggleChevronEl);
 
                 var sectionEls = Array.prototype.slice.call(dayEl.querySelectorAll('[data-role="specialists-section"]'));
                 sectionEls.forEach(function (sectionEl) {
@@ -506,24 +706,21 @@
                     var bodyEl = sectionEl.querySelector('[data-role="specialists-section-body"]');
                     var chevronEl = headerEl ? headerEl.querySelector('[data-role="chevron"]') : null;
 
-                    if (bodyEl) {
-                        hideEl(bodyEl);
-                    }
-                    setChevronDown(chevronEl);
-
                     if (headerEl && !headerEl.dataset.specialistsToggleBound) {
                         headerEl.dataset.specialistsToggleBound = '1';
                         headerEl.addEventListener('click', function () {
-                            if (!bodyEl) {
+                            var sectionKey = sectionEl ? sectionEl.getAttribute('data-section') : '';
+                            if (!sectionKey) {
                                 return;
                             }
-                            if (isHidden(bodyEl)) {
-                                slideDown(bodyEl);
-                                setChevronUp(chevronEl);
-                            } else {
-                                slideUp(bodyEl);
-                                setChevronDown(chevronEl);
-                            }
+
+                            var nextExpanded = !window.__specialistsSectionsVisible[sectionKey];
+                            window.__specialistsSectionsVisible[sectionKey] = nextExpanded;
+
+                            dayEls.forEach(function (d) {
+                                // Раскрытие секции синхронизируем по всем дням.
+                                setSectionExpandedForDay(d, sectionKey, nextExpanded, true);
+                            });
                         });
                     }
                 });
@@ -531,32 +728,8 @@
                 if (toggleEl && !toggleEl.dataset.specialistsToggleBound) {
                     toggleEl.dataset.specialistsToggleBound = '1';
                     toggleEl.addEventListener('click', function () {
-                        if (!blockEl) {
-                            return;
-                        }
-                        if (isHidden(blockEl)) {
-                            sectionEls.forEach(function (sectionEl) {
-                                var headerEl = sectionEl.querySelector('[data-role="specialists-section-toggle"]');
-                                var bodyEl = sectionEl.querySelector('[data-role="specialists-section-body"]');
-                                var chevronEl = headerEl ? headerEl.querySelector('[data-role="chevron"]') : null;
-                                if (bodyEl) {
-                                    hideEl(bodyEl);
-                                }
-                                setChevronDown(chevronEl);
-                            });
-
-                            slideDown(blockEl);
-                            if (toggleTextEl) {
-                                toggleTextEl.textContent = 'Скрыть специалистов';
-                            }
-                            setChevronUp(toggleChevronEl);
-                        } else {
-                            slideUp(blockEl);
-                            if (toggleTextEl) {
-                                toggleTextEl.textContent = 'Показать специалистов';
-                            }
-                            setChevronDown(toggleChevronEl);
-                        }
+                        window.__specialistsScheduleVisible = !window.__specialistsScheduleVisible;
+                        applyGlobalSpecialistsState(dayEls, true);
                     });
                 }
             });
@@ -944,6 +1117,52 @@
                 return window.__roomHoursIndex;
             }
 
+            function ensureRoomsIndex() {
+                if (window.__roomsIndex && window.__roomsIndex.built) {
+                    return window.__roomsIndex;
+                }
+
+                var rooms = Array.isArray(window.ROOMS) ? window.ROOMS : [];
+                var byRoomId = {};
+
+                rooms.forEach(function (r) {
+                    if (!r || r.pk === undefined || r.pk === null || !r.fields) {
+                        return;
+                    }
+                    var roomId = String(r.pk);
+                    byRoomId[roomId] = r;
+                });
+
+                window.__roomsIndex = {
+                    built: true,
+                    byRoomId: byRoomId,
+                };
+                return window.__roomsIndex;
+            }
+
+            function ensureAreasIndex() {
+                if (window.__areasIndex && window.__areasIndex.built) {
+                    return window.__areasIndex;
+                }
+
+                var areas = Array.isArray(window.AREAS) ? window.AREAS : [];
+                var byAreaId = {};
+
+                areas.forEach(function (a) {
+                    if (!a || a.pk === undefined || a.pk === null || !a.fields) {
+                        return;
+                    }
+                    var areaId = String(a.pk);
+                    byAreaId[areaId] = a;
+                });
+
+                window.__areasIndex = {
+                    built: true,
+                    byAreaId: byAreaId,
+                };
+                return window.__areasIndex;
+            }
+
             function ensureTariffScheduleIndex() {
                 if (window.__tariffScheduleIndex && window.__tariffScheduleIndex.built) {
                     return window.__tariffScheduleIndex;
@@ -1115,6 +1334,21 @@
                 }
 
                 var fields = scenario.fields || {};
+
+                if (fields.active === false) {
+                    roomCells.forEach(function (cell) {
+                        if (cell.classList.contains('booked')) {
+                            return;
+                        }
+
+                        cell.classList.remove('available');
+                        cell.style.backgroundColor = '#EBEBEC';
+                        cell.style.cursor = 'default';
+                        cell.removeAttribute('onclick');
+                    });
+                    return;
+                }
+
                 var scenarioName = (typeof fields.name === 'string') ? fields.name.trim() : '';
                 var isSimpleScenario = isSimpleScenarioName(scenarioName);
                 var startMinutes = parseTimeToMinutes(fields.work_time_start);
@@ -1128,6 +1362,8 @@
                 }
 
                 var roomHoursIdx = ensureRoomHoursIndex();
+                var roomsIdx = ensureRoomsIndex();
+                var areasIdx = ensureAreasIndex();
 
                 roomCells.forEach(function (cell) {
                     // Забронированные ячейки не трогаем, их поведение определяется логикой броней
@@ -1162,9 +1398,25 @@
                         }
                     }
 
-                    var insideRoomInterval = true;
                     var roomIdRaw = cell.getAttribute('room_id');
                     var roomIdNum = parseInt(roomIdRaw, 10);
+
+                    var isRoomInactive = false;
+                    var isAreaInactive = false;
+                    if (Number.isFinite(roomIdNum)) {
+                        var roomObj = roomsIdx.byRoomId[String(roomIdNum)] || null;
+                        if (roomObj && roomObj.fields && roomObj.fields.is_active === false) {
+                            isRoomInactive = true;
+                        }
+                        if (roomObj && roomObj.fields && roomObj.fields.area) {
+                            var areaObj = areasIdx.byAreaId[String(roomObj.fields.area)] || null;
+                            if (areaObj && areaObj.fields && areaObj.fields.is_active === false) {
+                                isAreaInactive = true;
+                            }
+                        }
+                    }
+
+                    var insideRoomInterval = true;
                     if (Number.isFinite(roomIdNum)) {
                         var roomHours = roomHoursIdx.byRoomId[String(roomIdNum)] || null;
                         if (roomHours && roomHours.startMin !== null && roomHours.endMin !== null) {
@@ -1183,7 +1435,7 @@
                         insideTariffInterval = isCellAllowedByTariffSchedule(scenario.pk, roomIdNum, dateIso, cellMinutes);
                     }
 
-                    if (!insideInterval || !insideTariffInterval || !insideRoomInterval) {
+                    if (!insideInterval || !insideTariffInterval || !insideRoomInterval || isRoomInactive || isAreaInactive) {
                         // Вне рабочего интервала сценария — отключаем клик и красим ячейку
                         cell.classList.remove('available');
                         cell.style.backgroundColor = '#EBEBEC';
@@ -2068,6 +2320,65 @@
 
             var scenarioFilterInitialized = false;
 
+            function syncScenarioFilterWarningState() {
+                var selectEl = rootEl.querySelector('.custom-select[data-filter-type="scenario"]');
+                var warnEl = document.getElementById('scenario-filter-warning-icon');
+                var isInactive = false;
+
+                if (selectEl) {
+                    var selectedLi = selectEl.querySelector('.options li.selected');
+                    if (selectedLi && selectedLi.getAttribute('data-inactive') === '1') {
+                        isInactive = true;
+                    }
+                }
+
+                if (!isInactive) {
+                    var scenario = (typeof window.getCurrentScenarioFromGlobals === 'function')
+                        ? window.getCurrentScenarioFromGlobals()
+                        : null;
+                    isInactive = !!(scenario && scenario.fields && scenario.fields.active === false);
+                }
+
+                if (warnEl) {
+                    warnEl.style.display = isInactive ? 'inline-block' : 'none';
+                }
+                if (selectEl) {
+                    if (isInactive) selectEl.classList.add('has-warning');
+                    else selectEl.classList.remove('has-warning');
+                }
+            }
+
+            function syncAreaFilterWarningState() {
+                var selectEl = rootEl.querySelector('.custom-select[data-filter-type="area"]');
+                var warnEl = document.getElementById('area-filter-warning-icon');
+                var isInactive = false;
+
+                if (selectEl) {
+                    var selectedLi = selectEl.querySelector('.options li.selected');
+                    if (selectedLi && selectedLi.getAttribute('data-inactive') === '1') {
+                        isInactive = true;
+                    }
+                }
+
+                if (!isInactive) {
+                    var areaId = window.currentAreaFilterId ? String(window.currentAreaFilterId) : null;
+                    if (areaId && Array.isArray(window.AREAS)) {
+                        var area = window.AREAS.find(function (a) {
+                            return a && String(a.pk) === areaId;
+                        }) || null;
+                        isInactive = !!(area && area.fields && area.fields.is_active === false);
+                    }
+                }
+
+                if (warnEl) {
+                    warnEl.style.display = isInactive ? 'inline-block' : 'none';
+                }
+                if (selectEl) {
+                    if (isInactive) selectEl.classList.add('has-warning');
+                    else selectEl.classList.remove('has-warning');
+                }
+            }
+
             function handleFilterSelected(filterType, value) {
                 if (filterType === 'scenario') {
                     var prevScenarioId = window.currentScenarioFilterId || null;
@@ -2080,6 +2391,12 @@
                         if (typeof window.applyScenarioWorkTimeRestrictions === 'function') {
                             window.applyScenarioWorkTimeRestrictions();
                         }
+                        syncScenarioFilterWarningState();
+
+                        var calendarContainer = document.getElementById('calendar-grid-container');
+                        if (calendarContainer && typeof window.initializeSpecialistsToggles === 'function') {
+                            window.initializeSpecialistsToggles(calendarContainer);
+                        }
                         return;
                     }
 
@@ -2091,14 +2408,18 @@
                         } else if (typeof window.refreshBookingsGrid === 'function') {
                             window.refreshBookingsGrid();
                         }
+                        syncScenarioFilterWarningState();
                         return;
                     }
 
                     if (typeof window.applyScenarioWorkTimeRestrictions === 'function') {
                         window.applyScenarioWorkTimeRestrictions();
                     }
+
+                    syncScenarioFilterWarningState();
                 } else if (filterType === 'area') {
                     window.currentAreaFilterId = value || null;
+                    syncAreaFilterWarningState();
                     if (typeof window.reloadCalendarGridForAreaChange === 'function') {
                         window.reloadCalendarGridForAreaChange();
                     } else if (typeof window.reloadCalendarGridForCurrentState === 'function') {
@@ -2149,12 +2470,16 @@
                                     handleFilterSelected(filterType, ctx ? ctx.value : null);
                                 } else if (filterType === 'area') {
                                     window.currentAreaFilterId = (ctx && ctx.value) ? ctx.value : null;
+                                    syncAreaFilterWarningState();
                                 }
                             }
                         });
                     }
                 }
             });
+
+            syncScenarioFilterWarningState();
+            syncAreaFilterWarningState();
         });
     </script>
 
@@ -2326,6 +2651,47 @@
             }
         }
 
+        function updateInfoModalEditButtonState(bookingData) {
+            var editButton = document.getElementById('infoEditButton');
+            if (!editButton) {
+                return;
+            }
+
+            var scenarioId = bookingData && bookingData.scenario_id !== undefined && bookingData.scenario_id !== null
+                ? String(bookingData.scenario_id)
+                : null;
+            var scenario = null;
+            if (scenarioId && Array.isArray(window.SCENARIOS)) {
+                scenario = window.SCENARIOS.find(function (s) {
+                    return s && String(s.pk) === scenarioId;
+                }) || null;
+            }
+            var isInactive = !!(scenario && scenario.fields && scenario.fields.active === false);
+
+            var roomInactive = bookingData && bookingData.room_is_active === false;
+            var areaInactive = bookingData && bookingData.area_is_active === false;
+            var isBlocked = isInactive || roomInactive || areaInactive;
+            window.__currentBookingEditAllowed = !isBlocked;
+
+            if (isBlocked) {
+                editButton.disabled = true;
+                editButton.setAttribute('aria-disabled', 'true');
+                if (isInactive) {
+                    editButton.setAttribute('title', 'Сценарий выключен. Редактирование брони недоступно.');
+                } else if (roomInactive) {
+                    editButton.setAttribute('title', 'Комната выключена. Редактирование брони недоступно.');
+                } else if (areaInactive) {
+                    editButton.setAttribute('title', 'Помещение выключено. Редактирование брони недоступно.');
+                } else {
+                    editButton.setAttribute('title', 'Редактирование брони недоступно.');
+                }
+            } else {
+                editButton.disabled = false;
+                editButton.removeAttribute('aria-disabled');
+                editButton.removeAttribute('title');
+            }
+        }
+
         async function openInfoModal() {
             var infoModalElement = document.getElementById('infoBookingModal');
             if (!infoModalElement) {
@@ -2363,6 +2729,23 @@
                             }
                             if (roomElement && typeof booking.room_name === 'string') {
                                 roomElement.textContent = booking.room_name;
+                            }
+
+                            var roomWarnEl = infoModalElement.querySelector('#info-room-warning-icon');
+                            var roomWarnTooltip = roomWarnEl ? roomWarnEl.querySelector('.warning-tooltip') : null;
+                            var roomInactive = booking && booking.room_is_active === false;
+                            var areaInactive = booking && booking.area_is_active === false;
+                            if (roomWarnEl) {
+                                roomWarnEl.style.display = (roomInactive || areaInactive) ? 'inline-block' : 'none';
+                                if (roomWarnTooltip) {
+                                    if (roomInactive && areaInactive) {
+                                        roomWarnTooltip.textContent = 'Комната и помещение выключены. Редактирование брони недоступно.';
+                                    } else if (roomInactive) {
+                                        roomWarnTooltip.textContent = 'Комната выключена. Редактирование брони недоступно.';
+                                    } else if (areaInactive) {
+                                        roomWarnTooltip.textContent = 'Помещение выключено. Редактирование брони недоступно.';
+                                    }
+                                }
                             }
 
                             if (publicIdElement && (typeof booking.id === 'number' || typeof booking.id === 'string')) {
@@ -2478,6 +2861,7 @@
                             renderInfoModalServices(infoModalElement, booking.services_by_group);
 
                             updateInfoModalPaymentButtonState(booking);
+                            updateInfoModalEditButtonState(booking);
                         }
                     } else {
                         console.error('Не удалось получить детали брони для info-модалки:', response.status);

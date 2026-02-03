@@ -24,6 +24,25 @@ from ..models import (
 
 
 class ReservationSerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        scenario = attrs.get("scenario") or getattr(self.instance, "scenario", None)
+        if scenario is not None and not getattr(scenario, "active", True):
+            raise serializers.ValidationError(
+                {"scenario": "Выбранный сценарий выключен"}
+            )
+
+        room = attrs.get("room") or getattr(self.instance, "room", None)
+        if room is not None and not getattr(room, "is_active", True):
+            raise serializers.ValidationError({"room": "Выбранная комната выключена"})
+
+        if (
+            room is not None
+            and getattr(room, "area", None) is not None
+            and not getattr(room.area, "is_active", True)
+        ):
+            raise serializers.ValidationError({"room": "Выбранное помещение выключено"})
+        return attrs
+
     class Meta:
         model = Reservation
         fields = "__all__"

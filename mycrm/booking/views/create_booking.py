@@ -570,6 +570,58 @@ def create_booking_view(request):
                     }
                 )
 
+            if scenario and not scenario.active:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Выбранный сценарий выключен",
+                        "field": "scenario_id",
+                        "errors": [
+                            {
+                                "message": "Выбранный сценарий выключен",
+                                "field": "scenario_id",
+                                "block_index": None,
+                            }
+                        ],
+                    }
+                )
+
+            if room and not getattr(room, "is_active", True):
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Выбранная комната выключена",
+                        "field": "room_id",
+                        "errors": [
+                            {
+                                "message": "Выбранная комната выключена",
+                                "field": "room_id",
+                                "block_index": None,
+                            }
+                        ],
+                    }
+                )
+
+            if (
+                room
+                and getattr(room, "area", None) is not None
+                and not getattr(room.area, "is_active", True)
+            ):
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Выбранное помещение выключено",
+                        "field": "room_id",
+                        "errors": [
+                            {
+                                "message": "Выбранное помещение выключено",
+                                "field": "room_id",
+                                "block_index": None,
+                            }
+                        ],
+                    }
+                )
+
             specialist_service = None
             if scenario and scenario.name == "Музыкальная школа":
                 if not specialist_service_id:
@@ -617,6 +669,9 @@ def create_booking_view(request):
 
                 approved_status = ReservationStatusType.objects.get(id=1080)
 
+                # Для bulk-create дополнительно валидируем пересечения *между блоками одной заявки*.
+                # Это отдельная проверка от `check_room_availability` / `check_specialist_availability`,
+                # которые сравнивают с уже существующими бронями в базе.
                 bulk_intervals = []
 
                 for i, block in enumerate(blocks):
@@ -690,6 +745,8 @@ def create_booking_view(request):
                         hours=duration_hours, minutes=duration_minutes
                     )
 
+                    # Пересечение в пределах одной bulk-операции: если блоки выбрали одну дату
+                    # и пересекающиеся интервалы, возвращаем ошибку с привязкой к конкретному блоку.
                     for prev in bulk_intervals:
                         if (
                             prev["start"] < end_datetime
@@ -700,6 +757,8 @@ def create_booking_view(request):
                                 block_index=i + 1,
                                 field="full_datetime",
                             )
+                    # Сохраняем интервалы как aware datetime (в той же TZ), чтобы сравнения
+                    # для следующих блоков были корректными и сообщение могло ссылаться на № блока.
                     bulk_intervals.append(
                         {"index": i + 1, "start": start_datetime, "end": end_datetime}
                     )
@@ -915,6 +974,25 @@ def create_booking_view(request):
             return JsonResponse({"success": False, "error": "Направление не найдено"})
         except ClientGroup.DoesNotExist:
             return JsonResponse({"success": False, "error": "Группа не найдена"})
+
+        if scenario and not scenario.active:
+            return JsonResponse(
+                {"success": False, "error": "Выбранный сценарий выключен"}
+            )
+
+        if room and not getattr(room, "is_active", True):
+            return JsonResponse(
+                {"success": False, "error": "Выбранная комната выключена"}
+            )
+
+        if (
+            room
+            and getattr(room, "area", None) is not None
+            and not getattr(room.area, "is_active", True)
+        ):
+            return JsonResponse(
+                {"success": False, "error": "Выбранное помещение выключено"}
+            )
 
         specialist_service = None
         if scenario and scenario.name == "Музыкальная школа":

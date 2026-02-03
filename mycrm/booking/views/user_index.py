@@ -249,6 +249,8 @@ def user_index_view(request):
     areas = Area.objects.prefetch_related("scenario").order_by("id")
     scenarios = Scenario.objects.order_by("id")
 
+    areas_json = serialize("json", areas, use_natural_primary_keys=True)
+
     default_area = areas[0] if areas else None
     default_scenario = scenarios[0] if scenarios else None
 
@@ -398,6 +400,7 @@ def user_index_view(request):
         "rooms": rooms,
         "rooms_json": rooms_json,
         "areas": areas,
+        "areas_json": areas_json,
         "scenarios": scenarios,
         "scenarios_json": scenarios_json,
         "show_datefrom": days_of_month[0]["date"].date().isoformat(),

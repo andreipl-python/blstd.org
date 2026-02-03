@@ -228,12 +228,28 @@
             }
         }
 
+        /**
+         * Синхронизирует доступные тарифы в селекте `tariff` на основе текущего выбора:
+         * даты, времени (start/end) и количества людей.
+         *
+         * Поддерживает оба режима:
+         * - single-create: вызывается как `window.syncCreateBookingTariffs()`
+         * - bulk-create: вызывается как `window.syncCreateBookingTariffs(blockEl)` и
+         *   работает в контексте конкретного блока `.booking-create-block`.
+         *
+         * Техническая деталь: в bulk UI часть состояния времени живёт в
+         * `blockEl._bulkTimeState`, но при рассинхроне (перестройка селектов, быстрые
+         * клики пользователя) делаем fallback на DOM (`ul.options li.selected`).
+         */
         function syncCreateBookingTariffs(blockEl) {
             if (!isTariffScenario()) {
                 return;
             }
 
             function parseTimeToMinutes(hm) {
+                // Здесь намеренно возвращаем `null` при невалидном времени.
+                // В отличие от `BookingTimeUtils.parseTimeToMinutes` (который возвращает 0),
+                // нам важно отличать «времени нет/не выбрано» от «00:00».
                 if (window.BookingModalUtils && typeof window.BookingModalUtils.parseHmToMinutes === 'function') {
                     return window.BookingModalUtils.parseHmToMinutes(hm);
                 }
@@ -266,6 +282,8 @@
                 var startMinutes = (state.startMinutes !== undefined) ? state.startMinutes : null;
                 var endMinutes = (state.endMinutes !== undefined) ? state.endMinutes : null;
 
+                // Fallback на DOM: используем выбранные элементы в списке, если `_bulkTimeState`
+                // ещё не успел обновиться (или если блок работает в single-режиме).
                 if ((startMinutes === null || startMinutes === undefined)) {
                     var startSelect = b.querySelector('.custom-select[id^="start-time"]');
                     var startLi = startSelect ? startSelect.querySelector('ul.options li.selected') : null;
@@ -1522,6 +1540,17 @@
                 return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
             }
 
+            /**
+             * Собирает данные одного bulk-блока в JSON-пейлоад для бэкенда.
+             *
+             * Важные детали:
+             * - Основной источник выбранного времени в bulk UI — `blockEl._bulkTimeState`,
+             *   но при рассинхроне (UI обновился, а state ещё нет) делаем fallback на DOM
+             *   (`ul.options li.selected`, `data-minutes`).
+             * - `full_datetime` отправляется в формате "YYYY-MM-DD HH:MM:SS".
+             * - `duration` по возможности берётся из селекта длительности; если его нет,
+             *   вычисляется из (end-start) или из (periods * minMinutes).
+             */
             function buildBlockPayload(blockEl) {
                 var dateInput = blockEl ? blockEl.querySelector('input[id^="modal-create-date"]') : null;
                 var dateIso = dateInput ? String(dateInput.value || '').trim() : '';
@@ -1688,8 +1717,14 @@
             }
 
             if (blocks.length > 1) {
+                // Bulk-create: при 2+ блоках отправляем массив в `blocks_json`.
+                // Бэкенд создаёт несколько броней в одной транзакции и возвращает ошибки
+                // с привязкой к номеру блока/полю.
                 formData.append('blocks_json', JSON.stringify(blocks));
             } else {
+                // Совместимость: при 1 блоке продолжаем отправлять legacy-поля
+                // (`full_datetime`, `duration`, `tariff_id`, `services`, ...), чтобы
+                // одиночное создание брони работало так же, как до появления bulk UI.
                 var b0 = blocks[0] || {};
                 if (b0.full_datetime) {
                     formData.append('full_datetime', b0.full_datetime);

@@ -79,6 +79,58 @@
 
     window.applyEditServicesFilters = applyEditServicesFilters;
 
+    function syncEditRoomWarningState() {
+        var selectEl = document.getElementById('edit-room');
+        var warnEl = document.getElementById('edit-room-warning-icon');
+        if (!selectEl) return;
+
+        var isInactive = false;
+        var selectedLi = selectEl.querySelector('ul.options li.selected');
+        if (selectedLi && selectedLi.getAttribute('data-inactive') === '1') {
+            isInactive = true;
+        }
+
+        // Фолбэк: если по какой-то причине data-inactive нет, пробуем определить по глобальным данным.
+        if (!isInactive) {
+            try {
+                var roomId = '';
+                if (typeof getSelectedValue === 'function') {
+                    roomId = String(getSelectedValue(selectEl) || '').trim();
+                }
+                if (roomId && Array.isArray(window.ROOMS)) {
+                    var roomObj = window.ROOMS.find(function (r) {
+                        return r && String(r.pk) === roomId;
+                    }) || null;
+                    if (roomObj && roomObj.fields && roomObj.fields.is_active === false) {
+                        isInactive = true;
+                    }
+                    if (!isInactive && roomObj && roomObj.fields && roomObj.fields.area && Array.isArray(window.AREAS)) {
+                        var areaObj = window.AREAS.find(function (a) {
+                            return a && String(a.pk) === String(roomObj.fields.area);
+                        }) || null;
+                        if (areaObj && areaObj.fields && areaObj.fields.is_active === false) {
+                            isInactive = true;
+                        }
+                    }
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        if (warnEl) {
+            warnEl.style.display = isInactive ? 'inline-block' : 'none';
+        }
+        selectEl.classList.toggle('has-warning', !!isInactive);
+
+        var ctrl = document.getElementById('editBookingModal')?._editTimeController;
+        if (ctrl && typeof ctrl.updateSubmitButtonState === 'function') {
+            ctrl.updateSubmitButtonState();
+        }
+    }
+
+    window.syncEditRoomWarningState = syncEditRoomWarningState;
+
     function syncEditClearableSelectState(selectEl) {
         if (!selectEl || !selectEl.classList || !selectEl.classList.contains('custom-select--clearable')) {
             return;
@@ -421,6 +473,7 @@
                                 controller.handleRoomOrDateChange();
                             }
                             applyEditServicesFilters();
+                            syncEditRoomWarningState();
                         }
                     },
                     'edit-direction': {
@@ -723,6 +776,8 @@
         setCustomSelectValue(modalEl.querySelector('#edit-teacher'), booking.specialist_id, 'Выберите преподавателя');
         setCustomSelectValue(modalEl.querySelector('#edit-specialist-service'), booking.specialist_service_id, 'Выберите услугу преподавателя');
 
+        syncEditRoomWarningState();
+
         const controller = ensureEditTimeController();
         if (controller && typeof controller.loadFromBooking === 'function') {
             controller.loadFromBooking(booking);
@@ -853,7 +908,14 @@
 
         const scenarioId = document.getElementById('editBookingModal')?.getAttribute('data-scenario-id') || null;
         if (!scenarioId) {
-            console.error('Не удалось определить тип брони (scenario)');
+            if (typeof Swal !== 'undefined' && Swal && typeof Swal.fire === 'function') {
+                Swal.fire({
+                    title: 'Ошибка!',
+                    text: 'Не удалось определить тип брони (сценарий).',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
             hideBookingSavingOverlay();
             return;
         }
@@ -965,7 +1027,14 @@
             }, 50);
 
         } catch (err) {
-            console.error('Ошибка при сохранении изменений брони:', err);
+            if (typeof Swal !== 'undefined' && Swal && typeof Swal.fire === 'function') {
+                Swal.fire({
+                    title: 'Ошибка!',
+                    text: (err && err.message) ? err.message : 'Не удалось сохранить изменения',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
         } finally {
             // Скрываем overlay после завершения
             hideBookingSavingOverlay();

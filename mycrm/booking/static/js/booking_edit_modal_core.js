@@ -885,6 +885,36 @@
             var hasTeacher = teacherSelectedLi !== null;
             var hasDirection = directionSelectedLi !== null;
 
+            var roomSelect = document.getElementById('edit-room');
+            var roomSelectedLi = roomSelect ? roomSelect.querySelector('ul.options li.selected') : null;
+            if (roomSelectedLi && roomSelectedLi.getAttribute('data-inactive') === '1') {
+                checklist.push('Комната или помещение выключены');
+            } else {
+                try {
+                    var selectedRoomId = (typeof getSelectedValue === 'function')
+                        ? String(getSelectedValue(roomSelect) || '').trim()
+                        : '';
+                    if (selectedRoomId && Array.isArray(window.ROOMS)) {
+                        var roomObj = window.ROOMS.find(function (r) {
+                            return r && String(r.pk) === selectedRoomId;
+                        }) || null;
+                        if (roomObj && roomObj.fields && roomObj.fields.is_active === false) {
+                            checklist.push('Комната выключена');
+                        }
+                        if (roomObj && roomObj.fields && roomObj.fields.area && Array.isArray(window.AREAS)) {
+                            var areaObj = window.AREAS.find(function (a) {
+                                return a && String(a.pk) === String(roomObj.fields.area);
+                            }) || null;
+                            if (areaObj && areaObj.fields && areaObj.fields.is_active === false) {
+                                checklist.push('Помещение выключено');
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
             // Формируем чек-лист
             if (!hasStartTime) {
                 checklist.push('Выберите время начала');

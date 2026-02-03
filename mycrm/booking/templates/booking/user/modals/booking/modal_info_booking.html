@@ -27,6 +27,10 @@
                         <div id="roomNameContainer" class="col-md-8 d-flex align-items-center justify-content-start gap-2">
                             <span id="scenarioName">Название сценария</span><span>/</span><span id="roomName">Название
                                 комнаты</span>
+                            <span id="info-room-warning-icon" class="start-time-warning-icon inline-warning-icon" style="display: none;">
+                                <span class="warning-tooltip">Комната или помещение выключены. Редактирование брони недоступно.</span>
+                                ⚠
+                            </span>
                         </div>
                         <div id="publicIdContainer" class="col-md-4 d-flex align-items-center justify-content-end">
                             <span>ID:</span>
@@ -43,7 +47,7 @@
                         </div>
                         <div class="col-md-4 d-flex justify-content-end gap-3">
                             <!--"Редактировать"-->
-                            <button type="button" class="button-third" onclick="switchToEditModal()">
+                            <button type="button" class="button-third" id="infoEditButton" onclick="switchToEditModal()">
                                 <svg width="48" height="48" viewBox="0 0 48 48" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
                                     <rect x="0.5" y="0.5" width="47" height="47" rx="15.5" fill="white" />
@@ -320,6 +324,13 @@
 <script>
     //Закрытие модального окна информации и открытие модального окна редактирования
     function switchToEditModal() {
+        if (window.__currentBookingEditAllowed === false) {
+            return;
+        }
+        var editBtn = document.getElementById('infoEditButton');
+        if (editBtn && editBtn.disabled) {
+            return;
+        }
         const infoModal = bootstrap.Modal.getInstance(document.getElementById('infoBookingModal'));
         infoModal.hide();
 
