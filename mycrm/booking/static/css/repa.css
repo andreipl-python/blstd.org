@@ -41,6 +41,108 @@
     background: #F9F9F9;
   }
 
+  body.auth-page {
+    background-image: url('../image/auth_background.jpg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  .auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+  }
+
+  .auth-card {
+    width: 31%;
+    min-width: 320px;
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 28px 28px 24px 28px;
+    box-shadow: 0 16px 40px rgba(24, 27, 34, 0.18);
+  }
+
+  .auth-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .auth-title {
+    text-align: center;
+    margin: 0 0 20px 0;
+  }
+
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .auth-label {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    color: #181B22;
+    margin-top: 2px;
+  }
+
+  .auth-input {
+    width: 100%;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid #EBEBEC;
+    background: #FFFFFF;
+    padding: 0 14px;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    color: #181B22;
+    outline: none;
+  }
+
+  .auth-input::placeholder {
+    color: #A1AAB9;
+  }
+
+  .auth-input:focus {
+    border-color: #7A52FF;
+    box-shadow: 0 0 0 4px rgba(122, 82, 255, 0.18);
+  }
+
+  .auth-submit {
+    width: 100%;
+    height: 42px;
+    border: none;
+    border-radius: 16px;
+    background: #7A52FF;
+    color: #FFFFFF;
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 128%;
+    letter-spacing: -0.008em;
+    margin-top: 10px;
+    cursor: pointer;
+  }
+
+  .auth-submit:active {
+    transform: translateY(1px);
+  }
+
   #calendar-grid-container [data-role="chevron"] {
     transition: transform 0.2s ease;
   }
