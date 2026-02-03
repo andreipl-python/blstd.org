@@ -1534,10 +1534,14 @@
   }
 
   .time-cell {
-    background-color: #CCFF00;
+    background-color: #EBEBEC;
     height: 8px;
     flex: 1;
     position: relative;
+  }
+
+  .time-cell.time-cell--working {
+    background-color: #CCFF00;
   }
 
   .time-cell:nth-child(4n):not(:last-child)::after {

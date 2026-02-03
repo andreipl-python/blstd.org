@@ -35,6 +35,7 @@ from .views.user_index import (
     get_calendar_grid,
     get_room_bookings_for_date,
     get_busy_specialists_for_date,
+    get_specialists_work_intervals,
     get_pending_requests_count,
 )
 from .views.tariffs import get_available_tariffs_view
@@ -133,6 +134,11 @@ urlpatterns = [
         "booking/busy-specialists-for-date/",
         get_busy_specialists_for_date,
         name="get_busy_specialists_for_date",
+    ),
+    path(
+        "booking/specialists-work-intervals/",
+        get_specialists_work_intervals,
+        name="get_specialists_work_intervals",
     ),
     path(
         "booking/pending-requests-count/",

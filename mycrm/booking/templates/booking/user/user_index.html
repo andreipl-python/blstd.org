@@ -1606,10 +1606,338 @@
                 });
             }
 
+            var specialistsWorkIntervalsCache = window.__specialistsWorkIntervalsCache || (window.__specialistsWorkIntervalsCache = {
+                key: null,
+                data: null,
+            });
+            var specialistsWorkIntervalsInflight = window.__specialistsWorkIntervalsInflight || (window.__specialistsWorkIntervalsInflight = {});
+
+            function getSelectedScenarioNameForTeachers() {
+                var scenarioId = window.currentScenarioFilterId ? String(window.currentScenarioFilterId) : null;
+                if (scenarioId && Array.isArray(window.SCENARIOS)) {
+                    var scenario = window.SCENARIOS.find(function (s) {
+                        return String(s.pk) === scenarioId;
+                    });
+                    if (scenario && scenario.fields && typeof scenario.fields.name === 'string') {
+                        return scenario.fields.name.trim();
+                    }
+                }
+                return null;
+            }
+
+            function parseHmToMinutesOrNull(hm) {
+                var s = String(hm || '').trim();
+                if (!s) {
+                    return null;
+                }
+                var parts = s.split(':');
+                if (parts.length < 2) {
+                    return null;
+                }
+                var h = parseInt(parts[0], 10);
+                var m = parseInt(parts[1], 10);
+                if (!Number.isFinite(h) || !Number.isFinite(m)) {
+                    return null;
+                }
+                return (h * 60) + m;
+            }
+
+            function getTeacherIdsFromServiceMapping() {
+                var mappingEl = document.getElementById('specialist_service_to_specialists_json')
+                    || document.getElementById('edit_specialist_service_to_specialists_json');
+                if (!mappingEl) {
+                    return {};
+                }
+                var raw = {};
+                try {
+                    raw = JSON.parse(mappingEl.textContent || '{}');
+                } catch (e) {
+                    raw = {};
+                }
+                var res = {};
+                Object.keys(raw || {}).forEach(function (serviceId) {
+                    var ids = raw[serviceId];
+                    if (!Array.isArray(ids)) {
+                        return;
+                    }
+                    ids.forEach(function (id) {
+                        var n = parseInt(id, 10);
+                        if (Number.isFinite(n)) {
+                            res[String(n)] = true;
+                        }
+                    });
+                });
+                return res;
+            }
+
+            function loadSpecialistsWorkIntervals(dateFrom, dateTo, callback) {
+                var df = String(dateFrom || '').trim();
+                var dt = String(dateTo || '').trim();
+                if (!df || !dt) {
+                    if (callback) callback(null);
+                    return;
+                }
+
+                var key = df + '|' + dt;
+                if (specialistsWorkIntervalsCache.key === key && specialistsWorkIntervalsCache.data) {
+                    if (callback) callback(specialistsWorkIntervalsCache.data);
+                    return;
+                }
+
+                if (specialistsWorkIntervalsInflight[key]) {
+                    specialistsWorkIntervalsInflight[key].push(callback);
+                    return;
+                }
+
+                specialistsWorkIntervalsInflight[key] = [callback];
+
+                var params = new URLSearchParams({
+                    date_from: df,
+                    date_to: dt,
+                });
+
+                fetch('/booking/specialists-work-intervals/?' + params.toString(), {
+                    method: 'GET',
+                })
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+                    if (data && data.success) {
+                        specialistsWorkIntervalsCache.key = key;
+                        specialistsWorkIntervalsCache.data = data;
+                    }
+                    var callbacks = specialistsWorkIntervalsInflight[key] || [];
+                    delete specialistsWorkIntervalsInflight[key];
+                    callbacks.forEach(function (cb) {
+                        if (cb) cb(data && data.success ? data : null);
+                    });
+                })
+                .catch(function () {
+                    var callbacks = specialistsWorkIntervalsInflight[key] || [];
+                    delete specialistsWorkIntervalsInflight[key];
+                    callbacks.forEach(function (cb) {
+                        if (cb) cb(null);
+                    });
+                });
+            }
+
+            function getDayGridTimeContext(dayEl) {
+                if (!dayEl) {
+                    return null;
+                }
+                var firstRow = dayEl.querySelector('table tbody tr');
+                if (!firstRow) {
+                    return null;
+                }
+                var gridCells = Array.prototype.slice.call(firstRow.querySelectorAll('td[full_datetime]'));
+                if (!gridCells.length) {
+                    return null;
+                }
+                var dtStr = gridCells[0].getAttribute('full_datetime') || '';
+                var parts = String(dtStr).split(' ');
+                if (parts.length < 2) {
+                    return null;
+                }
+                var hm = String(parts[1]).slice(0, 5);
+                var startMinutes = parseHmToMinutesOrNull(hm);
+                if (!Number.isFinite(startMinutes)) {
+                    return null;
+                }
+                return {
+                    startMinutes: startMinutes,
+                    count: gridCells.length,
+                    stepMinutes: 15,
+                };
+            }
+
+            function renderTeachersWorkSchedule(payload) {
+                if (!payload || !payload.work_intervals_by_date) {
+                    return;
+                }
+
+                var teachers = Array.isArray(payload.teachers) ? payload.teachers : [];
+                var teacherIds = getTeacherIdsFromServiceMapping();
+                var teacherIdsKeys = Object.keys(teacherIds);
+
+                var filteredTeachers = teachers;
+                if (teacherIdsKeys.length) {
+                    filteredTeachers = teachers.filter(function (t) {
+                        return t && t.id !== undefined && t.id !== null && teacherIds[String(t.id)];
+                    });
+                } else {
+                    filteredTeachers = teachers.filter(function (t) {
+                        return t && Array.isArray(t.directions) && t.directions.length;
+                    });
+                }
+
+                filteredTeachers.sort(function (a, b) {
+                    var an = a && typeof a.name === 'string' ? a.name : '';
+                    var bn = b && typeof b.name === 'string' ? b.name : '';
+                    return an.localeCompare(bn, 'ru');
+                });
+
+                var container = document.getElementById('calendar-grid-container');
+                if (!container) {
+                    return;
+                }
+
+                var dayEls = Array.prototype.slice.call(container.querySelectorAll('[data-role="calendar-day"]'));
+                dayEls.forEach(function (dayEl) {
+                    var dayIso = dayEl ? String(dayEl.getAttribute('data-day') || '').trim() : '';
+                    if (!dayIso) {
+                        return;
+                    }
+
+                    var sectionEl = dayEl.querySelector('[data-role="specialists-section"][data-section="teachers"]');
+                    if (!sectionEl) {
+                        return;
+                    }
+
+                    var bodyEl = sectionEl.querySelector('[data-role="specialists-section-body"]');
+                    if (!bodyEl) {
+                        return;
+                    }
+
+                    var avatarImg = bodyEl.querySelector('img');
+                    var avatarSrc = avatarImg ? (avatarImg.getAttribute('src') || '') : '';
+                    if (!avatarSrc) {
+                        avatarSrc = '/static/image/default.png';
+                    }
+
+                    var timeCtx = getDayGridTimeContext(dayEl);
+                    if (!timeCtx) {
+                        return;
+                    }
+
+                    var byDate = payload.work_intervals_by_date[dayIso] || {};
+                    bodyEl.innerHTML = '';
+
+                    filteredTeachers.forEach(function (t) {
+                        if (!t || t.id === undefined || t.id === null) {
+                            return;
+                        }
+
+                        var idStr = String(t.id);
+                        var name = (typeof t.name === 'string') ? t.name : '';
+                        var dirs = Array.isArray(t.directions) ? t.directions : [];
+                        var dirsLabel = dirs.map(function (d) {
+                            return d && typeof d.name === 'string' ? d.name : '';
+                        }).filter(Boolean).join(' / ');
+
+                        var rowEl = document.createElement('div');
+                        rowEl.className = 'd-flex';
+
+                        var imgWrap = document.createElement('div');
+                        imgWrap.className = 'me-3 d-flex';
+                        imgWrap.style.width = '96px';
+                        imgWrap.style.justifyContent = 'flex-end';
+
+                        var imgEl = document.createElement('img');
+                        imgEl.setAttribute('src', avatarSrc);
+                        imgEl.setAttribute('alt', '');
+                        imgEl.setAttribute('width', '32');
+                        imgEl.setAttribute('height', '32');
+                        imgWrap.appendChild(imgEl);
+
+                        var infoEl = document.createElement('div');
+                        infoEl.className = 'd-flex flex-column justify-content-between specialist-time mb-3';
+                        infoEl.style.flex = '1';
+
+                        var headerEl = document.createElement('div');
+                        headerEl.className = 'd-flex align-items-center gap-2';
+
+                        var nameEl = document.createElement('span');
+                        nameEl.className = 'fw-semibold';
+                        nameEl.style.fontSize = '14px';
+                        nameEl.textContent = name;
+                        headerEl.appendChild(nameEl);
+
+                        if (dirsLabel) {
+                            var dotEl = document.createElement('span');
+                            dotEl.textContent = '•';
+                            headerEl.appendChild(dotEl);
+
+                            var dirsEl = document.createElement('span');
+                            dirsEl.textContent = dirsLabel;
+                            headerEl.appendChild(dirsEl);
+                        }
+
+                        var timeLineEl = document.createElement('div');
+                        timeLineEl.className = 'd-flex w-100 specialist-time';
+
+                        for (var i = 0; i < timeCtx.count; i++) {
+                            var cellEl = document.createElement('div');
+                            cellEl.className = 'time-cell flex-fill';
+                            timeLineEl.appendChild(cellEl);
+                        }
+
+                        var intervals = byDate[idStr] || [];
+                        if (Array.isArray(intervals) && intervals.length) {
+                            var timeCells = Array.prototype.slice.call(timeLineEl.querySelectorAll('.time-cell'));
+                            timeCells.forEach(function (cell) {
+                                cell.classList.remove('time-cell--working');
+                            });
+
+                            for (var cellIdx = 0; cellIdx < timeCells.length; cellIdx++) {
+                                var cellStart = timeCtx.startMinutes + (cellIdx * timeCtx.stepMinutes);
+                                var cellEnd = cellStart + timeCtx.stepMinutes;
+                                var isWorking = false;
+
+                                for (var j = 0; j < intervals.length; j++) {
+                                    var it = intervals[j];
+                                    if (!it) {
+                                        continue;
+                                    }
+                                    var sMin = parseInt(it.startMinutes, 10);
+                                    var eMin = parseInt(it.endMinutes, 10);
+                                    if (!Number.isFinite(sMin) || !Number.isFinite(eMin)) {
+                                        continue;
+                                    }
+                                    if (cellStart < eMin && cellEnd > sMin) {
+                                        isWorking = true;
+                                        break;
+                                    }
+                                }
+
+                                if (isWorking) {
+                                    timeCells[cellIdx].classList.add('time-cell--working');
+                                }
+                            }
+                        }
+
+                        infoEl.appendChild(headerEl);
+                        infoEl.appendChild(timeLineEl);
+
+                        rowEl.appendChild(imgWrap);
+                        rowEl.appendChild(infoEl);
+                        bodyEl.appendChild(rowEl);
+                    });
+                });
+            }
+
+            function applyTeachersScheduleForCurrentRange() {
+                var scenarioName = getSelectedScenarioNameForTeachers();
+                if (scenarioName && isSimpleScenarioName(scenarioName)) {
+                    return;
+                }
+
+                var dateFrom = window.SHOW_DATE_FROM;
+                var dateTo = window.SHOW_DATE_TO;
+                if (!dateFrom || !dateTo) {
+                    return;
+                }
+
+                loadSpecialistsWorkIntervals(dateFrom, dateTo, function (payload) {
+                    renderTeachersWorkSchedule(payload);
+                });
+            }
+
             // Задержка чтобы таблица успела отрендериться и размеры были корректны
             setTimeout(function() {
                 updateBookedCells();
                 assignParentAttributes();
+                applyTeachersScheduleForCurrentRange();
             }, 50);
 
             bindCellTimeHoverPopoverHandlers();
@@ -1703,6 +2031,7 @@
                     setTimeout(function () {
                         updateBookedCells();
                         assignParentAttributes();
+                        applyTeachersScheduleForCurrentRange();
                         if (typeof window.applyScenarioWorkTimeRestrictions === 'function') {
                             window.applyScenarioWorkTimeRestrictions();
                         }

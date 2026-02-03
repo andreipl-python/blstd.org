@@ -965,3 +965,151 @@ def get_busy_specialists_for_date(request):
             "date": date_str,
         }
     )
+
+
+@login_required(login_url="login")
+def get_specialists_work_intervals(request):
+    date_from_str = request.GET.get("date_from")
+    date_to_str = request.GET.get("date_to")
+
+    if not date_from_str or not date_to_str:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Параметры date_from и date_to обязательны",
+            },
+            status=400,
+        )
+
+    try:
+        start_date = timezone.datetime.strptime(date_from_str, "%Y-%m-%d").date()
+        end_date = timezone.datetime.strptime(date_to_str, "%Y-%m-%d").date()
+    except ValueError:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Некорректный формат даты, ожидается YYYY-MM-DD",
+            },
+            status=400,
+        )
+
+    if start_date > end_date:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "date_from не может быть больше date_to",
+            },
+            status=400,
+        )
+
+    if (end_date - start_date).days > 60:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Слишком большой диапазон дат",
+            },
+            status=400,
+        )
+
+    specialists_qs = Specialist.objects.filter(active=True).prefetch_related("directions")
+    specialists = list(specialists_qs)
+    specialist_ids = [s.id for s in specialists]
+
+    teachers = []
+    for s in specialists:
+        teachers.append(
+            {
+                "id": int(s.id),
+                "name": s.name,
+                "directions": [{"id": int(d.id), "name": d.name} for d in s.directions.all()],
+            }
+        )
+
+    specialists_with_any_weekly = set(
+        SpecialistWeeklyInterval.objects.filter(specialist_id__in=specialist_ids)
+        .values_list("specialist_id", flat=True)
+        .distinct()
+    )
+
+    weekly_work_map = {}
+    for spec_id, weekday, start_t, end_t in SpecialistWeeklyInterval.objects.filter(
+        specialist_id__in=specialist_ids
+    ).values_list("specialist_id", "weekday", "start_time", "end_time"):
+        weekly_work_map.setdefault((int(spec_id), int(weekday)), []).append((start_t, end_t))
+
+    overrides_qs = (
+        SpecialistScheduleOverride.objects.filter(
+            date__gte=start_date,
+            date__lte=end_date,
+            specialist_id__in=specialist_ids,
+            specialist__active=True,
+        )
+        .prefetch_related("intervals")
+        .select_related("specialist")
+    )
+    overrides_map = {(int(o.specialist_id), o.date): o for o in overrides_qs}
+
+    def _time_to_minutes(t):
+        return int(t.hour) * 60 + int(t.minute)
+
+    def _merge_intervals_minutes(intervals):
+        merged = []
+        for s, e in sorted(intervals, key=lambda x: x[0]):
+            if s < 0:
+                s = 0
+            if e > 24 * 60:
+                e = 24 * 60
+            if s >= e:
+                continue
+            if not merged or s > merged[-1][1]:
+                merged.append([s, e])
+            else:
+                merged[-1][1] = max(merged[-1][1], e)
+        return merged
+
+    work_intervals_by_date = {}
+    cur = start_date
+    while cur <= end_date:
+        date_key = cur.isoformat()
+        weekday = int(cur.weekday())
+        by_spec = {}
+        for spec_id in specialist_ids:
+            override = overrides_map.get((int(spec_id), cur))
+            intervals_minutes = []
+
+            if override is not None:
+                if override.is_day_off:
+                    intervals_minutes = []
+                else:
+                    intervals_minutes = [
+                        (_time_to_minutes(i.start_time), _time_to_minutes(i.end_time))
+                        for i in getattr(override, "intervals", []).all()
+                        if i.start_time is not None and i.end_time is not None
+                    ]
+            else:
+                if int(spec_id) in specialists_with_any_weekly:
+                    intervals_minutes = [
+                        (_time_to_minutes(s), _time_to_minutes(e))
+                        for s, e in weekly_work_map.get((int(spec_id), weekday), [])
+                        if s is not None and e is not None
+                    ]
+                else:
+                    intervals_minutes = [(0, 24 * 60)]
+
+            merged = _merge_intervals_minutes(intervals_minutes)
+            by_spec[str(int(spec_id))] = [
+                {"startMinutes": s, "endMinutes": e} for s, e in merged
+            ]
+
+        work_intervals_by_date[date_key] = by_spec
+        cur += timedelta(days=1)
+
+    return JsonResponse(
+        {
+            "success": True,
+            "date_from": date_from_str,
+            "date_to": date_to_str,
+            "teachers": teachers,
+            "work_intervals_by_date": work_intervals_by_date,
+        }
+    )
