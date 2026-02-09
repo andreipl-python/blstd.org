@@ -971,6 +971,7 @@ def get_busy_specialists_for_date(request):
 def get_specialists_work_intervals(request):
     date_from_str = request.GET.get("date_from")
     date_to_str = request.GET.get("date_to")
+    scenario_id_str = request.GET.get("scenario_id")
 
     if not date_from_str or not date_to_str:
         return JsonResponse(
@@ -1011,7 +1012,16 @@ def get_specialists_work_intervals(request):
             status=400,
         )
 
-    specialists_qs = Specialist.objects.filter(active=True).prefetch_related("directions")
+    # Фильтрация специалистов по сценарию (если передан) и активности
+    specialists_qs = Specialist.objects.filter(active=True).prefetch_related(
+        "directions"
+    )
+    if scenario_id_str:
+        try:
+            scenario_id_int = int(scenario_id_str)
+            specialists_qs = specialists_qs.filter(scenarios__id=scenario_id_int)
+        except (ValueError, TypeError):
+            pass
     specialists = list(specialists_qs)
     specialist_ids = [s.id for s in specialists]
 
@@ -1021,7 +1031,10 @@ def get_specialists_work_intervals(request):
             {
                 "id": int(s.id),
                 "name": s.name,
-                "directions": [{"id": int(d.id), "name": d.name} for d in s.directions.all()],
+                "role": s.role,
+                "directions": [
+                    {"id": int(d.id), "name": d.name} for d in s.directions.all()
+                ],
             }
         )
 
@@ -1035,7 +1048,9 @@ def get_specialists_work_intervals(request):
     for spec_id, weekday, start_t, end_t in SpecialistWeeklyInterval.objects.filter(
         specialist_id__in=specialist_ids
     ).values_list("specialist_id", "weekday", "start_time", "end_time"):
-        weekly_work_map.setdefault((int(spec_id), int(weekday)), []).append((start_t, end_t))
+        weekly_work_map.setdefault((int(spec_id), int(weekday)), []).append(
+            (start_t, end_t)
+        )
 
     overrides_qs = (
         SpecialistScheduleOverride.objects.filter(
@@ -1097,9 +1112,11 @@ def get_specialists_work_intervals(request):
                     intervals_minutes = [(0, 24 * 60)]
 
             merged = _merge_intervals_minutes(intervals_minutes)
-            by_spec[str(int(spec_id))] = [
-                {"startMinutes": s, "endMinutes": e} for s, e in merged
-            ]
+            # Не включаем специалиста, если у него нет рабочих интервалов в этот день
+            if merged:
+                by_spec[str(int(spec_id))] = [
+                    {"startMinutes": s, "endMinutes": e} for s, e in merged
+                ]
 
         work_intervals_by_date[date_key] = by_spec
         cur += timedelta(days=1)

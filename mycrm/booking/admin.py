@@ -263,8 +263,11 @@ class SpecialistAdmin(admin.ModelAdmin):
     list_display = ("name", "role", "active")
     list_filter = ("role", "active")
     search_fields = ("name",)
-    filter_horizontal = ("directions", "specialist_services")
+    filter_horizontal = ("directions", "specialist_services", "scenarios")
     inlines = (SpecialistWeeklyIntervalInline,)
+
+    class Media:
+        js = ("js/admin_specialist_role.js",)
 
 
 @admin.register(SpecialistScheduleOverride)

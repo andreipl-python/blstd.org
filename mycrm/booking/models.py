@@ -709,11 +709,13 @@ class Direction(models.Model):
 class Specialist(models.Model):
     """Модель для хранения информации о специалистах"""
 
+    ROLE_ADMIN = "admin"
     ROLE_TEACHER = "teacher"
     ROLE_SOUND_ENGINEER = "sound_engineer"
     ROLE_TECHNICIAN = "technician"
 
     SPECIALIST_ROLE_CHOICES = [
+        (ROLE_ADMIN, "Администратор"),
         (ROLE_TEACHER, "Преподаватель"),
         (ROLE_SOUND_ENGINEER, "Звукорежиссёр"),
         (ROLE_TECHNICIAN, "Техник"),
@@ -746,6 +748,7 @@ class Specialist(models.Model):
         "для бронирования)",
         verbose_name="ID клиента",
         null=True,
+        blank=True,
     )
     directions = models.ManyToManyField(
         "Direction",
@@ -759,6 +762,13 @@ class Specialist(models.Model):
         related_name="specialists",
         help_text="Услуги, которые оказывает специалист",
         verbose_name="Услуги специалистов",
+        blank=True,
+    )
+    scenarios = models.ManyToManyField(
+        "Scenario",
+        related_name="specialists",
+        help_text="Сценарии, в которых участвует специалист",
+        verbose_name="Сценарии",
         blank=True,
     )
 

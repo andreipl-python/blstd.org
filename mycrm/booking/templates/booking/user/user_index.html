@@ -510,7 +510,7 @@
                 window.__specialistsScheduleVisible = false;
             }
             if (!window.__specialistsSectionsVisible || typeof window.__specialistsSectionsVisible !== 'object') {
-                window.__specialistsSectionsVisible = { admins: false, teachers: false, technicians: false };
+                window.__specialistsSectionsVisible = { admins: false, teachers: false, sound_engineers: false, technicians: false };
             }
 
             if (typeof window.__specialistsSectionsVisible.admins !== 'boolean') {
@@ -518,6 +518,9 @@
             }
             if (typeof window.__specialistsSectionsVisible.teachers !== 'boolean') {
                 window.__specialistsSectionsVisible.teachers = false;
+            }
+            if (typeof window.__specialistsSectionsVisible.sound_engineers !== 'boolean') {
+                window.__specialistsSectionsVisible.sound_engineers = false;
             }
             if (typeof window.__specialistsSectionsVisible.technicians !== 'boolean') {
                 window.__specialistsSectionsVisible.technicians = false;
@@ -579,6 +582,7 @@
                 dayEls.forEach(function (dayEl) {
                     setSectionContainerVisibleForDay(dayEl, 'teachers', showTeachers);
                     setSectionContainerVisibleForDay(dayEl, 'admins', true);
+                    setSectionContainerVisibleForDay(dayEl, 'sound_engineers', true);
                     setSectionContainerVisibleForDay(dayEl, 'technicians', true);
                 });
             }
@@ -666,6 +670,7 @@
                         showEl(blockEl);
                         setSectionExpandedForDay(dayEl, 'admins', !!window.__specialistsSectionsVisible.admins, false);
                         setSectionExpandedForDay(dayEl, 'teachers', !!window.__specialistsSectionsVisible.teachers, false);
+                        setSectionExpandedForDay(dayEl, 'sound_engineers', !!window.__specialistsSectionsVisible.sound_engineers, false);
                         setSectionExpandedForDay(dayEl, 'technicians', !!window.__specialistsSectionsVisible.technicians, false);
 
                         if (animate) {
@@ -677,6 +682,7 @@
                         // При скрытии — прячем секции без изменения глобального состояния.
                         setSectionExpandedForDay(dayEl, 'admins', false, false);
                         setSectionExpandedForDay(dayEl, 'teachers', false, false);
+                        setSectionExpandedForDay(dayEl, 'sound_engineers', false, false);
                         setSectionExpandedForDay(dayEl, 'technicians', false, false);
 
                         if (animate) {
@@ -1678,7 +1684,8 @@
                     return;
                 }
 
-                var key = df + '|' + dt;
+                var scenarioId = window.currentScenarioFilterId ? String(window.currentScenarioFilterId) : '';
+                var key = df + '|' + dt + '|' + scenarioId;
                 if (specialistsWorkIntervalsCache.key === key && specialistsWorkIntervalsCache.data) {
                     if (callback) callback(specialistsWorkIntervalsCache.data);
                     return;
@@ -1695,6 +1702,9 @@
                     date_from: df,
                     date_to: dt,
                 });
+                if (scenarioId) {
+                    params.set('scenario_id', scenarioId);
+                }
 
                 fetch('/booking/specialists-work-intervals/?' + params.toString(), {
                     method: 'GET',
@@ -1751,134 +1761,123 @@
                 };
             }
 
-            function renderTeachersWorkSchedule(payload) {
+            // Маппинг role -> data-section в шаблоне
+            var ROLE_TO_SECTION = {
+                'admin': 'admins',
+                'teacher': 'teachers',
+                'sound_engineer': 'sound_engineers',
+                'technician': 'technicians'
+            };
+
+            function renderSpecialistsWorkSchedule(payload) {
                 if (!payload || !payload.work_intervals_by_date) {
                     return;
                 }
 
-                var teachers = Array.isArray(payload.teachers) ? payload.teachers : [];
-                var teacherIds = getTeacherIdsFromServiceMapping();
-                var teacherIdsKeys = Object.keys(teacherIds);
+                var allSpecialists = Array.isArray(payload.teachers) ? payload.teachers : [];
 
-                var filteredTeachers = teachers;
-                if (teacherIdsKeys.length) {
-                    filteredTeachers = teachers.filter(function (t) {
-                        return t && t.id !== undefined && t.id !== null && teacherIds[String(t.id)];
-                    });
-                } else {
-                    filteredTeachers = teachers.filter(function (t) {
-                        return t && Array.isArray(t.directions) && t.directions.length;
-                    });
-                }
+                // Группируем специалистов по ролям
+                var byRole = {};
+                allSpecialists.forEach(function (s) {
+                    if (!s || s.id === undefined || s.id === null) return;
+                    var role = s.role || 'teacher';
+                    if (!byRole[role]) byRole[role] = [];
+                    byRole[role].push(s);
+                });
 
-                filteredTeachers.sort(function (a, b) {
-                    var an = a && typeof a.name === 'string' ? a.name : '';
-                    var bn = b && typeof b.name === 'string' ? b.name : '';
-                    return an.localeCompare(bn, 'ru');
+                // Сортируем каждую группу по имени
+                Object.keys(byRole).forEach(function (role) {
+                    byRole[role].sort(function (a, b) {
+                        var an = a && typeof a.name === 'string' ? a.name : '';
+                        var bn = b && typeof b.name === 'string' ? b.name : '';
+                        return an.localeCompare(bn, 'ru');
+                    });
                 });
 
                 var container = document.getElementById('calendar-grid-container');
-                if (!container) {
-                    return;
-                }
+                if (!container) return;
 
                 var dayEls = Array.prototype.slice.call(container.querySelectorAll('[data-role="calendar-day"]'));
                 dayEls.forEach(function (dayEl) {
                     var dayIso = dayEl ? String(dayEl.getAttribute('data-day') || '').trim() : '';
-                    if (!dayIso) {
-                        return;
-                    }
-
-                    var sectionEl = dayEl.querySelector('[data-role="specialists-section"][data-section="teachers"]');
-                    if (!sectionEl) {
-                        return;
-                    }
-
-                    var bodyEl = sectionEl.querySelector('[data-role="specialists-section-body"]');
-                    if (!bodyEl) {
-                        return;
-                    }
-
-                    var avatarImg = bodyEl.querySelector('img');
-                    var avatarSrc = avatarImg ? (avatarImg.getAttribute('src') || '') : '';
-                    if (!avatarSrc) {
-                        avatarSrc = '/static/image/default.png';
-                    }
-
-                    var timeCtx = getDayGridTimeContext(dayEl);
-                    if (!timeCtx) {
-                        return;
-                    }
+                    if (!dayIso) return;
 
                     var byDate = payload.work_intervals_by_date[dayIso] || {};
-                    bodyEl.innerHTML = '';
+                    var timeCtx = getDayGridTimeContext(dayEl);
+                    if (!timeCtx) return;
 
-                    filteredTeachers.forEach(function (t) {
-                        if (!t || t.id === undefined || t.id === null) {
-                            return;
-                        }
+                    // Рендерим каждую секцию по роли
+                    Object.keys(ROLE_TO_SECTION).forEach(function (role) {
+                        var sectionName = ROLE_TO_SECTION[role];
+                        var sectionEl = dayEl.querySelector('[data-role="specialists-section"][data-section="' + sectionName + '"]');
+                        if (!sectionEl) return;
 
-                        var idStr = String(t.id);
-                        var name = (typeof t.name === 'string') ? t.name : '';
-                        var dirs = Array.isArray(t.directions) ? t.directions : [];
-                        var dirsLabel = dirs.map(function (d) {
-                            return d && typeof d.name === 'string' ? d.name : '';
-                        }).filter(Boolean).join(' / ');
+                        var bodyEl = sectionEl.querySelector('[data-role="specialists-section-body"]');
+                        if (!bodyEl) return;
 
-                        var rowEl = document.createElement('div');
-                        rowEl.className = 'd-flex';
+                        bodyEl.innerHTML = '';
 
-                        var imgWrap = document.createElement('div');
-                        imgWrap.className = 'me-3 d-flex';
-                        imgWrap.style.width = '96px';
-                        imgWrap.style.justifyContent = 'flex-end';
+                        var specialists = byRole[role] || [];
+                        specialists.forEach(function (t) {
+                            var idStr = String(t.id);
+                            // Пропускаем специалиста, если у него нет интервалов в этот день
+                            var intervals = byDate[idStr];
+                            if (!intervals || !Array.isArray(intervals) || !intervals.length) return;
 
-                        var imgEl = document.createElement('img');
-                        imgEl.setAttribute('src', avatarSrc);
-                        imgEl.setAttribute('alt', '');
-                        imgEl.setAttribute('width', '32');
-                        imgEl.setAttribute('height', '32');
-                        imgWrap.appendChild(imgEl);
+                            var name = (typeof t.name === 'string') ? t.name : '';
+                            var dirs = Array.isArray(t.directions) ? t.directions : [];
+                            var dirsLabel = dirs.map(function (d) {
+                                return d && typeof d.name === 'string' ? d.name : '';
+                            }).filter(Boolean).join(' / ');
 
-                        var infoEl = document.createElement('div');
-                        infoEl.className = 'd-flex flex-column justify-content-between specialist-time mb-3';
-                        infoEl.style.flex = '1';
+                            var rowEl = document.createElement('div');
+                            rowEl.className = 'd-flex';
 
-                        var headerEl = document.createElement('div');
-                        headerEl.className = 'd-flex align-items-center gap-2';
+                            var imgWrap = document.createElement('div');
+                            imgWrap.className = 'me-3 d-flex';
+                            imgWrap.style.width = '96px';
+                            imgWrap.style.justifyContent = 'flex-end';
 
-                        var nameEl = document.createElement('span');
-                        nameEl.className = 'fw-semibold';
-                        nameEl.style.fontSize = '14px';
-                        nameEl.textContent = name;
-                        headerEl.appendChild(nameEl);
+                            var imgEl = document.createElement('img');
+                            imgEl.setAttribute('src', '/static/image/default.png');
+                            imgEl.setAttribute('alt', '');
+                            imgEl.setAttribute('width', '32');
+                            imgEl.setAttribute('height', '32');
+                            imgWrap.appendChild(imgEl);
 
-                        if (dirsLabel) {
-                            var dotEl = document.createElement('span');
-                            dotEl.textContent = '•';
-                            headerEl.appendChild(dotEl);
+                            var infoEl = document.createElement('div');
+                            infoEl.className = 'd-flex flex-column justify-content-between specialist-time mb-3';
+                            infoEl.style.flex = '1';
 
-                            var dirsEl = document.createElement('span');
-                            dirsEl.textContent = dirsLabel;
-                            headerEl.appendChild(dirsEl);
-                        }
+                            var headerEl = document.createElement('div');
+                            headerEl.className = 'd-flex align-items-center gap-2';
 
-                        var timeLineEl = document.createElement('div');
-                        timeLineEl.className = 'd-flex w-100 specialist-time';
+                            var nameEl = document.createElement('span');
+                            nameEl.className = 'fw-semibold';
+                            nameEl.style.fontSize = '14px';
+                            nameEl.textContent = name;
+                            headerEl.appendChild(nameEl);
 
-                        for (var i = 0; i < timeCtx.count; i++) {
-                            var cellEl = document.createElement('div');
-                            cellEl.className = 'time-cell flex-fill';
-                            timeLineEl.appendChild(cellEl);
-                        }
+                            if (dirsLabel) {
+                                var dotEl = document.createElement('span');
+                                dotEl.textContent = '\u2022';
+                                headerEl.appendChild(dotEl);
 
-                        var intervals = byDate[idStr] || [];
-                        if (Array.isArray(intervals) && intervals.length) {
+                                var dirsEl = document.createElement('span');
+                                dirsEl.textContent = dirsLabel;
+                                headerEl.appendChild(dirsEl);
+                            }
+
+                            var timeLineEl = document.createElement('div');
+                            timeLineEl.className = 'd-flex w-100 specialist-time';
+
+                            for (var i = 0; i < timeCtx.count; i++) {
+                                var cellEl = document.createElement('div');
+                                cellEl.className = 'time-cell flex-fill';
+                                timeLineEl.appendChild(cellEl);
+                            }
+
                             var timeCells = Array.prototype.slice.call(timeLineEl.querySelectorAll('.time-cell'));
-                            timeCells.forEach(function (cell) {
-                                cell.classList.remove('time-cell--working');
-                            });
-
                             for (var cellIdx = 0; cellIdx < timeCells.length; cellIdx++) {
                                 var cellStart = timeCtx.startMinutes + (cellIdx * timeCtx.stepMinutes);
                                 var cellEnd = cellStart + timeCtx.stepMinutes;
@@ -1886,14 +1885,10 @@
 
                                 for (var j = 0; j < intervals.length; j++) {
                                     var it = intervals[j];
-                                    if (!it) {
-                                        continue;
-                                    }
+                                    if (!it) continue;
                                     var sMin = parseInt(it.startMinutes, 10);
                                     var eMin = parseInt(it.endMinutes, 10);
-                                    if (!Number.isFinite(sMin) || !Number.isFinite(eMin)) {
-                                        continue;
-                                    }
+                                    if (!Number.isFinite(sMin) || !Number.isFinite(eMin)) continue;
                                     if (cellStart < eMin && cellEnd > sMin) {
                                         isWorking = true;
                                         break;
@@ -1904,24 +1899,19 @@
                                     timeCells[cellIdx].classList.add('time-cell--working');
                                 }
                             }
-                        }
 
-                        infoEl.appendChild(headerEl);
-                        infoEl.appendChild(timeLineEl);
+                            infoEl.appendChild(headerEl);
+                            infoEl.appendChild(timeLineEl);
 
-                        rowEl.appendChild(imgWrap);
-                        rowEl.appendChild(infoEl);
-                        bodyEl.appendChild(rowEl);
+                            rowEl.appendChild(imgWrap);
+                            rowEl.appendChild(infoEl);
+                            bodyEl.appendChild(rowEl);
+                        });
                     });
                 });
             }
 
             function applyTeachersScheduleForCurrentRange() {
-                var scenarioName = getSelectedScenarioNameForTeachers();
-                if (scenarioName && isSimpleScenarioName(scenarioName)) {
-                    return;
-                }
-
                 var dateFrom = window.SHOW_DATE_FROM;
                 var dateTo = window.SHOW_DATE_TO;
                 if (!dateFrom || !dateTo) {
@@ -1929,7 +1919,7 @@
                 }
 
                 loadSpecialistsWorkIntervals(dateFrom, dateTo, function (payload) {
-                    renderTeachersWorkSchedule(payload);
+                    renderSpecialistsWorkSchedule(payload);
                 });
             }
 
