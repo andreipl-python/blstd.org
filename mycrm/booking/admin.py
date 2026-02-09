@@ -260,8 +260,8 @@ class SpecialistServiceAdmin(admin.ModelAdmin):
 
 @admin.register(Specialist)
 class SpecialistAdmin(admin.ModelAdmin):
-    list_display = ("name", "active")
-    list_filter = ("active",)
+    list_display = ("name", "role", "active")
+    list_filter = ("role", "active")
     search_fields = ("name",)
     filter_horizontal = ("directions", "specialist_services")
     inlines = (SpecialistWeeklyIntervalInline,)

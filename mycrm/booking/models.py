@@ -709,6 +709,16 @@ class Direction(models.Model):
 class Specialist(models.Model):
     """Модель для хранения информации о специалистах"""
 
+    ROLE_TEACHER = "teacher"
+    ROLE_SOUND_ENGINEER = "sound_engineer"
+    ROLE_TECHNICIAN = "technician"
+
+    SPECIALIST_ROLE_CHOICES = [
+        (ROLE_TEACHER, "Преподаватель"),
+        (ROLE_SOUND_ENGINEER, "Звукорежиссёр"),
+        (ROLE_TECHNICIAN, "Техник"),
+    ]
+
     id = models.IntegerField(primary_key=True, null=False, blank=False)
     name = models.CharField(
         help_text="ФИО специалиста",
@@ -716,6 +726,13 @@ class Specialist(models.Model):
         max_length=100,
         null=False,
         unique=True,
+    )
+    role = models.CharField(
+        help_text="Роль специалиста в системе",
+        verbose_name="Роль",
+        max_length=20,
+        choices=SPECIALIST_ROLE_CHOICES,
+        default=ROLE_TEACHER,
     )
     active = models.BooleanField(
         help_text="Активность специалиста (работает или нет)",
