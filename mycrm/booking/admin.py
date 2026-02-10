@@ -34,8 +34,9 @@ class SpecialistWeeklyIntervalInlineFormSet(BaseInlineFormSet):
     def clean(self):
         super().clean()
 
-        # Группируем интервалы по weekday и валидируем пересечения прямо на форме.
-        intervals_by_weekday = {}
+        # Группируем интервалы по (weekday, scenario) и валидируем пересечения.
+        # Между разными сценариями пересечения допустимы.
+        intervals_by_group = {}
 
         for form in self.forms:
             if not hasattr(form, "cleaned_data"):
@@ -46,12 +47,15 @@ class SpecialistWeeklyIntervalInlineFormSet(BaseInlineFormSet):
             weekday = form.cleaned_data.get("weekday")
             start = form.cleaned_data.get("start_time")
             end = form.cleaned_data.get("end_time")
+            scenario = form.cleaned_data.get("scenario")
             if weekday is None or start is None or end is None:
                 continue
 
-            intervals_by_weekday.setdefault(int(weekday), []).append((start, end))
+            scenario_id = scenario.pk if scenario else None
+            group_key = (int(weekday), scenario_id)
+            intervals_by_group.setdefault(group_key, []).append((start, end))
 
-        for weekday, intervals in intervals_by_weekday.items():
+        for group_key, intervals in intervals_by_group.items():
             intervals_sorted = sorted(intervals, key=lambda x: x[0])
             prev_end = None
             for start, end in intervals_sorted:
@@ -272,8 +276,8 @@ class SpecialistAdmin(admin.ModelAdmin):
 
 @admin.register(SpecialistScheduleOverride)
 class SpecialistScheduleOverrideAdmin(admin.ModelAdmin):
-    list_display = ("specialist", "date", "is_day_off")
-    list_filter = ("is_day_off", "specialist")
+    list_display = ("specialist", "scenario", "date", "is_day_off")
+    list_filter = ("is_day_off", "specialist", "scenario")
     search_fields = ("specialist__name",)
     date_hierarchy = "date"
     inlines = (SpecialistOverrideIntervalInline,)

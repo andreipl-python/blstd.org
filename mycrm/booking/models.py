@@ -79,6 +79,15 @@ class SpecialistWeeklyInterval(models.Model):
         verbose_name="Специалист",
         help_text="Специалист, для которого задан интервал",
     )
+    scenario = models.ForeignKey(
+        "Scenario",
+        on_delete=CASCADE,
+        related_name="specialist_weekly_intervals",
+        verbose_name="Сценарий",
+        help_text="Сценарий, к которому относится интервал (пусто = глобальное расписание)",
+        null=True,
+        blank=True,
+    )
     weekday = models.SmallIntegerField(
         choices=WEEKDAY_CHOICES,
         verbose_name="День недели",
@@ -97,7 +106,7 @@ class SpecialistWeeklyInterval(models.Model):
         db_table = "specialist_weekly_intervals"
         verbose_name = "Интервал работы специалиста (неделя)"
         verbose_name_plural = "Интервалы работы специалистов (неделя)"
-        ordering = ("specialist", "weekday", "start_time")
+        ordering = ("specialist", "scenario", "weekday", "start_time")
         constraints = [
             models.CheckConstraint(
                 name="weekly_interval_start_lt_end",
@@ -117,10 +126,12 @@ class SpecialistWeeklyInterval(models.Model):
         qs = SpecialistWeeklyInterval.objects.filter(
             specialist_id=self.specialist_id,
             weekday=self.weekday,
+            scenario_id=self.scenario_id,
         )
         if self.pk:
             qs = qs.exclude(pk=self.pk)
-        # Запрещаем пересечение интервалов в рамках одного дня недели.
+        # Запрещаем пересечение интервалов в рамках (specialist, weekday, scenario).
+        # Между разными сценариями пересечения допустимы.
         if (
             self.start_time is not None
             and self.end_time is not None
@@ -132,7 +143,8 @@ class SpecialistWeeklyInterval(models.Model):
 
     def __str__(self):
         weekday_label = dict(self.WEEKDAY_CHOICES).get(self.weekday, str(self.weekday))
-        return f"{self.specialist} — {weekday_label}: {self.start_time}-{self.end_time}"
+        scenario_label = f" [{self.scenario}]" if self.scenario_id else ""
+        return f"{self.specialist}{scenario_label} — {weekday_label}: {self.start_time}-{self.end_time}"
 
 
 class SpecialistScheduleOverride(models.Model):
@@ -149,6 +161,15 @@ class SpecialistScheduleOverride(models.Model):
         related_name="schedule_overrides",
         verbose_name="Специалист",
         help_text="Специалист, для которого задано исключение",
+    )
+    scenario = models.ForeignKey(
+        "Scenario",
+        on_delete=CASCADE,
+        related_name="specialist_schedule_overrides",
+        verbose_name="Сценарий",
+        help_text="Сценарий, к которому относится исключение (пусто = глобальное)",
+        null=True,
+        blank=True,
     )
     date = models.DateField(
         verbose_name="Дата",
@@ -172,10 +193,11 @@ class SpecialistScheduleOverride(models.Model):
         verbose_name = "Исключение расписания специалиста"
         verbose_name_plural = "Исключения расписания специалистов"
         ordering = ("specialist", "date")
-        unique_together = ("specialist", "date")
+        unique_together = ("specialist", "date", "scenario")
 
     def __str__(self):
-        return f"{self.specialist} — {self.date}"
+        scenario_label = f" [{self.scenario}]" if self.scenario_id else ""
+        return f"{self.specialist}{scenario_label} — {self.date}"
 
 
 class SpecialistOverrideInterval(models.Model):

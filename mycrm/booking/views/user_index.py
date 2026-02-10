@@ -713,9 +713,11 @@ def get_busy_specialists_for_date(request):
 
     Ожидает параметры GET:
       - date (YYYY-MM-DD, обязательный)
+      - scenario_id (int, опциональный) — фильтр расписания по сценарию
     """
 
     date_str = request.GET.get("date")
+    scenario_id_str = request.GET.get("scenario_id")
 
     if not date_str:
         return JsonResponse(
@@ -795,11 +797,68 @@ def get_busy_specialists_for_date(request):
                 merged[-1][1] = max(merged[-1][1], e)
         return merged
 
+    # --- Определяем scenario_id для фильтрации расписания ---
+    scenario_id_int = None
+    if scenario_id_str:
+        try:
+            scenario_id_int = int(scenario_id_str)
+        except (ValueError, TypeError):
+            pass
+
+    # --- Overrides: сценарий-aware ---
+    overrides_qs_filter = Q(date=target_date, specialist__active=True)
+    if scenario_id_int is not None:
+        overrides_qs_filter &= Q(scenario_id=scenario_id_int) | Q(scenario__isnull=True)
+    overrides_qs = SpecialistScheduleOverride.objects.filter(
+        overrides_qs_filter
+    ).prefetch_related("intervals")
+    # Ключ: (spec_id, scenario_id|None) → override
+    overrides_raw = {}
+    for o in overrides_qs:
+        overrides_raw[(int(o.specialist_id), o.scenario_id)] = o
+
+    def _get_override(specialist_id):
+        if scenario_id_int is not None:
+            specific = overrides_raw.get((specialist_id, scenario_id_int))
+            if specific is not None:
+                return specific
+        return overrides_raw.get((specialist_id, None))
+
+    # --- Weekly-интервалы: сценарий-aware ---
+    weekly_qs = SpecialistWeeklyInterval.objects.filter(specialist__active=True)
+    if scenario_id_int is not None:
+        weekly_qs = weekly_qs.filter(
+            Q(scenario_id=scenario_id_int) | Q(scenario__isnull=True)
+        )
+    specialists_with_any_weekly = set(
+        weekly_qs.values_list("specialist_id", flat=True).distinct()
+    )
+    weekday = int(target_date.weekday())
+    # Ключ: (spec_id, scenario_id|None) → list of (start_min, end_min)
+    weekly_work_raw = {}
+    for spec_id, start_t, end_t, sc_id in weekly_qs.filter(
+        weekday=weekday,
+        specialist_id__in=specialists_with_any_weekly,
+    ).values_list("specialist_id", "start_time", "end_time", "scenario_id"):
+        weekly_work_raw.setdefault((int(spec_id), sc_id), []).append(
+            (_time_to_minutes(start_t), _time_to_minutes(end_t))
+        )
+
+    def _get_weekly_work(specialist_id):
+        if scenario_id_int is not None:
+            specific = weekly_work_raw.get((specialist_id, scenario_id_int))
+            if specific:
+                return specific
+        fallback = weekly_work_raw.get((specialist_id, None))
+        if fallback:
+            return fallback
+        return []
+
     def _get_unavailability_intervals_for_specialist(specialist_id: int):
         # Возвращаем интервалы НЕДОСТУПНОСТИ (gaps), то есть всё, что вне рабочего
         # времени специалиста на эту дату. Эти интервалы отдаем фронту как "busy",
         # чтобы повторно использовать существующую проверку isSpecialistBusy.
-        override = overrides_map.get(specialist_id)
+        override = _get_override(specialist_id)
         if override is not None:
             if override.is_day_off:
                 return [(0, 24 * 60)]
@@ -811,7 +870,7 @@ def get_busy_specialists_for_date(request):
             if specialist_id not in specialists_with_any_weekly:
                 # Нет weekly-расписания вообще — значит не ограничиваем доступность.
                 return []
-            work = weekly_work_map.get(specialist_id, [])
+            work = _get_weekly_work(specialist_id)
 
         work_merged = _merge_work_intervals(work)
         if not work_merged:
@@ -828,30 +887,9 @@ def get_busy_specialists_for_date(request):
             gaps.append((prev_end, 24 * 60))
         return gaps
 
-    overrides_qs = SpecialistScheduleOverride.objects.filter(
-        date=target_date,
-        specialist__active=True,
-    ).prefetch_related("intervals")
-    overrides_map = {o.specialist_id: o for o in overrides_qs}
-
-    specialists_with_any_weekly = set(
-        SpecialistWeeklyInterval.objects.filter(specialist__active=True)
-        .values_list("specialist_id", flat=True)
-        .distinct()
-    )
-    weekday = int(target_date.weekday())
-    weekly_work_map = {}
-    for spec_id, start_t, end_t in SpecialistWeeklyInterval.objects.filter(
-        weekday=weekday,
-        specialist_id__in=specialists_with_any_weekly,
-    ).values_list("specialist_id", "start_time", "end_time"):
-        weekly_work_map.setdefault(int(spec_id), []).append(
-            (_time_to_minutes(start_t), _time_to_minutes(end_t))
-        )
-
     relevant_specialist_ids = (
         set(bookings_qs.values_list("specialist_id", flat=True))
-        | set(overrides_map.keys())
+        | {spec_id for spec_id, _ in overrides_raw.keys()}
         | set(specialists_with_any_weekly)
         | set(client_busy_specialist_ids)
     )
@@ -1038,31 +1076,74 @@ def get_specialists_work_intervals(request):
             }
         )
 
+    # --- Определяем scenario_id для фильтрации интервалов расписания ---
+    scenario_id_int = None
+    if scenario_id_str:
+        try:
+            scenario_id_int = int(scenario_id_str)
+        except (ValueError, TypeError):
+            pass
+
+    # --- Weekly-интервалы: берём для конкретного сценария + fallback (scenario=NULL) ---
+    weekly_qs = SpecialistWeeklyInterval.objects.filter(
+        specialist_id__in=specialist_ids
+    )
+    if scenario_id_int is not None:
+        weekly_qs = weekly_qs.filter(
+            Q(scenario_id=scenario_id_int) | Q(scenario__isnull=True)
+        )
+
     specialists_with_any_weekly = set(
-        SpecialistWeeklyInterval.objects.filter(specialist_id__in=specialist_ids)
-        .values_list("specialist_id", flat=True)
-        .distinct()
+        weekly_qs.values_list("specialist_id", flat=True).distinct()
     )
 
-    weekly_work_map = {}
-    for spec_id, weekday, start_t, end_t in SpecialistWeeklyInterval.objects.filter(
-        specialist_id__in=specialist_ids
-    ).values_list("specialist_id", "weekday", "start_time", "end_time"):
-        weekly_work_map.setdefault((int(spec_id), int(weekday)), []).append(
+    # Ключ: (spec_id, weekday, scenario_id|None) → list of (start, end)
+    weekly_work_raw = {}
+    for spec_id, weekday, start_t, end_t, sc_id in weekly_qs.values_list(
+        "specialist_id", "weekday", "start_time", "end_time", "scenario_id"
+    ):
+        weekly_work_raw.setdefault((int(spec_id), int(weekday), sc_id), []).append(
             (start_t, end_t)
         )
 
+    def _get_weekly_intervals(spec_id, weekday):
+        """Возвращает weekly-интервалы с приоритетом: конкретный сценарий > fallback (NULL)."""
+        if scenario_id_int is not None:
+            specific = weekly_work_raw.get((spec_id, weekday, scenario_id_int))
+            if specific:
+                return specific
+        fallback = weekly_work_raw.get((spec_id, weekday, None))
+        if fallback:
+            return fallback
+        return []
+
+    # --- Overrides: берём для конкретного сценария + fallback (scenario=NULL) ---
+    overrides_qs_filter = Q(
+        date__gte=start_date,
+        date__lte=end_date,
+        specialist_id__in=specialist_ids,
+        specialist__active=True,
+    )
+    if scenario_id_int is not None:
+        overrides_qs_filter &= Q(scenario_id=scenario_id_int) | Q(scenario__isnull=True)
+
     overrides_qs = (
-        SpecialistScheduleOverride.objects.filter(
-            date__gte=start_date,
-            date__lte=end_date,
-            specialist_id__in=specialist_ids,
-            specialist__active=True,
-        )
+        SpecialistScheduleOverride.objects.filter(overrides_qs_filter)
         .prefetch_related("intervals")
         .select_related("specialist")
     )
-    overrides_map = {(int(o.specialist_id), o.date): o for o in overrides_qs}
+    # Ключ: (spec_id, date, scenario_id|None) → override
+    overrides_raw = {}
+    for o in overrides_qs:
+        overrides_raw[(int(o.specialist_id), o.date, o.scenario_id)] = o
+
+    def _get_override(spec_id, cur_date):
+        """Возвращает override с приоритетом: конкретный сценарий > fallback (NULL)."""
+        if scenario_id_int is not None:
+            specific = overrides_raw.get((spec_id, cur_date, scenario_id_int))
+            if specific is not None:
+                return specific
+        return overrides_raw.get((spec_id, cur_date, None))
 
     def _time_to_minutes(t):
         return int(t.hour) * 60 + int(t.minute)
@@ -1089,7 +1170,7 @@ def get_specialists_work_intervals(request):
         weekday = int(cur.weekday())
         by_spec = {}
         for spec_id in specialist_ids:
-            override = overrides_map.get((int(spec_id), cur))
+            override = _get_override(int(spec_id), cur)
             intervals_minutes = []
 
             if override is not None:
@@ -1103,9 +1184,10 @@ def get_specialists_work_intervals(request):
                     ]
             else:
                 if int(spec_id) in specialists_with_any_weekly:
+                    raw = _get_weekly_intervals(int(spec_id), weekday)
                     intervals_minutes = [
                         (_time_to_minutes(s), _time_to_minutes(e))
-                        for s, e in weekly_work_map.get((int(spec_id), weekday), [])
+                        for s, e in raw
                         if s is not None and e is not None
                     ]
                 else:

@@ -553,6 +553,7 @@ def edit_booking_view(request, booking_id):
                     start_datetime,
                     end_datetime,
                     exclude_reservation_id=booking_id,
+                    scenario_id=booking.scenario_id,
                 )
         except Exception as e:
             return JsonResponse(
@@ -809,7 +810,12 @@ def get_available_specialists(request, booking_id):
         specialists_by_schedule = []
         for s in specialists:
             try:
-                check_specialist_schedule(s, booking.datetimestart, booking.datetimeend)
+                check_specialist_schedule(
+                    s,
+                    booking.datetimestart,
+                    booking.datetimeend,
+                    scenario_id=booking.scenario_id,
+                )
             except Exception:
                 # Если не попадает в рабочее время / выходной / и т.п.
                 continue

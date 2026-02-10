@@ -131,27 +131,41 @@ def _time_to_minutes(t):
     return t.hour * 60 + t.minute
 
 
-def get_specialist_work_intervals_for_date(specialist: Specialist, target_date):
+def get_specialist_work_intervals_for_date(
+    specialist: Specialist, target_date, scenario_id=None
+):
     """Возвращает рабочие интервалы специалиста на конкретную дату.
 
     Приоритет:
     - Если на дату есть override — используем его (или считаем день выходным).
     - Иначе используем weekly-интервалы. Если weekly-интервалов в принципе нет —
       расписание не ограничивает (поведение как раньше).
+    - При наличии scenario_id: сначала ищем записи для конкретного сценария,
+      если нет — fallback на глобальные (scenario=NULL).
 
     Формат ответа:
     - restricted: расписание ограничивает/не ограничивает доступность
     - is_day_off: является ли дата выходным для специалиста
     - intervals: список пар (start_time, end_time)
     """
-    override = (
-        SpecialistScheduleOverride.objects.filter(
-            specialist_id=specialist.id,
-            date=target_date,
+    # --- Override: приоритет конкретный сценарий > fallback (NULL) ---
+    override_qs_filter = Q(specialist_id=specialist.id, date=target_date)
+    if scenario_id is not None:
+        override_qs_filter &= Q(scenario_id=scenario_id) | Q(scenario__isnull=True)
+    overrides = list(
+        SpecialistScheduleOverride.objects.filter(override_qs_filter).prefetch_related(
+            "intervals"
         )
-        .prefetch_related("intervals")
-        .first()
     )
+    override = None
+    if overrides:
+        # Приоритет: конкретный сценарий > fallback (NULL)
+        by_scenario = {o.scenario_id: o for o in overrides}
+        if scenario_id is not None and scenario_id in by_scenario:
+            override = by_scenario[scenario_id]
+        elif None in by_scenario:
+            override = by_scenario[None]
+
     if override is not None:
         # Override может пометить день выходным, либо задать конкретные интервалы.
         if override.is_day_off:
@@ -167,9 +181,12 @@ def get_specialist_work_intervals_for_date(specialist: Specialist, target_date):
             "intervals": intervals,
         }
 
-    has_any_weekly = SpecialistWeeklyInterval.objects.filter(
-        specialist_id=specialist.id
-    ).exists()
+    # --- Weekly: приоритет конкретный сценарий > fallback (NULL) ---
+    weekly_qs_filter = Q(specialist_id=specialist.id)
+    if scenario_id is not None:
+        weekly_qs_filter &= Q(scenario_id=scenario_id) | Q(scenario__isnull=True)
+
+    has_any_weekly = SpecialistWeeklyInterval.objects.filter(weekly_qs_filter).exists()
     if not has_any_weekly:
         # Если у специалиста нет weekly-расписания — ничего не ограничиваем.
         return {
@@ -179,14 +196,23 @@ def get_specialist_work_intervals_for_date(specialist: Specialist, target_date):
         }
 
     weekday = int(target_date.weekday())
-    # Если weekly-расписание есть, то отсутствие интервалов в конкретный weekday
-    # трактуем как выходной.
-    intervals = list(
-        SpecialistWeeklyInterval.objects.filter(
-            specialist_id=specialist.id,
-            weekday=weekday,
-        ).values_list("start_time", "end_time")
-    )
+    weekly_day_qs = SpecialistWeeklyInterval.objects.filter(
+        weekly_qs_filter,
+        weekday=weekday,
+    ).values_list("start_time", "end_time", "scenario_id")
+
+    # Группируем по scenario_id для выбора приоритетных интервалов
+    by_sc = {}
+    for start_t, end_t, sc_id in weekly_day_qs:
+        by_sc.setdefault(sc_id, []).append((start_t, end_t))
+
+    if scenario_id is not None and scenario_id in by_sc:
+        intervals = by_sc[scenario_id]
+    elif None in by_sc:
+        intervals = by_sc[None]
+    else:
+        intervals = []
+
     return {
         "restricted": True,
         "is_day_off": len(intervals) == 0,
@@ -198,6 +224,7 @@ def check_specialist_schedule(
     specialist: Specialist,
     start_datetime: datetime,
     end_datetime: datetime,
+    scenario_id=None,
 ) -> bool:
     """Проверяет, работает ли специалист по расписанию в указанный интервал.
 
@@ -222,7 +249,9 @@ def check_specialist_schedule(
     if local_start.date() != local_end.date():
         raise ValidationError("Бронь не может пересекать сутки")
 
-    schedule = get_specialist_work_intervals_for_date(specialist, local_start.date())
+    schedule = get_specialist_work_intervals_for_date(
+        specialist, local_start.date(), scenario_id=scenario_id
+    )
     if not schedule.get("restricted"):
         return True
     if schedule.get("is_day_off"):
@@ -319,11 +348,14 @@ def check_specialist_availability(
     start_datetime: datetime,
     end_datetime: datetime,
     exclude_reservation_id: int | None = None,
+    scenario_id=None,
 ) -> bool:
     """Проверка доступности специалиста"""
     # Сначала проверяем фиксированное расписание (weekly/override), и только потом —
     # пересечения с существующими бронями.
-    check_specialist_schedule(specialist, start_datetime, end_datetime)
+    check_specialist_schedule(
+        specialist, start_datetime, end_datetime, scenario_id=scenario_id
+    )
 
     # Специалист может быть занят не только как преподаватель, но и как клиент
     # (например, если сам берёт урок у другого специалиста).
@@ -788,7 +820,10 @@ def create_booking_view(request):
                         check_room_availability(room, start_datetime, end_datetime)
                         if specialist:
                             check_specialist_availability(
-                                specialist, start_datetime, end_datetime
+                                specialist,
+                                start_datetime,
+                                end_datetime,
+                                scenario_id=scenario_id,
                             )
                     except ValidationError as e:
                         raise BulkCreateBookingError(
@@ -1061,7 +1096,12 @@ def create_booking_view(request):
         try:
             check_room_availability(room, start_datetime, end_datetime)
             if specialist:
-                check_specialist_availability(specialist, start_datetime, end_datetime)
+                check_specialist_availability(
+                    specialist,
+                    start_datetime,
+                    end_datetime,
+                    scenario_id=scenario_id,
+                )
         except ValidationError as e:
             return JsonResponse(
                 {
